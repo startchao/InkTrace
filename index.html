@@ -3,193 +3,176 @@
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AI 閱讀器 v2.0.1c</title>
+    <title>AI 閱讀器 v2.0.1c-Fix</title>
     
-    <script src="https://unpkg.com/dexie/dist/dexie.js?v=20260306"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dexie@3.2.4/dist/dexie.min.js"></script>
     
     <style>
-        :root { --bg: #f5f5f7; --card: #ffffff; --text: #1d1d1f; --primary: #0071e3; --toolbar: rgba(255,255,255,0.9); }
-        body.dark { --bg: #121212; --card: #1e1e1e; --text: #e0e0e0; --primary: #0a84ff; --toolbar: rgba(30,30,30,0.9); }
-        
-        body { background-color: var(--bg); color: var(--text); font-family: -apple-system, "PingFang TC", "Heiti TC", sans-serif; margin: 0; transition: 0.3s; overflow-x: hidden; }
+        :root { --bg: #f5f5f7; --card: #ffffff; --text: #1d1d1f; --primary: #0071e3; }
+        body.dark { --bg: #121212; --card: #1e1e1e; --text: #e0e0e0; --primary: #0a84ff; }
+        body { background-color: var(--bg); color: var(--text); font-family: sans-serif; margin: 0; transition: 0.3s; -webkit-tap-highlight-color: transparent; }
 
-        /* --- 1. 書庫介面 --- */
-        #library-page { max-width: 600px; margin: 0 auto; padding: 20px; display: block; }
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 15px; margin-bottom: 20px; }
-        .version-tag { font-size: 10px; background: #0071e3; color: white; padding: 2px 8px; border-radius: 10px; margin-left: 10px; }
+        /* 書庫介面 */
+        #library-page { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .version-tag { font-size: 10px; background: #0071e3; color: white; padding: 2px 8px; border-radius: 10px; }
         
-        .book-grid { display: grid; gap: 15px; }
-        .book-card { background: var(--card); padding: 20px; border-radius: 18px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: transform 0.2s; }
-        .book-card:active { transform: scale(0.98); }
-        .progress-circle { font-size: 12px; color: var(--primary); font-weight: bold; border: 2px solid var(--primary); width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+        .book-card { 
+            background: var(--card); padding: 20px; border-radius: 15px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 15px;
+            display: flex; justify-content: space-between; align-items: center;
+            cursor: pointer; user-select: none;
+        }
 
-        /* --- 2. 閱讀器介面 (預設隱藏) --- */
+        /* 閱讀器介面 */
         #reader-page { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 1000; overflow-y: auto; }
-        #reader-content { 
-            padding: 60px 25px 150px 25px; 
-            max-width: 800px; margin: 0 auto; 
-            font-size: 22px; line-height: 1.9; 
-            white-space: pre-wrap; word-break: break-all;
-        }
+        #reader-content { padding: 40px 20px 150px 20px; font-size: 20px; line-height: 1.8; white-space: pre-wrap; word-break: break-all; }
 
-        /* --- 3. 閱讀器工具欄 --- */
-        .reader-toolbar { 
-            position: fixed; bottom: 0; left: 0; width: 100%; 
-            background: var(--toolbar); backdrop-filter: blur(15px);
-            border-top: 1px solid rgba(0,0,0,0.1);
-            display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px;
-            padding: 15px 10px 30px 10px; box-sizing: border-box;
-        }
-        .reader-toolbar button { 
-            background: transparent; color: var(--text); border: 1px solid rgba(128,128,128,0.3); 
-            padding: 10px 5px; border-radius: 10px; font-size: 13px; cursor: pointer;
-        }
-        .btn-exit { background: #ff3b30 !important; color: white !important; border: none !important; }
-
-        /* --- 按鈕通用 --- */
-        .main-btn { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 20px; font-weight: bold; cursor: pointer; }
+        .toolbar { position: fixed; bottom: 0; width: 100%; background: rgba(0,0,0,0.8); display: flex; justify-content: space-around; padding: 15px 0; }
+        .toolbar button { background: #444; color: white; border: none; padding: 8px 12px; border-radius: 8px; font-size: 14px; }
+        
+        .btn-main { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 20px; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div id="library-page">
     <div class="header">
-        <h2>書庫 <span class="version-tag">v2.0.1c</span></h2>
-        <button class="main-btn" onclick="document.getElementById('fileInput').click()">＋ 上傳小說</button>
+        <h2>書庫 <span class="version-tag">v2.0.1c-Fix</span></h2>
+        <button class="btn-main" onclick="triggerUpload()">＋ 上傳小說</button>
     </div>
     <input type="file" id="fileInput" accept=".txt" style="display:none">
-    <div id="bookList" class="book-grid"></div>
-    <p style="text-align:center; font-size:12px; color:#888; margin-top:30px;">提示：電腦按右鍵 / 手機長按可刪除書籍</p>
+    <div id="bookList">載入中...</div>
 </div>
 
 <div id="reader-page">
     <div id="reader-content"></div>
-    
-    <div class="reader-toolbar">
-        <button onclick="changeFontSize(2)">字體 A+</button>
-        <button onclick="changeFontSize(-2)">字體 A-</button>
-        <button onclick="toggleTheme()">切換模式</button>
-        <button onclick="alert('v2.0.2 即將推出：聽書功能')">🎧 聽書</button>
-        <button onclick="alert('v2.0.3 即將推出：簡繁轉換')">文 繁/簡</button>
-        <button onclick="window.scrollTo(0,0)">回到頂部</button>
-        <button class="btn-exit" onclick="closeReader()">退出閱讀</button>
+    <div class="toolbar">
+        <button onclick="changeFontSize(2)">A+</button>
+        <button onclick="changeFontSize(-2)">A-</button>
+        <button onclick="closeReader()" style="background:#ff3b30;">返回</button>
     </div>
 </div>
 
 <script>
-    const db = new Dexie("ReaderDB");
-    db.version(1).stores({ books: '++id, title, content, progress, lastRead' });
+    // 1. 初始化資料庫，加入錯誤防護
+    let db;
+    try {
+        db = new Dexie("ReaderDB");
+        db.version(1).stores({ books: '++id, title, content, progress, lastRead' });
+    } catch (e) {
+        alert("資料庫啟動失敗，請嘗試使用一般瀏覽器（如 Chrome/Safari）開啟");
+    }
 
-    // 1. 上傳與讀取 (解決看不到內容的核心修正)
-    document.getElementById('fileInput').onchange = (e) => {
+    // 2. 修正上傳觸發
+    function triggerUpload() {
+        document.getElementById('fileInput').click();
+    }
+
+    document.getElementById('fileInput').onchange = function(e) {
         const file = e.target.files[0];
         if (!file) return;
 
         const reader = new FileReader();
-        reader.onload = async (event) => {
-            const text = event.target.result;
-            if (!text || text.length < 5) {
-                alert("檔案內容過短或讀取失敗！");
-                return;
+        reader.onload = async function(event) {
+            try {
+                const text = event.target.result;
+                await db.books.add({ 
+                    title: file.name.replace('.txt', ''), 
+                    content: text, 
+                    progress: 0, 
+                    lastRead: Date.now() 
+                });
+                renderLibrary();
+            } catch (err) {
+                alert("存檔失敗：" + err);
             }
-            await db.books.add({ 
-                title: file.name.replace('.txt', ''), 
-                content: text, 
-                progress: 0, 
-                lastRead: Date.now() 
-            });
-            renderLibrary();
         };
-        // 嘗試 UTF-8 讀取，若為簡體檔案請確認編碼
-        reader.readAsText(file, "UTF-8"); 
+        reader.readAsText(file, "UTF-8");
     };
 
-    // 2. 顯示書庫
+    // 3. 渲染書庫 (修正點擊與長按)
+    let touchStartTime;
     async function renderLibrary() {
-        const books = await db.books.reverse().sortBy('lastRead');
-        const list = document.getElementById('bookList');
-        
-        if (books.length === 0) {
-            list.innerHTML = '<p style="text-align:center; padding:50px; color:#999;">目前沒有書籍<br>請先點擊上方按鈕上傳 TXT 檔</p>';
-            return;
-        }
+        try {
+            const books = await db.books.reverse().sortBy('lastRead');
+            const list = document.getElementById('bookList');
+            
+            if (books.length === 0) {
+                list.innerHTML = '<p style="text-align:center;color:#999;">目前沒有書籍</p>';
+                return;
+            }
 
-        list.innerHTML = books.map(b => `
-            <div class="book-card" onclick="openReader(${b.id})" oncontextmenu="deleteBook(event, ${b.id})">
-                <div style="flex:1">
-                    <div style="font-weight:bold; font-size:18px; margin-bottom:5px;">${b.title}</div>
-                    <div style="font-size:12px; color:#888;">最後閱讀：${new Date(b.lastRead).toLocaleDateString()}</div>
+            list.innerHTML = books.map(b => `
+                <div class="book-card" 
+                     onclick="openReader(${b.id})" 
+                     oncontextmenu="handleDelete(event, ${b.id})"
+                     ontouchstart="handleTouchStart(event)"
+                     ontouchend="handleTouchEnd(event, ${b.id})">
+                    <div>
+                        <div style="font-weight:bold;">${b.title}</div>
+                        <div style="font-size:12px;color:#888;">${new Date(b.lastRead).toLocaleDateString()}</div>
+                    </div>
+                    <div style="color:#0071e3;font-weight:bold;">${Math.round((b.progress || 0) * 100)}%</div>
                 </div>
-                <div class="progress-circle">${Math.round((b.progress || 0) * 100)}%</div>
-            </div>
-        `).join('');
+            `).join('');
+        } catch (e) {
+            document.getElementById('bookList').innerHTML = "讀取資料庫失敗，請重整網頁。";
+        }
     }
 
-    // 3. 進入閱讀器 (切換畫面)
+    // 4. 閱讀與退出
     let currentBookId = null;
     async function openReader(id) {
         const book = await db.books.get(id);
         if (!book) return;
-
         currentBookId = id;
-        const contentEl = document.getElementById('reader-content');
-        
-        // 確保內容確實被填入
-        contentEl.textContent = book.content; 
-
-        // 切換頁面顯示
+        document.getElementById('reader-content').innerText = book.content;
         document.getElementById('library-page').style.display = 'none';
         document.getElementById('reader-page').style.display = 'block';
-
-        // 恢復捲動位置
+        
+        // 恢復進度
+        const container = document.getElementById('reader-page');
         setTimeout(() => {
-            const container = document.getElementById('reader-page');
-            const total = container.scrollHeight - window.innerHeight;
-            container.scrollTop = (book.progress || 0) * total;
-        }, 150);
+            container.scrollTop = (book.progress || 0) * (container.scrollHeight - window.innerHeight);
+        }, 100);
     }
 
-    // 4. 退出閱讀器 (儲存並回書庫)
     function closeReader() {
         const container = document.getElementById('reader-page');
-        const total = container.scrollHeight - window.innerHeight;
-        const progress = total > 0 ? container.scrollTop / total : 0;
-
-        db.books.update(currentBookId, { 
-            progress: progress, 
-            lastRead: Date.now() 
-        }).then(() => {
-            document.getElementById('library-page').style.display = 'block';
-            document.getElementById('reader-page').style.display = 'none';
-            renderLibrary();
-        });
+        const progress = container.scrollTop / (container.scrollHeight - window.innerHeight);
+        db.books.update(currentBookId, { progress: progress || 0, lastRead: Date.now() });
+        document.getElementById('library-page').style.display = 'block';
+        document.getElementById('reader-page').style.display = 'none';
+        renderLibrary();
     }
 
-    // 5. 閱讀輔助功能
+    // 5. 輔助功能
     function changeFontSize(delta) {
         const el = document.getElementById('reader-content');
         const cur = parseInt(window.getComputedStyle(el).fontSize);
         el.style.fontSize = (cur + delta) + 'px';
     }
 
-    function toggleTheme() {
-        document.body.classList.toggle('dark');
-    }
-
-    async function deleteBook(e, id) {
-        e.preventDefault();
-        if(confirm('確定要從書庫刪除這本書嗎？')) {
-            await db.books.delete(id);
-            renderLibrary();
+    // 長按刪除邏輯
+    function handleTouchStart(e) { touchStartTime = Date.now(); }
+    async function handleTouchEnd(e, id) {
+        if (Date.now() - touchStartTime > 800) { // 長按超過 0.8 秒
+            e.preventDefault();
+            if (confirm("要刪除這本書嗎？")) {
+                await db.books.delete(id);
+                renderLibrary();
+            }
         }
     }
+    function handleDelete(e, id) {
+        e.preventDefault();
+        if (confirm("要刪除這本書嗎？")) { db.books.delete(id); renderLibrary(); }
+    }
 
-    // 初始化
-    renderLibrary();
+    // 啟動
+    window.onload = renderLibrary;
 </script>
-
 </body>
 </html>
