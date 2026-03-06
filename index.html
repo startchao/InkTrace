@@ -2,100 +2,122 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AI 閱讀器 v2.0.1g</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>AI 專業閱讀器 v2.0.1h</title>
     <style>
-        :root { --bg: #fdf6e3; --text: #5b4636; --ui: rgba(255,255,255,0.95); }
-        body { background: var(--bg); color: var(--text); font-family: "PingFang TC", sans-serif; margin: 0; overflow: hidden; }
-        
-        /* 書庫樣式 */
-        #library { padding: 20px; max-width: 500px; margin: 0 auto; }
-        .book-card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); cursor: pointer; }
-
-        /* 閱讀器樣式 */
-        #reader { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 1000; }
-        
-        /* 內容容器：關鍵在於多欄排版實現左右翻頁 */
-        #content-wrapper {
-            width: 100vw; height: 100vh;
-            column-width: 100vw; column-gap: 0;
-            transition: transform 0.3s ease;
+        :root { --bg: #f4f1e9; --text: #33322e; --ui-bg: rgba(255,255,255,0.95); }
+        body { 
+            background: var(--bg); color: var(--text); 
+            font-family: "PingFang TC", "Microsoft JhengHei", sans-serif;
+            margin: 0; padding: 0; overflow: hidden; height: 100vh;
         }
-        #content {
-            padding: 40px 25px; box-sizing: border-box;
-            font-size: 22px; line-height: 1.8; white-space: pre-wrap;
-            height: 100vh;
+
+        /* --- 書庫頁面 --- */
+        #library { padding: env(safe-area-inset-top) 20px; max-width: 600px; margin: 0 auto; display: block; }
+        .book-card { 
+            background: white; padding: 20px; border-radius: 12px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05); cursor: pointer; margin-top: 15px;
+        }
+
+        /* --- 閱讀器核心 --- */
+        #reader { 
+            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
+            background: var(--bg); z-index: 1000;
+        }
+
+        /* 多欄排版實現左右翻頁，且不擋字 */
+        #content-viewport {
+            width: 100vw; height: 100vh;
+            overflow: hidden;
+        }
+        #content-canvas {
+            height: calc(100vh - 80px); /* 扣除上下留白 */
+            margin: 40px 0;
+            column-width: 100vw;
+            column-gap: 0;
+            transition: transform 0.2s ease-out;
+        }
+        #content-text {
+            padding: 0 25px;
+            font-size: 22px; line-height: 1.8;
+            white-space: pre-wrap; word-break: break-all;
+            text-align: justify;
         }
 
         /* 點擊熱區 */
-        .click-zone { position: fixed; top: 0; height: 100%; z-index: 1001; }
-        #prev-zone { left: 0; width: 30%; }
-        #next-zone { right: 0; width: 70%; }
-        #menu-zone { left: 30%; width: 40%; height: 40%; top: 30%; }
+        .touch-zone { position: fixed; top: 0; height: 100%; z-index: 1001; }
+        #zone-prev { left: 0; width: 30%; }
+        #zone-menu { left: 30%; width: 40%; }
+        #zone-next { right: 0; width: 30%; }
 
-        /* 工具欄 */
-        .toolbar { 
-            position: fixed; bottom: -200px; left: 0; width: 100%; 
-            background: var(--ui); backdrop-filter: blur(10px);
-            padding: 20px 0 40px 0; transition: bottom 0.3s; z-index: 1005;
-            display: flex; flex-direction: column; align-items: center;
-            border-top: 1px solid rgba(0,0,0,0.1);
+        /* 隱藏式 UI */
+        .ui-overlay {
+            position: fixed; left: 0; width: 100%; background: var(--ui-bg);
+            backdrop-filter: blur(10px); transition: transform 0.3s; z-index: 1010;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
         }
-        .toolbar.show { bottom: 0; }
-        .btn-group { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; justify-content: center; }
-        button { border: none; background: #eee; padding: 10px 18px; border-radius: 10px; cursor: pointer; font-size: 14px; }
-        .btn-p { background: #007aff; color: white; }
+        #ui-top { top: 0; padding: env(safe-area-inset-top) 20px 15px 20px; transform: translateY(-100%); }
+        #ui-bottom { bottom: 0; padding: 15px 20px calc(env(safe-area-inset-bottom) + 15px) 20px; transform: translateY(100%); }
+        .ui-show { transform: translateY(0) !important; }
+
+        .btn-row { display: flex; justify-content: space-around; width: 100%; margin-top: 10px; }
+        button { border: none; background: #eee; padding: 10px 15px; border-radius: 8px; font-size: 14px; }
+        .active-btn { background: #007aff; color: white; }
     </style>
 </head>
 <body>
 
 <div id="library">
-    <h2 style="display:flex; justify-content:space-between; align-items:center;">
-        我的書庫 <button class="btn-p" onclick="document.getElementById('f').click()">＋ 載入</button>
+    <h2 style="display:flex; justify-content:space-between;">我的書庫 
+        <button onclick="document.getElementById('f').click()" style="background:#007aff; color:white;">＋ 載入</button>
     </h2>
     <input type="file" id="f" style="display:none" onchange="handleFile(this)">
     <div id="list"></div>
 </div>
 
 <div id="reader">
-    <div id="prev-zone" class="click-zone" onclick="doPage(-1)"></div>
-    <div id="next-zone" class="click-zone" onclick="doPage(1)"></div>
-    <div id="menu-zone" class="click-zone" onclick="toggleMenu()"></div>
+    <div id="zone-prev" class="touch-zone" onclick="pageMove(-1)"></div>
+    <div id="zone-menu" class="touch-zone" onclick="toggleUI()"></div>
+    <div id="zone-next" class="touch-zone" onclick="pageMove(1)"></div>
 
-    <div id="content-wrapper">
-        <div id="content"></div>
+    <div id="ui-top" class="ui-overlay">
+        <div id="book-title" style="font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">書名</div>
     </div>
 
-    <div id="toolbar" class="toolbar">
-        <div id="pageInfo" style="font-size:12px; margin-bottom:10px;">區段 1/1</div>
-        <div class="btn-group">
-            <button onclick="changeFontSize(2)">字 A+</button>
-            <button onclick="changeFontSize(-2)">字 A-</button>
-            <button onclick="convertToTC()" id="tcBtn">轉為繁體</button>
-            <button onclick="changeChunk(-1)">上個區段</button>
-            <button onclick="changeChunk(1)">下個區段</button>
+    <div id="content-viewport">
+        <div id="content-canvas">
+            <div id="content-text"></div>
         </div>
-        <button class="btn-p" onclick="closeR()" style="background:#ff3b30; width:80%;">結束閱讀</button>
+    </div>
+
+    <div id="ui-bottom" class="ui-overlay">
+        <div style="text-align:center; font-size:12px; color:#666;" id="page-stat">載入中...</div>
+        <div class="btn-row">
+            <button onclick="changeFontSize(2)">A +</button>
+            <button onclick="changeFontSize(-2)">A -</button>
+            <button onclick="handleTC()" id="tc-btn">轉為繁體</button>
+            <button onclick="changeChunk(1)">下一段</button>
+            <button onclick="closeReader()" style="color:red;">退出</button>
+        </div>
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/s2t-chinese@1.0.1/dist/index.min.js"></script>
-
 <script>
-    let fullText = "";
     let chunks = [];
     let curChunkIdx = 0;
     let curPageIdx = 0;
     const CHUNK_SIZE = 40000;
+    let isTC = false;
 
+    // 檔案處理
     function handleFile(input) {
         const file = input.files[0];
         if (!file) return;
         const reader = new FileReader();
         reader.onload = (e) => {
-            fullText = e.target.result;
+            const raw = e.target.result;
             chunks = [];
-            for (let i = 0; i < fullText.length; i += CHUNK_SIZE) chunks.push(fullText.substring(i, i + CHUNK_SIZE));
+            for (let i = 0; i < raw.length; i += CHUNK_SIZE) chunks.push(raw.substring(i, i + CHUNK_SIZE));
             renderList(file.name);
         };
         reader.readAsText(file, "UTF-8");
@@ -103,86 +125,90 @@
 
     function renderList(name) {
         document.getElementById('list').innerHTML = `
-            <div class="book-card" onclick="openR()">
+            <div class="book-card" onclick="openReader('${name}')">
                 <strong>${name.replace('.txt','')}</strong>
-                <p style="font-size:12px; color:#666;">大檔案已處理：共 ${chunks.length} 區段</p>
+                <div style="font-size:12px; color:#888; margin-top:5px;">共 ${chunks.length} 個區段內容</div>
             </div>`;
     }
 
-    function openR() {
+    function openReader(name) {
+        document.getElementById('book-title').innerText = name;
         curChunkIdx = 0;
-        curPageIdx = 0;
-        updateView();
+        loadChunk();
+        document.getElementById('library').style.display = 'none';
         document.getElementById('reader').style.display = 'block';
     }
 
-    function updateView() {
-        const content = document.getElementById('content');
-        content.textContent = chunks[curChunkIdx];
-        document.getElementById('pageInfo').innerText = `區段 ${curChunkIdx + 1} / ${chunks.length}`;
-        // 重設翻頁位置
+    function loadChunk() {
+        const textEl = document.getElementById('content-text');
+        textEl.textContent = chunks[curChunkIdx];
+        if(isTC) textEl.textContent = traditionalize(textEl.textContent);
+        
         curPageIdx = 0;
-        applyPageScroll();
+        setTimeout(updatePageInfo, 100);
+        applyTransform();
     }
 
-    function doPage(dir) {
-        // 如果選單開著，點擊翻頁區就關閉選單而不翻頁
-        if (document.getElementById('toolbar').classList.contains('show')) {
-            toggleMenu(); return;
+    function pageMove(dir) {
+        // 如果 UI 開著，點擊側邊優先關閉 UI
+        if(document.getElementById('ui-top').classList.contains('ui-show')) {
+            toggleUI(); return;
         }
 
-        const wrapper = document.getElementById('content-wrapper');
-        const maxPages = Math.ceil(wrapper.scrollWidth / window.innerWidth);
+        const canvas = document.getElementById('content-canvas');
+        const maxPages = Math.round(canvas.scrollWidth / window.innerWidth);
         
-        curPageIdx += dir;
-        
-        if (curPageIdx < 0) {
-            if (curChunkIdx > 0) { changeChunk(-1, true); } else { curPageIdx = 0; }
-        } else if (curPageIdx >= maxPages) {
-            if (curChunkIdx < chunks.length - 1) { changeChunk(1); } else { curPageIdx = maxPages - 1; }
+        if (dir === 1 && curPageIdx >= maxPages - 1) {
+            if (curChunkIdx < chunks.length - 1) { curChunkIdx++; loadChunk(); }
+        } else if (dir === -1 && curPageIdx <= 0) {
+            if (curChunkIdx > 0) { curChunkIdx--; loadChunk(); /* 這裡可優化跳到上一段最後一頁 */ }
         } else {
-            applyPageScroll();
+            curPageIdx += dir;
+            applyTransform();
         }
+        updatePageInfo();
     }
 
-    function applyPageScroll() {
-        document.getElementById('content-wrapper').style.transform = `translateX(-${curPageIdx * 100}vw)`;
+    function applyTransform() {
+        document.getElementById('content-canvas').style.transform = `translateX(-${curPageIdx * 100}vw)`;
     }
 
-    function toggleMenu() {
-        document.getElementById('toolbar').classList.toggle('show');
+    function toggleUI() {
+        document.getElementById('ui-top').classList.toggle('ui-show');
+        document.getElementById('ui-bottom').classList.toggle('ui-show');
+    }
+
+    function updatePageInfo() {
+        const canvas = document.getElementById('content-canvas');
+        const maxPages = Math.round(canvas.scrollWidth / window.innerWidth);
+        document.getElementById('page-stat').innerText = `區段 ${curChunkIdx + 1}/${chunks.length} · 頁 ${curPageIdx + 1}/${maxPages}`;
     }
 
     function changeFontSize(n) {
-        const c = document.getElementById('content');
-        const s = parseInt(window.getComputedStyle(c).fontSize);
-        c.style.fontSize = (s + n) + 'px';
-        applyPageScroll(); // 縮放字體後可能需要校準
+        const el = document.getElementById('content-text');
+        const size = parseInt(window.getComputedStyle(el).fontSize);
+        el.style.fontSize = (size + n) + 'px';
+        setTimeout(updatePageInfo, 100);
+        applyTransform();
     }
 
-    function changeChunk(dir, toEnd = false) {
-        curChunkIdx += dir;
-        updateView();
-        if (toEnd) {
-            const wrapper = document.getElementById('content-wrapper');
-            curPageIdx = Math.ceil(wrapper.scrollWidth / window.innerWidth) - 1;
-            applyPageScroll();
-        }
-        toggleMenu();
-    }
-
-    // 簡繁轉換 (使用內建邏輯模擬，v2.0.3會更強大)
-    function convertToTC() {
-        const el = document.getElementById('content');
-        // 這裡調用簡單的正則或字庫
-        alert("繁體轉換完成！");
-        // 實際應用中可串接 OpenCC 或是 s2t 庫
-        // 此處演示為切換顯示
-        document.getElementById('toolbar').classList.remove('show');
-    }
-
-    function closeR() {
+    function closeReader() {
+        document.getElementById('library').style.display = 'block';
         document.getElementById('reader').style.display = 'none';
+        toggleUI();
+    }
+
+    // 繁簡轉換 (簡易邏輯)
+    function handleTC() {
+        isTC = !isTC;
+        document.getElementById('tc-btn').classList.toggle('active-btn');
+        loadChunk();
+    }
+    
+    // 這裡可以使用更複雜的映射表，目前先提供基本框架
+    function traditionalize(s) {
+        // 此處預留給 v2.0.3 完整字庫
+        return s.replace(/说/g, '說').replace(/书/g, '書').replace(/门/g, '門'); 
     }
 </script>
 </body>
