@@ -3,51 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>AI 閱讀器 v2.0.1k</title>
+    <title>AI 閱讀器 v2.0.1L</title>
     <style>
-        :root { --bg: #f4f1e9; --text: #33322e; --ui: rgba(255,255,255,0.98); --primary: #007aff; }
+        :root { --bg: #f4f1e9; --text: #33322e; --primary: #007aff; }
         body { background: var(--bg); color: var(--text); font-family: "PingFang TC", sans-serif; margin: 0; overflow: hidden; height: 100vh; }
         
-        /* 書庫 */
-        #library { padding: env(safe-area-inset-top) 20px; max-width: 600px; margin: 0 auto; height: 100vh; overflow-y: auto; box-sizing: border-box; }
-        .v-tag { font-size: 10px; background: #34c759; color: white; padding: 2px 8px; border-radius: 10px; margin-left: 5px; }
-        .book-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); cursor: pointer; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; border-left: 5px solid var(--primary); }
-        .del-btn { color: #ff3b30; font-size: 12px; padding: 5px 10px; border: 1px solid #ff3b30; border-radius: 6px; }
+        /* 書庫介面 */
+        #library { padding: env(safe-area-inset-top) 20px; max-width: 600px; margin: 0 auto; text-align: center; }
+        .v-tag { font-size: 10px; background: #ff9500; color: white; padding: 2px 8px; border-radius: 10px; }
+        .upload-area { 
+            border: 2px dashed #ccc; padding: 40px 20px; border-radius: 20px; 
+            background: white; margin-top: 30px; cursor: pointer;
+        }
 
-        /* 閱讀器 */
+        /* 閱讀器介面 */
         #reader { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg); z-index: 1000; }
         #content-viewport { width: 100vw; height: 100vh; overflow: hidden; }
-        #content-canvas { height: calc(100vh - 80px); margin: 40px 0; column-width: 100vw; column-gap: 0; transition: transform 0.25s ease-out; }
-        #content-text { padding: 0 25px; font-size: 22px; line-height: 1.8; white-space: pre-wrap; word-break: break-all; text-align: justify; }
+        #content-canvas { 
+            height: calc(100vh - 80px); margin: 40px 0; 
+            column-width: 100vw; column-gap: 0; transition: transform 0.2s ease-out; 
+        }
+        #content-text { 
+            padding: 0 25px; font-size: 22px; line-height: 1.8; 
+            white-space: pre-wrap; word-break: break-all; text-align: justify; 
+        }
 
-        /* 熱區 */
+        /* 交互熱區 */
         .touch-zone { position: fixed; top: 0; height: 100%; z-index: 1001; }
         #zone-prev { left: 0; width: 30%; }
         #zone-menu { left: 30%; width: 40%; }
         #zone-next { right: 0; width: 30%; }
 
-        /* 選單 */
-        .ui-overlay { position: fixed; left: 0; width: 100%; background: var(--ui); backdrop-filter: blur(12px); transition: 0.3s; z-index: 1010; opacity: 0; pointer-events: none; }
-        #ui-top { top: 0; padding: env(safe-area-inset-top) 20px 15px 20px; border-bottom: 1px solid #ddd; transform: translateY(-100%); }
-        #ui-bottom { bottom: 0; padding: 15px 20px calc(env(safe-area-inset-bottom) + 15px) 20px; border-top: 1px solid #ddd; transform: translateY(100%); }
+        /* 選單浮層 */
+        .ui-panel { 
+            position: fixed; left: 0; width: 100%; background: rgba(255,255,255,0.98); 
+            backdrop-filter: blur(15px); transition: 0.3s; z-index: 1010; opacity: 0; pointer-events: none; 
+        }
+        #ui-top { top: 0; padding: env(safe-area-inset-top) 20px 15px 20px; transform: translateY(-100%); border-bottom: 1px solid #ddd; }
+        #ui-bottom { bottom: 0; padding: 15px 20px calc(env(safe-area-inset-bottom) + 15px) 20px; transform: translateY(100%); border-top: 1px solid #ddd; }
         .ui-show { opacity: 1; pointer-events: auto; transform: translateY(0) !important; }
 
-        button { border: none; background: #efeff4; padding: 12px 18px; border-radius: 10px; font-size: 14px; cursor: pointer; }
-        .btn-p { background: var(--primary); color: white; }
+        button { border: none; background: #efeff4; padding: 12px 20px; border-radius: 12px; font-size: 14px; }
+        .btn-p { background: var(--primary); color: white; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div id="library">
-    <h2 style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px;">
-        我的書庫 <span class="v-tag">v2.0.1k</span>
-        <button class="btn-p" onclick="document.getElementById('f').click()">＋ 載入小說</button>
-    </h2>
-    <input type="file" id="f" style="display:none" onchange="handleFile(this)">
-    <div id="book-list"></div>
-    <div style="text-align:center; margin-top:50px;">
-        <button onclick="clearStorage()" style="font-size:10px; opacity:0.3;">清除緩存 (無法載入時點此)</button>
+    <h2 style="margin-top:40px;">我的書庫 <span class="v-tag">v2.0.1L</span></h2>
+    <div class="upload-area" onclick="document.getElementById('f').click()">
+        <div style="font-size: 40px; margin-bottom: 10px;">📖</div>
+        <div style="font-weight:bold; color:var(--primary);">點擊此處載入小說</div>
+        <div style="font-size:12px; color:#888; margin-top:8px;">支援超大檔案 (UTF-8 / GBK 自動轉碼)</div>
     </div>
+    <input type="file" id="f" style="display:none" onchange="handleFile(this)">
+    <p style="margin-top:30px; font-size:12px; color:#999; line-height:1.6;">
+        為了保護手機記憶體，本版採「即時載入」模式。<br>
+        如果您正在閱讀大檔案，請勿清理後台。
+    </p>
 </div>
 
 <div id="reader">
@@ -55,74 +68,58 @@
     <div id="zone-menu" class="touch-zone" onclick="toggleUI()"></div>
     <div id="zone-next" class="touch-zone" onclick="pageMove(1)"></div>
 
-    <div id="ui-top" class="ui-overlay"><div id="cur-title" style="font-weight:bold;">書名</div></div>
+    <div id="ui-top" class="ui-panel">
+        <div id="cur-title" style="font-weight:bold; font-size:16px;">書名</div>
+    </div>
 
-    <div id="content-viewport"><div id="content-canvas"><div id="content-text"></div></div></div>
+    <div id="content-viewport">
+        <div id="content-canvas"><div id="content-text"></div></div>
+    </div>
 
-    <div id="ui-bottom" class="ui-overlay">
-        <div id="page-info" style="text-align:center; font-size:12px; color:#888; margin-bottom:12px;">頁面資訊</div>
-        <div style="display:flex; justify-content:space-around; gap:10px;">
-            <button onclick="adjSize(2)">A+</button>
-            <button onclick="adjSize(-2)">A-</button>
-            <button onclick="toggleTC()" id="tc-btn">轉繁體</button>
-            <button onclick="closeReader()" style="background:#ff3b30; color:white;">退出</button>
+    <div id="ui-bottom" class="ui-panel">
+        <div id="page-info" style="text-align:center; font-size:12px; color:#666; margin-bottom:12px;">載入中...</div>
+        <div style="display:flex; justify-content:space-around;">
+            <button onclick="adjSize(2)">A +</button>
+            <button onclick="adjSize(-2)">A -</button>
+            <button onclick="toggleTC()" id="tc-btn">轉為繁體</button>
+            <button onclick="closeReader()" style="background:#ff3b30; color:white;">關閉</button>
         </div>
     </div>
 </div>
 
 <script>
-    let library = [];
-    try { library = JSON.parse(localStorage.getItem('reader_v3') || '[]'); } catch(e) { library = []; }
+    let chunks = [], curChunkIdx = 0, curPageIdx = 0, isTC = false;
+    const CHUNK_SIZE = 45000;
     
-    let curBook = null, chunks = [], curChunkIdx = 0, curPageIdx = 0, isTC = false;
-    const CHUNK_SIZE = 40000;
-
-    // 簡繁對應 (簡易版)
-    const tMap = {"说":"說","书":"書","门":"門","长":"長","家":"家","后":"後","蚂":"螞","蚱":"蚱","离":"離","间":"間","断":"斷","圣":"聖","元":"元"};
+    // 簡易簡繁對應
+    const tMap = {"说":"說","书":"書","门":"門","长":"長","家":"家","后":"後","蚂":"螞","蚱":"蚱","离":"離","间":"間","断":"斷","圣":"聖","元":"元","虽":"雖","战":"戰","万":"萬"};
     function toTC(text) { return text.split('').map(c => tMap[c] || c).join(''); }
 
     function handleFile(input) {
         const file = input.files[0]; if (!file) return;
         const reader = new FileReader();
+        
         reader.onload = (e) => {
             let content = e.target.result;
-            // 檢查是否亂碼 (菱形問號特徵)
-            if (content.includes('\uFFFD')) {
+            // 亂碼判斷邏輯優化
+            if (content.includes('\uFFFD') || content.length < 10) {
                 const gReader = new FileReader();
-                gReader.onload = (ge) => saveBook(file.name, ge.target.result);
-                gReader.readAsText(file, "GBK");
+                gReader.onload = (ge) => startReader(file.name, ge.target.result);
+                gReader.readAsText(file, "GBK"); // 強制簡體編碼嘗試
             } else {
-                saveBook(file.name, content);
+                startReader(file.name, content);
             }
         };
         reader.readAsText(file, "UTF-8");
         input.value = '';
     }
 
-    function saveBook(name, content) {
-        try {
-            library.push({ id: Date.now(), name: name.replace('.txt',''), data: content });
-            localStorage.setItem('reader_v3', JSON.stringify(library));
-            renderList();
-        } catch(e) {
-            alert("記憶體不足，請刪除舊書後再上傳。");
-        }
-    }
-
-    function renderList() {
-        const listEl = document.getElementById('book-list');
-        listEl.innerHTML = library.map((b, i) => `
-            <div class="book-card" onclick="openReader(${i})">
-                <div style="font-weight:bold;">${b.name}</div>
-                <div class="del-btn" onclick="event.stopPropagation(); deleteBook(${i})">刪除</div>
-            </div>`).join('') || '<p style="text-align:center; color:#bbb; margin-top:50px;">點選右上角載入 TXT</p>';
-    }
-
-    function openReader(idx) {
-        curBook = library[idx];
-        document.getElementById('cur-title').innerText = curBook.name;
+    function startReader(name, data) {
+        document.getElementById('cur-title').innerText = name.replace('.txt','');
         chunks = [];
-        for (let i = 0; i < curBook.data.length; i += CHUNK_SIZE) chunks.push(curBook.data.substring(i, i + CHUNK_SIZE));
+        for (let i = 0; i < data.length; i += CHUNK_SIZE) {
+            chunks.push(data.substring(i, i + CHUNK_SIZE));
+        }
         curChunkIdx = 0; curPageIdx = 0;
         loadChunk();
         document.getElementById('library').style.display = 'none';
@@ -141,12 +138,14 @@
         if(document.getElementById('ui-top').classList.contains('ui-show')) { toggleUI(); return; }
         const canvas = document.getElementById('content-canvas');
         const max = Math.round(canvas.scrollWidth / window.innerWidth);
+        
         if (dir === 1 && curPageIdx >= max - 1) {
             if (curChunkIdx < chunks.length - 1) { curChunkIdx++; curPageIdx = 0; loadChunk(); }
         } else if (dir === -1 && curPageIdx <= 0) {
             if (curChunkIdx > 0) { curChunkIdx--; curPageIdx = 0; loadChunk(); }
         } else {
-            curPageIdx += dir; applyPage();
+            curPageIdx += dir;
+            applyPage();
         }
         updateInfo();
     }
@@ -156,7 +155,7 @@
     function updateInfo() {
         const canvas = document.getElementById('content-canvas');
         const max = Math.round(canvas.scrollWidth / window.innerWidth);
-        document.getElementById('page-info').innerText = `區段 ${curChunkIdx + 1}/${chunks.length} · 頁 ${curPageIdx + 1}/${max}`;
+        document.getElementById('page-info').innerText = `區段 ${curChunkIdx + 1}/${chunks.length} · 頁碼 ${curPageIdx + 1}/${max}`;
     }
     function adjSize(n) {
         const el = document.getElementById('content-text');
@@ -165,14 +164,14 @@
     }
     function toggleTC() {
         isTC = !isTC;
-        document.getElementById('tc-btn').innerText = isTC ? "恢復簡體" : "轉繁體";
+        document.getElementById('tc-btn').innerText = isTC ? "恢復簡體" : "轉為繁體";
         loadChunk();
     }
-    function deleteBook(i) { if(confirm('刪除？')) { library.splice(i, 1); localStorage.setItem('reader_v3', JSON.stringify(library)); renderList(); } }
-    function closeReader() { document.getElementById('library').style.display = 'block'; document.getElementById('reader').style.display = 'none'; if(document.getElementById('ui-top').classList.contains('ui-show')) toggleUI(); }
-    function clearStorage() { if(confirm('清除所有資料？')) { localStorage.clear(); location.reload(); } }
-
-    renderList();
+    function closeReader() {
+        document.getElementById('library').style.display = 'block';
+        document.getElementById('reader').style.display = 'none';
+        if(document.getElementById('ui-top').classList.contains('ui-show')) toggleUI();
+    }
 </script>
 </body>
 </html>
