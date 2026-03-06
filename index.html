@@ -3,42 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>AI 專業閱讀器 v2.0.1r</title>
+    <title>AI 專業閱讀器 v2.0.2</title>
     <style>
         :root { --bg: #f4f1e9; --text: #33322e; --primary: #007aff; --ui-bg: rgba(255,255,255,0.98); }
-        body { background: var(--bg); color: var(--text); font-family: -apple-system, "PingFang TC", sans-serif; margin: 0; overflow: hidden; height: 100vh; }
+        body { background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; overflow: hidden; height: 100vh; }
         
         /* 書庫介面 */
         #library { padding: calc(env(safe-area-inset-top) + 20px) 20px; max-width: 600px; margin: 0 auto; height: 100vh; overflow-y: auto; box-sizing: border-box; }
-        .v-tag { font-size: 10px; background: #5856d6; color: white; padding: 2px 8px; border-radius: 10px; }
-        .upload-zone { border: 2px dashed #aaa; padding: 40px 20px; border-radius: 20px; background: white; text-align: center; cursor: pointer; margin-bottom: 25px; transition: 0.2s; }
-        .upload-zone:active { transform: scale(0.98); background: #f9f9f9; }
-        .book-card { background: white; padding: 20px; border-radius: 15px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .v-tag { font-size: 10px; background: #34c759; color: white; padding: 2px 8px; border-radius: 10px; }
+        .upload-zone { border: 2px dashed #aaa; padding: 40px 20px; border-radius: 20px; background: white; text-align: center; cursor: pointer; margin-bottom: 25px; }
+        .book-card { background: white; padding: 18px; border-radius: 14px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
 
-        /* 閱讀器核心排版 */
+        /* 閱讀器佈局 */
         #reader { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg); z-index: 1000; }
         #content-viewport { width: 100vw; height: 100vh; overflow: hidden; }
-        #content-canvas { 
-            height: calc(100vh - 100px); /* 留白避開系統欄 */
-            margin: 50px 0; 
-            column-width: 100vw; column-gap: 0; 
-            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1); 
-        }
+        #content-canvas { height: calc(100vh - 120px); margin: 60px 0; column-width: 100vw; column-gap: 0; transition: transform 0.25s ease-out; }
         #content-text { padding: 0 25px; font-size: 22px; line-height: 1.8; white-space: pre-wrap; word-break: break-all; text-align: justify; }
 
-        /* 點擊熱區 */
+        /* 頂部/底部選單 - 修正跑版 */
+        .ui-panel { position: fixed; left: 0; width: 100%; background: var(--ui-bg); backdrop-filter: blur(15px); transition: 0.3s; z-index: 1010; opacity: 0; pointer-events: none; }
+        #ui-top { top: 0; padding: calc(env(safe-area-inset-top) + 10px) 20px 15px 20px; border-bottom: 1px solid #ddd; transform: translateY(-100%); display: flex; justify-content: space-between; align-items: center; }
+        #ui-bottom { bottom: 0; padding: 15px 20px calc(env(safe-area-inset-bottom) + 20px) 20px; border-top: 1px solid #ddd; transform: translateY(100%); }
+        .ui-show { opacity: 1; pointer-events: auto; transform: translateY(0) !important; }
+
+        /* 熱區 */
         .touch-zone { position: fixed; top: 0; height: 100%; z-index: 1001; }
         #zone-prev { left: 0; width: 30%; }
         #zone-menu { left: 30%; width: 40%; }
         #zone-next { right: 0; width: 30%; }
 
-        /* 浮動 UI 選單 */
-        .ui-panel { position: fixed; left: 0; width: 100%; background: var(--ui-bg); backdrop-filter: blur(15px); transition: 0.3s ease; z-index: 1010; opacity: 0; pointer-events: none; }
-        #ui-top { top: 0; padding: calc(env(safe-area-inset-top) + 10px) 20px 15px 20px; transform: translateY(-100%); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; }
-        #ui-bottom { bottom: 0; padding: 15px 20px calc(env(safe-area-inset-bottom) + 15px) 20px; transform: translateY(100%); border-top: 1px solid #ddd; }
-        .ui-show { opacity: 1; pointer-events: auto; transform: translateY(0) !important; }
-
-        /* 專業目錄側欄 */
+        /* 目錄側欄 */
         #toc-panel { position: fixed; left: -100%; top: 0; width: 85%; height: 100%; background: white; z-index: 2000; transition: 0.3s ease; overflow-y: auto; padding: calc(env(safe-area-inset-top) + 20px) 20px; box-sizing: border-box; }
         .toc-item { padding: 16px; border-bottom: 1px solid #f0f0f0; font-size: 15px; color: #333; }
         #toc-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 1999; }
@@ -50,17 +44,14 @@
 <body>
 
 <div id="library">
-    <h2 style="display:flex; justify-content:space-between; align-items:center;">我的書庫 <span class="v-tag">v2.0.1r</span></h2>
-    
+    <h2 style="display:flex; justify-content:space-between; align-items:center;">我的書庫 <span class="v-tag">v2.0.2</span></h2>
     <div class="upload-zone" onclick="document.getElementById('f').click()">
-        <div style="font-size:32px;">📥</div>
-        <div style="font-weight:bold; color:var(--primary); margin-top:10px;">點擊載入小說檔案</div>
-        <div style="font-size:11px; color:#999; margin-top:5px;">支援大檔案載入 · 自動掃描章節</div>
+        <div style="font-size:32px;">📚</div>
+        <div style="font-weight:bold; color:var(--primary); margin-top:10px;">點擊載入 TXT 檔案</div>
+        <div style="font-size:11px; color:#999; margin-top:5px;">智慧章節掃描已啟動</div>
     </div>
-    
     <input type="file" id="f" style="display:none" onchange="handleFile(this)">
     <div id="book-list"></div>
-    <button onclick="localStorage.clear(); location.reload();" style="margin-top:60px; width:100%; opacity:0.15; font-size:10px; background:none; border:1px solid #999; color:#999;">系統重置 (清除紀錄)</button>
 </div>
 
 <div id="reader">
@@ -78,10 +69,11 @@
 
     <div id="ui-bottom" class="ui-panel">
         <div id="page-info" style="text-align:center; font-size:12px; color:#666; margin-bottom:12px;">讀取中...</div>
-        <div style="display:flex; justify-content:space-around;">
-            <button onclick="adjSize(2)">A +</button>
-            <button onclick="adjSize(-2)">A -</button>
+        <div style="display:flex; justify-content:space-around; align-items:center;">
+            <button onclick="adjSize(2)">A+</button>
+            <button onclick="adjSize(-2)">A-</button>
             <button onclick="toggleTC()" id="tc-btn">轉為繁體</button>
+            <button onclick="toggleTTS()" id="tts-btn">🎧 聽書</button>
         </div>
     </div>
 </div>
@@ -91,7 +83,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js"></script>
 <script>
-    let library = JSON.parse(localStorage.getItem('lib_v7') || '[]');
+    let library = JSON.parse(localStorage.getItem('lib_v8') || '[]');
     let currentData = "", chunks = [], chapters = [], curChunkIdx = 0, curPageIdx = 0, isTC = false, currentBookKey = "";
     const CHUNK_SIZE = 45000;
     const converter = OpenCC.Converter({ from: 'cn', to: 'twp' });
@@ -101,7 +93,6 @@
         const reader = new FileReader();
         reader.onload = (e) => {
             let content = e.target.result;
-            // 亂碼判讀
             if (content.includes('\uFFFD')) {
                 const gReader = new FileReader();
                 gReader.onload = (ge) => initBook(file.name, ge.target.result);
@@ -109,41 +100,42 @@
             } else { initBook(file.name, content); }
         };
         reader.readAsText(file, "UTF-8");
+        input.value = '';
     }
 
     function initBook(name, data) {
         currentData = data;
         const cleanName = name.replace('.txt','');
-        currentBookKey = cleanName + "_" + data.length; // 生成特徵碼
+        currentBookKey = btoa(encodeURIComponent(cleanName)).substring(0,16) + "_" + data.length;
         
-        // 儲存至清單 (不存 data，避免溢位)
         if (!library.find(b => b.key === currentBookKey)) {
             library.push({ name: cleanName, key: currentBookKey });
-            localStorage.setItem('lib_v7', JSON.stringify(library));
+            localStorage.setItem('lib_v8', JSON.stringify(library));
         }
 
-        // 智慧型章節掃描 (行首識別)
+        // --- 智慧章節過濾演算法 ---
         chapters = [];
         const lines = data.split('\n');
-        let charCount = 0;
+        let totalChars = 0;
         const reg = /^(第?\s*[0-9一二三四五六七八九十百千萬]+[章節回卷].*)|^(楔子.*)|^(序章.*)/;
+        const punctuation = /[，。！？、；：「」『』（）]/; // 標點符號過濾
+
         lines.forEach(line => {
             const trimmed = line.trim();
-            if (trimmed.length > 0 && trimmed.length < 35 && reg.test(trimmed)) {
-                chapters.push({ name: trimmed, pos: charCount });
+            // 規則：長度介於 2-25 字，符合正則，且末尾不帶常見標點
+            if (trimmed.length > 1 && trimmed.length < 25 && reg.test(trimmed) && !punctuation.test(trimmed.slice(-1))) {
+                chapters.push({ name: trimmed, pos: totalChars });
             }
-            charCount += line.length + 1; // +1 為換行符
+            totalChars += line.length + 1;
         });
         renderTOC();
 
-        // 分段處理
         chunks = [];
         for (let i = 0; i < data.length; i += CHUNK_SIZE) chunks.push(data.substring(i, i + CHUNK_SIZE));
         
-        // 進度檢查
         const prog = JSON.parse(localStorage.getItem('prog_' + currentBookKey) || 'null');
         if (prog && confirm("偵測到上次閱讀紀錄，是否跳轉？")) {
-            curChunkIdx = prog.c; curPageIdx = prog.p;
+            curChunkIdx = prog.c; curPageIdx = Math.min(prog.p, 100); 
         } else {
             curChunkIdx = 0; curPageIdx = 0;
         }
@@ -157,18 +149,10 @@
     function renderLibrary() {
         const list = document.getElementById('book-list');
         list.innerHTML = library.map((b, i) => `
-            <div class="book-card" onclick="alert('請點擊上方按鈕重新載入檔案以啟動記憶')">
-                <div style="flex:1">
-                    <strong>${b.name}</strong>
-                    <div style="font-size:11px; color:#999; margin-top:4px;">${getProgDesc(b.key)}</div>
-                </div>
-                <button onclick="event.stopPropagation(); deleteBook(${i})" style="color:red;">✕</button>
+            <div class="book-card" onclick="alert('請重新載入該檔案讀取')">
+                <div style="flex:1"><strong>${b.name}</strong></div>
+                <button onclick="event.stopPropagation(); deleteBook(${i})" style="color:red; background:none;">✕</button>
             </div>`).join('') || '<p style="text-align:center; color:#999; margin-top:50px;">目前尚無紀錄</p>';
-    }
-
-    function getProgDesc(key) {
-        const p = JSON.parse(localStorage.getItem('prog_' + key) || 'null');
-        return p ? `已讀至 區段 ${p.c + 1} 頁 ${p.p + 1}` : '新書籍';
     }
 
     function renderTOC() {
@@ -217,7 +201,10 @@
     }
 
     function applyPage() { document.getElementById('content-canvas').style.transform = `translateX(-${curPageIdx * 100}vw)`; }
-    function toggleUI() { document.getElementById('ui-top').classList.toggle('ui-show'); document.getElementById('ui-bottom').classList.toggle('ui-show'); }
+    function toggleUI() { 
+        document.getElementById('ui-top').classList.toggle('ui-show'); 
+        document.getElementById('ui-bottom').classList.toggle('ui-show'); 
+    }
     function updateInfo() {
         const canvas = document.getElementById('content-canvas');
         const max = Math.round(canvas.scrollWidth / window.innerWidth) || 1;
@@ -236,7 +223,7 @@
     function deleteBook(idx) {
         const key = library[idx].key;
         library.splice(idx, 1);
-        localStorage.setItem('lib_v7', JSON.stringify(library));
+        localStorage.setItem('lib_v8', JSON.stringify(library));
         localStorage.removeItem('prog_' + key);
         renderLibrary();
     }
@@ -248,6 +235,12 @@
         document.getElementById('reader').style.display = 'none'; 
         renderLibrary();
     }
+    
+    // 聽書 API 初始化
+    function toggleTTS() {
+        alert("聽書功能正在串接中，即將隨 v2.0.2b 更新開放！");
+    }
+    
     renderLibrary();
 </script>
 </body>
