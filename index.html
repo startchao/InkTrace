@@ -2,330 +2,110 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>墨痕 InkTrace - 流光閱讀器</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minimal Reader</title>
     <style>
-        :root {
-            --bg: #f4f1ea; --surface: #ffffff; --text: #2c2c2c;
-            --accent: #8e6d5d; --highlight: rgba(142, 109, 93, 0.15);
-            --border: #dcd7ce; --safe-top: env(safe-area-inset-top, 0px);
-        }
-
-        /* 夜間模式 */
-        [data-theme="dark"] {
-            --bg: #1a1a1a; --surface: #242424; --text: #d1d1d1;
-            --accent: #c49a6c; --highlight: rgba(196, 154, 108, 0.2);
-            --border: #333;
-        }
-
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body, html { 
-            height: 100%; margin: 0; overflow: hidden; 
-            font-family: "PingFang TC", "Microsoft JhengHei", serif;
-            background: var(--bg); color: var(--text); transition: 0.3s;
-        }
-
-        /* 佈局 */
-        .app-container { display: flex; flex-direction: column; height: 100vh; }
-        header { 
-            padding: calc(var(--safe-top) + 10px) 20px 10px; 
-            background: var(--surface); border-bottom: 1px solid var(--border);
-            display: flex; justify-content: space-between; align-items: center; z-index: 100;
-        }
-
-        .reader-viewport { 
-            flex: 1; position: relative; overflow: hidden; 
-            padding: 20px; display: flex; justify-content: center;
-        }
-
-        #content-area {
-            width: 100%; max-width: 800px; line-height: 2; font-size: 18px;
-            text-align: justify; transition: transform 0.3s ease;
-        }
-
-        /* 直排模式樣式 */
-        .vertical-mode {
-            writing-mode: vertical-rl;
-            text-orientation: mixed;
-            height: 80%; width: auto !important;
-            max-width: none !important;
-        }
-
-        /* 流光高亮效果 */
-        p { 
-            margin-bottom: 1.5em; padding: 4px 8px; border-radius: 6px;
-            transition: background 0.4s ease, transform 0.2s;
-            cursor: pointer;
-        }
-        p.reading-active { 
-            background: var(--highlight); 
-            box-shadow: 0 0 0 2px var(--highlight);
-            transform: scale(1.01);
-        }
-
-        /* 控制面板 */
-        .controls {
-            position: fixed; bottom: 0; left: 0; right: 0;
-            background: var(--surface); border-top: 1px solid var(--border);
-            padding: 15px 20px calc(env(safe-area-inset-bottom) + 15px);
-            display: flex; justify-content: space-around; transform: translateY(100%);
-            transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 1000;
-        }
-        .controls.show { transform: translateY(0); }
-
-        .btn {
-            background: none; border: 1px solid var(--border); color: var(--text);
-            padding: 8px 15px; border-radius: 20px; cursor: pointer; font-size: 14px;
-        }
-        .btn.primary { background: var(--accent); color: white; border: none; }
-
-        /* 書架介面 */
-        #library {
-            position: fixed; inset: 0; background: var(--bg); z-index: 2000;
-            padding: 40px 20px; overflow-y: auto;
-        }
-        .book-card {
-            background: var(--surface); padding: 20px; border-radius: 12px;
-            margin-bottom: 15px; border: 1px solid var(--border);
+        :root { --bg: #ffffff; --text: #333333; }
+        body.dark { --bg: #1a1a1a; --text: #cccccc; }
+        body { background: var(--bg); color: var(--text); font-family: sans-serif; margin: 0; transition: 0.3s; }
+        
+        /* 書庫樣式 */
+        #library { padding: 20px; }
+        .book-item { 
+            padding: 15px; border-bottom: 1px solid #eee; 
             display: flex; justify-content: space-between; align-items: center;
         }
-        .hidden { display: none !important; }
 
-        /* 翻譯小標籤 */
-        .translation {
-            display: block; font-size: 0.8em; color: var(--accent);
-            margin-top: 4px; opacity: 0.8;
-        }
+        /* 閱讀器樣式 */
+        #reader { display: none; padding: 20px; line-height: 1.8; font-size: 18px; }
+        .controls { position: fixed; bottom: 0; width: 100%; background: rgba(0,0,0,0.8); color: white; display: flex; justify-content: space-around; padding: 10px 0; }
+        
+        #content { white-space: pre-wrap; }
     </style>
 </head>
 <body>
 
-<div class="app-container">
-    <header>
-        <div style="font-weight: bold; letter-spacing: 2px;">墨痕 INKTRACE</div>
-        <button class="btn" onclick="toggleLibrary()">書庫</button>
-    </header>
+<div id="library">
+    <h2>我的書庫</h2>
+    <input type="file" id="fileInput" accept=".txt" style="display:none">
+    <button onclick="document.getElementById('fileInput').click()">＋ 上傳 TXT</button>
+    <button onclick="toggleTheme()">🌙/☀️ 切換模式</button>
+    <div id="bookList"></div>
+</div>
 
-    <main class="reader-viewport" onclick="toggleUI()">
-        <div id="content-area">
-            <p style="text-align: center; margin-top: 100px; color: #888;">請從書庫匯入 TXT 檔案開始閱讀</p>
-        </div>
-    </main>
-
-    <div class="controls" id="main-controls">
-        <button class="btn" onclick="prevPage()">上一頁</button>
-        <button id="tts-btn" class="btn primary" onclick="handleTTS()">▶ 聽書</button>
-        <button class="btn" id="convert-btn" onclick="toggleConvert()">繁</button>
-        <button class="btn" onclick="toggleVertical()">直排</button>
-        <button class="btn" onclick="nextPage()">下一頁</button>
+<div id="reader">
+    <div id="content"></div>
+    <div class="controls">
+        <button onclick="changeFontSize(-2)">A-</button>
+        <button onclick="changeFontSize(2)">A+</button>
+        <button onclick="closeReader()">返回書庫</button>
     </div>
 </div>
 
-<div id="library">
-    <h2 style="margin-bottom: 30px;">我的書庫</h2>
-    <input type="file" id="file-input" accept=".txt" hidden onchange="importFile(event)">
-    <button class="btn primary" style="width: 100%; padding: 15px; margin-bottom: 20px;" onclick="document.getElementById('file-input').click()">+ 匯入新書 (TXT)</button>
-    <div id="book-list"></div>
-</div>
-
+<script src="https://unpkg.com/dexie/dist/dexie.js"></script>
 <script>
-    // --- 狀態管理 ---
-    let state = {
-        rawText: "",
-        paragraphs: [],
-        currentPage: 0,
-        pageSize: 10, // 每頁顯示段落數
-        isReading: false,
-        currentParaIdx: 0,
-        isVertical: false,
-        isConverted: true,
-        books: []
-    };
+    // --- 資料庫初始化 ---
+    const db = new Dexie("ReaderDB");
+    db.version(1).stores({ books: '++id, title, lastRead' });
 
-    const synth = window.speechSynthesis;
-    let utterance = null;
-
-    // --- 初始化 ---
-    window.onload = () => {
-        loadLibrary();
-    };
-
-    // --- 書庫功能 ---
-    function importFile(e) {
+    // --- 核心功能：上傳 ---
+    document.getElementById('fileInput').onchange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const book = {
-                id: Date.now(),
-                title: file.name.replace('.txt', ''),
-                content: event.target.result,
-                progress: 0
-            };
-            state.books.push(book);
-            saveLibrary();
-            renderLibrary();
-        };
-        reader.readAsText(file);
-    }
+        const text = await file.text();
+        await db.books.add({ title: file.name, content: text, progress: 0, lastRead: Date.now() });
+        renderLibrary();
+    };
 
-    function renderLibrary() {
-        const list = document.getElementById('book-list');
-        list.innerHTML = state.books.map(b => `
-            <div class="book-card" onclick="openBook(${b.id})">
-                <div>
-                    <div style="font-weight: 500;">${b.title}</div>
-                    <div style="font-size: 12px; color: #888;">已讀 ${b.progress}%</div>
-                </div>
-                <button class="btn" onclick="event.stopPropagation(); deleteBook(${b.id})">刪除</button>
+    // --- 核心功能：書庫渲染 ---
+    async function renderLibrary() {
+        const books = await db.books.reverse().sortBy('lastRead');
+        const list = document.getElementById('bookList');
+        list.innerHTML = books.map(b => `
+            <div class="book-item" oncontextmenu="deleteBook(event, ${b.id})">
+                <span onclick="openBook(${b.id})">${b.title}</span>
+                <small>${Math.round(b.progress * 100)}%</small>
             </div>
         `).join('');
     }
 
-    function openBook(id) {
-        const book = state.books.find(b => b.id === id);
-        state.rawText = book.content;
-        state.paragraphs = state.rawText.split('\n').filter(p => p.trim() !== "");
-        state.currentPage = 0;
-        state.currentParaIdx = 0;
-        renderPage();
-        toggleLibrary();
+    // --- 核心功能：閱讀器控制 ---
+    let currentBookId = null;
+    async function openBook(id) {
+        const book = await db.books.get(id);
+        currentBookId = id;
+        document.getElementById('content').innerText = book.content;
+        document.getElementById('library').style.display = 'none';
+        document.getElementById('reader').style.display = 'block';
+        window.scrollTo(0, book.progress * document.body.scrollHeight);
     }
 
-    // --- 渲染引擎 ---
-    function renderPage() {
-        const start = state.currentPage * state.pageSize;
-        const end = start + state.pageSize;
-        const pageParas = state.paragraphs.slice(start, end);
-        
-        const area = document.getElementById('content-area');
-        area.innerHTML = pageParas.map((p, i) => `
-            <p id="para-${start + i}" onclick="jumpToPara(${start + i})">${p}</p>
-        `).join('');
-        
-        updateProgress();
+    function closeReader() {
+        const progress = window.scrollY / document.body.scrollHeight;
+        db.books.update(currentBookId, { progress: progress, lastRead: Date.now() });
+        document.getElementById('library').style.display = 'block';
+        document.getElementById('reader').style.display = 'none';
+        renderLibrary();
     }
 
-    // --- 流光聽書系統 (核心邏輯) ---
-    function handleTTS() {
-        if (state.isReading) {
-            stopTTS();
-        } else {
-            startTTS();
-        }
+    // --- 輔助功能 ---
+    function changeFontSize(delta) {
+        const el = document.getElementById('content');
+        const cur = parseInt(window.getComputedStyle(el).fontSize);
+        el.style.fontSize = (cur + delta) + 'px';
     }
 
-    function startTTS() {
-        if (state.currentParaIdx >= state.paragraphs.length) return;
-        
-        state.isReading = true;
-        document.getElementById('tts-btn').textContent = "⏸ 暫停";
-        speakParagraph(state.currentParaIdx);
-    }
+    function toggleTheme() { document.body.classList.toggle('dark'); }
 
-    function speakParagraph(idx) {
-        if (!state.isReading || idx >= state.paragraphs.length) return;
-
-        // 檢查是否需要自動翻頁
-        const startIdx = state.currentPage * state.pageSize;
-        const endIdx = startIdx + state.pageSize;
-        
-        if (idx >= endIdx) {
-            nextPage(); 
-            // 翻頁後延遲一下再繼續，確保 DOM 已渲染
-            setTimeout(() => speakParagraph(idx), 300);
-            return;
-        }
-
-        state.currentParaIdx = idx;
-        
-        // 視覺高亮 (流光效果)
-        document.querySelectorAll('p').forEach(p => p.classList.remove('reading-active'));
-        const activeP = document.getElementById(`para-${idx}`);
-        if (activeP) {
-            activeP.classList.add('reading-active');
-            activeP.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-
-        // 語音合成
-        utterance = new SpeechSynthesisUtterance(state.paragraphs[idx]);
-        utterance.lang = 'zh-TW';
-        utterance.rate = 1.0;
-
-        utterance.onend = () => {
-            if (state.isReading) {
-                speakParagraph(idx + 1);
-            }
-        };
-
-        synth.speak(utterance);
-    }
-
-    function stopTTS() {
-        state.isReading = false;
-        synth.cancel();
-        document.getElementById('tts-btn').textContent = "▶ 聽書";
-        document.querySelectorAll('p').forEach(p => p.classList.remove('reading-active'));
-    }
-
-    // --- 頁面交互 ---
-    function nextPage() {
-        if ((state.currentPage + 1) * state.pageSize < state.paragraphs.length) {
-            state.currentPage++;
-            renderPage();
-        }
-    }
-
-    function prevPage() {
-        if (state.currentPage > 0) {
-            state.currentPage--;
-            renderPage();
-        }
-    }
-
-    function jumpToPara(idx) {
-        state.currentParaIdx = idx;
-        if (state.isReading) {
-            synth.cancel();
-            speakParagraph(idx);
-        }
-    }
-
-    function toggleVertical() {
-        state.isVertical = !state.isVertical;
-        document.getElementById('content-area').classList.toggle('vertical-mode');
-    }
-
-    function toggleUI() {
-        document.getElementById('main-controls').classList.toggle('show');
-    }
-
-    function toggleLibrary() {
-        document.getElementById('library').classList.toggle('hidden');
-    }
-
-    function updateProgress() {
-        const total = state.paragraphs.length;
-        const current = (state.currentPage + 1) * state.pageSize;
-        const progress = Math.min(100, Math.round((current / total) * 100));
-        // 此處可擴充儲存到資料庫
-    }
-
-    // --- 資料持久化 ---
-    function saveLibrary() { localStorage.setItem('it_library', JSON.stringify(state.books)); }
-    function loadLibrary() {
-        const saved = localStorage.getItem('it_library');
-        if (saved) {
-            state.books = JSON.parse(saved);
+    async function deleteBook(e, id) {
+        e.preventDefault();
+        if(confirm('確定要刪除這本書嗎？')) {
+            await db.books.delete(id);
             renderLibrary();
         }
     }
-    function deleteBook(id) {
-        state.books = state.books.filter(b => b.id !== id);
-        saveLibrary();
-        renderLibrary();
-    }
-</script>
 
+    renderLibrary();
+</script>
 </body>
 </html>
