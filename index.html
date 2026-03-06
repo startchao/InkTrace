@@ -3,56 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>AI 專業閱讀器 v2.0.1q</title>
+    <title>AI 專業閱讀器 v2.0.1r</title>
     <style>
         :root { --bg: #f4f1e9; --text: #33322e; --primary: #007aff; --ui-bg: rgba(255,255,255,0.98); }
-        body { background: var(--bg); color: var(--text); font-family: sans-serif; margin: 0; overflow: hidden; height: 100vh; }
+        body { background: var(--bg); color: var(--text); font-family: -apple-system, "PingFang TC", sans-serif; margin: 0; overflow: hidden; height: 100vh; }
         
-        /* 書庫畫面 */
+        /* 書庫介面 */
         #library { padding: calc(env(safe-area-inset-top) + 20px) 20px; max-width: 600px; margin: 0 auto; height: 100vh; overflow-y: auto; box-sizing: border-box; }
-        .v-tag { font-size: 10px; background: #ff9500; color: white; padding: 2px 8px; border-radius: 10px; }
-        .upload-zone { border: 2px dashed #bbb; padding: 40px 20px; border-radius: 20px; background: white; text-align: center; cursor: pointer; margin-bottom: 25px; }
+        .v-tag { font-size: 10px; background: #5856d6; color: white; padding: 2px 8px; border-radius: 10px; }
+        .upload-zone { border: 2px dashed #aaa; padding: 40px 20px; border-radius: 20px; background: white; text-align: center; cursor: pointer; margin-bottom: 25px; transition: 0.2s; }
+        .upload-zone:active { transform: scale(0.98); background: #f9f9f9; }
         .book-card { background: white; padding: 20px; border-radius: 15px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
 
-        /* 閱讀器 */
+        /* 閱讀器核心排版 */
         #reader { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg); z-index: 1000; }
-        #content-canvas { height: calc(100vh - 100px); margin: 50px 0; column-width: 100vw; column-gap: 0; transition: transform 0.2s ease; }
+        #content-viewport { width: 100vw; height: 100vh; overflow: hidden; }
+        #content-canvas { 
+            height: calc(100vh - 100px); /* 留白避開系統欄 */
+            margin: 50px 0; 
+            column-width: 100vw; column-gap: 0; 
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1); 
+        }
         #content-text { padding: 0 25px; font-size: 22px; line-height: 1.8; white-space: pre-wrap; word-break: break-all; text-align: justify; }
 
-        /* 選單控制 */
+        /* 點擊熱區 */
         .touch-zone { position: fixed; top: 0; height: 100%; z-index: 1001; }
         #zone-prev { left: 0; width: 30%; }
         #zone-menu { left: 30%; width: 40%; }
         #zone-next { right: 0; width: 30%; }
 
-        .ui-panel { position: fixed; left: 0; width: 100%; background: var(--ui-bg); backdrop-filter: blur(15px); transition: 0.3s; z-index: 1010; opacity: 0; pointer-events: none; }
+        /* 浮動 UI 選單 */
+        .ui-panel { position: fixed; left: 0; width: 100%; background: var(--ui-bg); backdrop-filter: blur(15px); transition: 0.3s ease; z-index: 1010; opacity: 0; pointer-events: none; }
         #ui-top { top: 0; padding: calc(env(safe-area-inset-top) + 10px) 20px 15px 20px; transform: translateY(-100%); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; }
         #ui-bottom { bottom: 0; padding: 15px 20px calc(env(safe-area-inset-bottom) + 15px) 20px; transform: translateY(100%); border-top: 1px solid #ddd; }
         .ui-show { opacity: 1; pointer-events: auto; transform: translateY(0) !important; }
 
-        /* 目錄側欄 */
-        #toc-panel { position: fixed; left: -100%; top: 0; width: 85%; height: 100%; background: white; z-index: 2000; transition: 0.3s; overflow-y: auto; padding: calc(env(safe-area-inset-top) + 20px) 20px; box-sizing: border-box; }
-        .toc-item { padding: 16px; border-bottom: 1px solid #eee; font-size: 14px; }
+        /* 專業目錄側欄 */
+        #toc-panel { position: fixed; left: -100%; top: 0; width: 85%; height: 100%; background: white; z-index: 2000; transition: 0.3s ease; overflow-y: auto; padding: calc(env(safe-area-inset-top) + 20px) 20px; box-sizing: border-box; }
+        .toc-item { padding: 16px; border-bottom: 1px solid #f0f0f0; font-size: 15px; color: #333; }
         #toc-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 1999; }
         
-        button { border: none; background: #efeff4; padding: 10px 18px; border-radius: 10px; cursor: pointer; }
+        button { border: none; background: #efeff4; padding: 10px 18px; border-radius: 10px; cursor: pointer; font-size: 14px; }
+        .btn-p { background: var(--primary); color: white; }
     </style>
 </head>
 <body>
 
 <div id="library">
-    <h2 style="display:flex; justify-content:space-between; align-items:center;">我的書庫 <span class="v-tag">v2.0.1q</span></h2>
+    <h2 style="display:flex; justify-content:space-between; align-items:center;">我的書庫 <span class="v-tag">v2.0.1r</span></h2>
     
     <div class="upload-zone" onclick="document.getElementById('f').click()">
-        <div style="font-size:30px;">📂</div>
-        <div style="font-weight:bold; color:var(--primary); margin-top:10px;">點擊載入 TXT 檔案</div>
-        <div style="font-size:11px; color:#999; margin-top:5px;">支援超大檔案且自動解決亂碼</div>
+        <div style="font-size:32px;">📥</div>
+        <div style="font-weight:bold; color:var(--primary); margin-top:10px;">點擊載入小說檔案</div>
+        <div style="font-size:11px; color:#999; margin-top:5px;">支援大檔案載入 · 自動掃描章節</div>
     </div>
     
     <input type="file" id="f" style="display:none" onchange="handleFile(this)">
     <div id="book-list"></div>
-    
-    <button onclick="localStorage.clear(); location.reload();" style="margin-top:50px; width:100%; opacity:0.2; font-size:10px;">重置系統 (當機時使用)</button>
+    <button onclick="localStorage.clear(); location.reload();" style="margin-top:60px; width:100%; opacity:0.15; font-size:10px; background:none; border:1px solid #999; color:#999;">系統重置 (清除紀錄)</button>
 </div>
 
 <div id="reader">
@@ -83,9 +91,9 @@
 
 <script src="https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js"></script>
 <script>
-    let library = JSON.parse(localStorage.getItem('lib_v6') || '[]');
-    let currentData = "", chunks = [], chapters = [], curChunkIdx = 0, curPageIdx = 0, isTC = false, currentBookId = null;
-    const CHUNK_SIZE = 40000;
+    let library = JSON.parse(localStorage.getItem('lib_v7') || '[]');
+    let currentData = "", chunks = [], chapters = [], curChunkIdx = 0, curPageIdx = 0, isTC = false, currentBookKey = "";
+    const CHUNK_SIZE = 45000;
     const converter = OpenCC.Converter({ from: 'cn', to: 'twp' });
 
     function handleFile(input) {
@@ -93,78 +101,89 @@
         const reader = new FileReader();
         reader.onload = (e) => {
             let content = e.target.result;
-            // 亂碼修正
+            // 亂碼判讀
             if (content.includes('\uFFFD')) {
                 const gReader = new FileReader();
-                gReader.onload = (ge) => processBook(file.name, ge.target.result);
+                gReader.onload = (ge) => initBook(file.name, ge.target.result);
                 gReader.readAsText(file, "GBK");
-            } else { processBook(file.name, content); }
+            } else { initBook(file.name, content); }
         };
         reader.readAsText(file, "UTF-8");
     }
 
-    function processBook(name, data) {
-        // v2.0.1q 策略：不儲存龐大的 data 到 localStorage，僅持有在記憶體中
+    function initBook(name, data) {
         currentData = data;
-        const id = "book_" + Date.now();
-        const bookInfo = { id: id, name: name.replace('.txt','') };
+        const cleanName = name.replace('.txt','');
+        currentBookKey = cleanName + "_" + data.length; // 生成特徵碼
         
-        // 更新清單
-        library.push(bookInfo);
-        localStorage.setItem('lib_v6', JSON.stringify(library));
+        // 儲存至清單 (不存 data，避免溢位)
+        if (!library.find(b => b.key === currentBookKey)) {
+            library.push({ name: cleanName, key: currentBookKey });
+            localStorage.setItem('lib_v7', JSON.stringify(library));
+        }
+
+        // 智慧型章節掃描 (行首識別)
+        chapters = [];
+        const lines = data.split('\n');
+        let charCount = 0;
+        const reg = /^(第?\s*[0-9一二三四五六七八九十百千萬]+[章節回卷].*)|^(楔子.*)|^(序章.*)/;
+        lines.forEach(line => {
+            const trimmed = line.trim();
+            if (trimmed.length > 0 && trimmed.length < 35 && reg.test(trimmed)) {
+                chapters.push({ name: trimmed, pos: charCount });
+            }
+            charCount += line.length + 1; // +1 為換行符
+        });
+        renderTOC();
+
+        // 分段處理
+        chunks = [];
+        for (let i = 0; i < data.length; i += CHUNK_SIZE) chunks.push(data.substring(i, i + CHUNK_SIZE));
         
-        // 直接開啟閱讀
-        initReader(bookInfo.name, data, id);
+        // 進度檢查
+        const prog = JSON.parse(localStorage.getItem('prog_' + currentBookKey) || 'null');
+        if (prog && confirm("偵測到上次閱讀紀錄，是否跳轉？")) {
+            curChunkIdx = prog.c; curPageIdx = prog.p;
+        } else {
+            curChunkIdx = 0; curPageIdx = 0;
+        }
+        
+        loadChunk();
+        document.getElementById('cur-title').innerText = cleanName;
+        document.getElementById('library').style.display = 'none';
+        document.getElementById('reader').style.display = 'block';
     }
 
     function renderLibrary() {
         const list = document.getElementById('book-list');
         list.innerHTML = library.map((b, i) => `
-            <div class="book-card" onclick="alert('請重新點擊上傳按鈕載入該檔案讀取')">
-                <strong>${b.name}</strong>
+            <div class="book-card" onclick="alert('請點擊上方按鈕重新載入檔案以啟動記憶')">
+                <div style="flex:1">
+                    <strong>${b.name}</strong>
+                    <div style="font-size:11px; color:#999; margin-top:4px;">${getProgDesc(b.key)}</div>
+                </div>
                 <button onclick="event.stopPropagation(); deleteBook(${i})" style="color:red;">✕</button>
-            </div>`).join('') || '<p style="text-align:center; color:#999; margin-top:50px;">請點擊上方按鈕載入 TXT</p>';
+            </div>`).join('') || '<p style="text-align:center; color:#999; margin-top:50px;">目前尚無紀錄</p>';
     }
 
-    function initReader(name, data, id) {
-        currentBookId = id;
-        currentData = data;
-        document.getElementById('cur-title').innerText = name;
-        
-        // 重新掃描章節
-        chapters = [];
-        const reg = /(第?\s*[0-9一二三四五六七八九十百千萬]+[章節回卷].*)|(楔子.*)|(序章.*)/g;
-        let m;
-        while ((m = reg.exec(data)) !== null) {
-            chapters.push({ name: m[0].trim(), pos: m.index });
-        }
-        renderTOC();
-
-        chunks = [];
-        for (let i = 0; i < data.length; i += CHUNK_SIZE) chunks.push(data.substring(i, i + CHUNK_SIZE));
-        
-        // 恢復進度
-        const progress = JSON.parse(localStorage.getItem('progress_' + id) || '{"c":0, "p":0}');
-        curChunkIdx = progress.c; curPageIdx = progress.p;
-        
-        loadChunk();
-        document.getElementById('library').style.display = 'none';
-        document.getElementById('reader').style.display = 'block';
+    function getProgDesc(key) {
+        const p = JSON.parse(localStorage.getItem('prog_' + key) || 'null');
+        return p ? `已讀至 區段 ${p.c + 1} 頁 ${p.p + 1}` : '新書籍';
     }
 
     function renderTOC() {
         document.getElementById('toc-list').innerHTML = chapters.map(ch => 
-            `<div class="toc-item" onclick="jumpToChapter(${ch.pos})">${ch.name}</div>`).join('');
+            `<div class="toc-item" onclick="jumpToChapter(${ch.pos})">${ch.name}</div>`).join('') || '<div class="toc-item">未偵測到章節</div>';
     }
 
     function jumpToChapter(pos) {
         curChunkIdx = Math.floor(pos / CHUNK_SIZE);
-        const chunkRelativePos = pos % CHUNK_SIZE;
+        const relPos = pos % CHUNK_SIZE;
         loadChunk();
         setTimeout(() => {
             const canvas = document.getElementById('content-canvas');
-            const maxPages = Math.round(canvas.scrollWidth / window.innerWidth);
-            curPageIdx = Math.floor((chunkRelativePos / chunks[curChunkIdx].length) * maxPages);
+            const max = Math.round(canvas.scrollWidth / window.innerWidth);
+            curPageIdx = Math.floor((relPos / chunks[curChunkIdx].length) * max);
             applyPage();
             updateInfo();
         }, 150);
@@ -172,8 +191,8 @@
     }
 
     function loadChunk() {
-        const textEl = document.getElementById('content-text');
-        textEl.textContent = isTC ? converter(chunks[curChunkIdx]) : chunks[curChunkIdx];
+        const el = document.getElementById('content-text');
+        el.textContent = isTC ? converter(chunks[curChunkIdx]) : chunks[curChunkIdx];
         setTimeout(updateInfo, 50);
         applyPage();
     }
@@ -190,11 +209,11 @@
             curPageIdx += dir; applyPage();
         }
         updateInfo();
-        saveProgress();
+        saveProg();
     }
 
-    function saveProgress() {
-        if(currentBookId) localStorage.setItem('progress_' + currentBookId, JSON.stringify({c: curChunkIdx, p: curPageIdx}));
+    function saveProg() {
+        if(currentBookKey) localStorage.setItem('prog_' + currentBookKey, JSON.stringify({c: curChunkIdx, p: curPageIdx}));
     }
 
     function applyPage() { document.getElementById('content-canvas').style.transform = `translateX(-${curPageIdx * 100}vw)`; }
@@ -214,15 +233,21 @@
         document.getElementById('tc-btn').innerText = isTC ? "恢復簡體" : "轉為繁體";
         loadChunk();
     }
-    function deleteBook(idx) { library.splice(idx, 1); localStorage.setItem('lib_v6', JSON.stringify(library)); renderLibrary(); }
+    function deleteBook(idx) {
+        const key = library[idx].key;
+        library.splice(idx, 1);
+        localStorage.setItem('lib_v7', JSON.stringify(library));
+        localStorage.removeItem('prog_' + key);
+        renderLibrary();
+    }
     function openTOC() { document.getElementById('toc-panel').style.left = '0'; document.getElementById('toc-overlay').style.display = 'block'; }
     function closeTOC() { document.getElementById('toc-panel').style.left = '-100%'; document.getElementById('toc-overlay').style.display = 'none'; }
     function closeReader() { 
-        saveProgress();
-        document.getElementById('library').style.display = 'block'; document.getElementById('reader').style.display = 'none'; 
+        saveProg(); 
+        document.getElementById('library').style.display = 'block'; 
+        document.getElementById('reader').style.display = 'none'; 
         renderLibrary();
     }
-    
     renderLibrary();
 </script>
 </body>
