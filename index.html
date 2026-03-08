@@ -1,522 +1,194 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-
-<title>Mobile Novel Reader</title>
-
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小說閱讀器 v3.1</title>
 <style>
-
-body{
-margin:0;
-font-family:-apple-system,BlinkMacSystemFont;
-background:#ffffff;
-color:#000;
-overflow:hidden;
-}
-
-body.night{
-background:#000;
-color:#ccc;
-}
-
-#loader{
-position:absolute;
-top:0;
-bottom:0;
-left:0;
-right:0;
-display:flex;
-flex-direction:column;
-align-items:center;
-justify-content:center;
-text-align:center;
-}
-
-#reader{
-display:none;
-position:absolute;
-top:0;
-bottom:0;
-left:0;
-right:0;
-padding:6%;
-}
-
-#page{
-max-width:720px;
-margin:auto;
-font-size:20px;
-line-height:1.6;
-}
-
-#toolbar{
-
-position:fixed;
-bottom:0;
-left:0;
-right:0;
-
-background:rgba(0,0,0,0.8);
-color:white;
-
-padding:10px;
-
-display:none;
-
-}
-
-button{
-margin:3px;
-}
-
-.highlight{
-background:#ccc;
-}
-
+body{margin:0;font-family:system-ui,sans-serif;background:#f4f4f4;color:#222}
+header{background:#222;color:#fff;padding:10px 16px;display:flex;justify-content:space-between;align-items:center}
+.container{padding:16px}
+button{border:none;padding:8px 14px;border-radius:6px;margin:4px;cursor:pointer;background:#444;color:#fff}
+button:hover{background:#666}
+input{padding:8px;margin:4px;border-radius:4px;border:1px solid #ccc}
+.book{background:#fff;border-radius:8px;padding:12px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 1px 3px rgba(0,0,0,0.1)}
+#reader{display:none}
+#content{white-space:pre-wrap;line-height:1.9;font-size:18px;background:#fff;padding:24px;border-radius:8px;min-height:60vh;max-height:75vh;overflow:auto;box-shadow:0 2px 6px rgba(0,0,0,0.1)}
+#toc{background:#fff;border-radius:8px;padding:12px;margin:12px 0;max-height:160px;overflow:auto;box-shadow:0 1px 4px rgba(0,0,0,0.08)}
+.dark{background:#111;color:#ddd}
+.dark #content,.dark .book,.dark #toc{background:#1e1e1e}
 </style>
 </head>
-
-
 <body>
 
-<div id="loader">
+<header>
+  <span>📚 小說閱讀器 v3.1</span>
+  <div>
+    <button onclick="toggleDark()">🌙 深色</button>
+  </div>
+</header>
 
-<h2>小說閱讀器</h2>
+<div class="container">
+  <div id="library">
+    <input type="file" id="fileInput" accept=".txt">
+    <button onclick="uploadBook()">上傳</button>
+    <input id="search" placeholder="搜尋書名" oninput="searchBooks()">
+    <div id="bookList"></div>
+  </div>
 
-<button onclick="openFile()">載入TXT</button>
+  <div id="reader">
+    <div style="margin-bottom:12px">
+      <button onclick="back()">← 返回</button>
+      <button onclick="convert()">簡→繁</button>
+      <button onclick="speak()">▶ 朗讀</button>
+      <button onclick="pauseSpeak()">⏸</button>
+      <button onclick="resumeSpeak()">▶</button>
+      <button onclick="fontPlus()">A+</button>
+      <button onclick="fontMinus()">A-</button>
+    </div>
 
-<p>支援20MB TXT</p>
-
-<p>v1.5</p>
-
+    <h2 id="title"></h2>
+    <div id="toc"></div>
+    <div id="content"></div>
+  </div>
 </div>
 
-<div id="reader">
-
-<div id="page"></div>
-
-</div>
-
-<div id="toolbar">
-
-<button onclick="toggleNight()">夜間</button>
-
-<button onclick="fontUp()">字+</button>
-
-<button onclick="fontDown()">字-</button>
-
-<button onclick="lineUp()">行+</button>
-
-<button onclick="lineDown()">行-</button>
-
-<button onclick="startReading()">朗讀</button>
-
-<button onclick="stopReading()">停止</button>
-
-<button onclick="addBookmark()">書籤</button>
-
-<span style="float:right">v1.5</span>
-
-</div>
-
-<input type="file" id="fileInput" accept=".txt" style="display:none">
+<!-- 使用 opencc-js CDN (簡→繁) -->
+<script src="https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/cn2t.js"></script>
 
 <script>
+let library = []
+let currentBook = null
+let fontSize = 18
+let converter = OpenCC.Converter({ from: 'cn', to: 'tw' }) // 簡→繁 (台灣標準)
 
-/* 狀態 */
-
-let paragraphs=[]
-let pages=[]
-
-let chapters=[]
-
-let currentPage=0
-
-let fontSize=20
-let lineHeight=1.6
-
-let speechRate=1
-
-let speaking=false
-let speakIndex=0
-
-
-/* 開檔 */
-
-function openFile(){
-
-document.getElementById("fileInput").click()
-
+function loadLibrary() {
+  library = JSON.parse(localStorage.getItem("library") || "[]")
+  renderLibrary()
 }
 
-document.getElementById("fileInput").addEventListener("change",e=>{
-
-loadFile(e.target.files[0])
-
-})
-
-
-/* 拖曳 */
-
-document.body.addEventListener("dragover",e=>e.preventDefault())
-
-document.body.addEventListener("drop",e=>{
-
-e.preventDefault()
-
-loadFile(e.dataTransfer.files[0])
-
-})
-
-
-/* 讀檔 */
-
-function loadFile(file){
-
-let reader=new FileReader()
-
-reader.onload=function(){
-
-startReader(reader.result)
-
+function saveLibrary() {
+  localStorage.setItem("library", JSON.stringify(library))
 }
 
-reader.readAsText(file)
-
+function renderLibrary(list = library) {
+  const box = document.getElementById("bookList")
+  box.innerHTML = ""
+  list.forEach(b => {
+    const div = document.createElement("div")
+    div.className = "book"
+    div.innerHTML = `<div>${b.title}</div>
+      <div>
+        <button onclick="openBook('${b.id}')">閱讀</button>
+        <button onclick="deleteBook('${b.id}')">刪除</button>
+      </div>`
+    box.appendChild(div)
+  })
 }
 
-
-/* 啟動 */
-
-function startReader(text){
-
-document.getElementById("loader").style.display="none"
-
-document.getElementById("reader").style.display="block"
-
-parseText(text)
-
-detectChapters()
-
-buildPages()
-
-loadProgress()
-
-renderPage()
-
+function searchBooks() {
+  const q = document.getElementById("search").value.toLowerCase()
+  renderLibrary(library.filter(b => b.title.toLowerCase().includes(q)))
 }
 
-
-/* TXT解析 */
-
-function parseText(text){
-
-paragraphs=text.split(/\n+/)
-
+function uploadBook() {
+  const f = document.getElementById("fileInput").files[0]
+  if (!f) return
+  const r = new FileReader()
+  r.onload = () => {
+    library.push({ id: Date.now().toString(), title: f.name, content: r.result })
+    saveLibrary()
+    renderLibrary()
+  }
+  r.readAsText(f, "utf-8")
 }
 
-
-/* 章節偵測 */
-
-function detectChapters(){
-
-chapters=[]
-
-paragraphs.forEach((p,i)=>{
-
-if(/第.{1,6}章/.test(p)){
-
-chapters.push({
-title:p,
-index:i
-})
-
+function deleteBook(id) {
+  library = library.filter(b => b.id !== id)
+  localStorage.removeItem("pos_" + id)
+  saveLibrary()
+  renderLibrary()
 }
 
-})
-
+function openBook(id) {
+  currentBook = library.find(b => b.id === id)
+  if (!currentBook) return
+  document.getElementById("title").textContent = currentBook.title
+  document.getElementById("content").textContent = currentBook.content
+  generateTOC()
+  document.getElementById("library").style.display = "none"
+  document.getElementById("reader").style.display = "block"
+  restoreScroll()
 }
 
-
-/* 分頁 */
-
-function buildPages(){
-
-pages=[]
-
-let page=[]
-
-let limit=900
-let count=0
-
-for(let p of paragraphs){
-
-if(p.length>500){
-
-let parts=p.match(/.{1,500}/g)
-
-parts.forEach(add)
-
-}else{
-
-add(p)
-
+function back() {
+  saveScroll()
+  speechSynthesis.cancel()
+  document.getElementById("library").style.display = "block"
+  document.getElementById("reader").style.display = "none"
 }
 
+function generateTOC() {
+  const lines = currentBook.content.split(/\n/)
+  let html = ""
+  lines.forEach((line, i) => {
+    if (/第.{0,10}[章回]/u.test(line.trim())) {
+      html += `<div style="cursor:pointer;padding:4px 0" onclick="scrollToLine(${i})">${line.trim()}</div>`
+    }
+  })
+  document.getElementById("toc").innerHTML = html || "<div>無章節目錄</div>"
 }
 
-function add(p){
-
-if(count+p.length>limit){
-
-pages.push(page)
-
-page=[]
-count=0
+function scrollToLine(n) {
+  const lines = currentBook.content.split(/\n/)
+  let pos = 0
+  for (let i = 0; i < n; i++) pos += lines[i].length + 1
+  document.getElementById("content").scrollTop = pos
 }
 
-page.push(p)
-
-count+=p.length
-
+function speak() {
+  const text = document.getElementById("content").textContent
+  const u = new SpeechSynthesisUtterance(text)
+  u.lang = "zh-TW"
+  speechSynthesis.speak(u)
 }
 
-pages.push(page)
+function pauseSpeak() { speechSynthesis.pause() }
+function resumeSpeak() { speechSynthesis.resume() }
 
+function fontPlus() {
+  fontSize += 2
+  document.getElementById("content").style.fontSize = fontSize + "px"
 }
 
-
-/* 渲染 */
-
-function renderPage(){
-
-let pageDiv=document.getElementById("page")
-
-pageDiv.innerHTML=""
-
-pageDiv.style.fontSize=fontSize+"px"
-pageDiv.style.lineHeight=lineHeight
-
-let data=pages[currentPage]
-
-if(!data) return
-
-data.forEach((p,i)=>{
-
-let el=document.createElement("p")
-
-el.textContent=p
-
-el.dataset.index=i
-
-pageDiv.appendChild(el)
-
-})
-
-saveProgress()
-
+function fontMinus() {
+  fontSize = Math.max(12, fontSize - 2)
+  document.getElementById("content").style.fontSize = fontSize + "px"
 }
 
-
-/* 點擊翻頁 */
-
-document.body.addEventListener("click",e=>{
-
-if(document.getElementById("reader").style.display!="block")
-return
-
-let x=e.clientX
-let w=window.innerWidth
-
-if(x<w*0.3) prevPage()
-else if(x>w*0.7) nextPage()
-else toggleToolbar()
-
-})
-
-
-function nextPage(){
-
-if(currentPage<pages.length-1){
-
-currentPage++
-
-renderPage()
-
+function toggleDark() {
+  document.body.classList.toggle("dark")
 }
 
+function saveScroll() {
+  if (!currentBook) return
+  localStorage.setItem("pos_" + currentBook.id, document.getElementById("content").scrollTop)
 }
 
-function prevPage(){
-
-if(currentPage>0){
-
-currentPage--
-
-renderPage()
-
+function restoreScroll() {
+  if (!currentBook) return
+  const pos = localStorage.getItem("pos_" + currentBook.id) || 0
+  setTimeout(() => {
+    document.getElementById("content").scrollTop = +pos
+  }, 80)
 }
 
+function convert() {
+  const el = document.getElementById("content")
+  el.textContent = converter(el.textContent)
 }
 
-
-/* 工具列 */
-
-function toggleToolbar(){
-
-let bar=document.getElementById("toolbar")
-
-bar.style.display=bar.style.display=="none"?"block":"none"
-
-}
-
-
-/* 夜間 */
-
-function toggleNight(){
-
-document.body.classList.toggle("night")
-
-}
-
-
-/* 字體 */
-
-function fontUp(){
-
-fontSize+=2
-renderPage()
-
-}
-
-function fontDown(){
-
-fontSize-=2
-renderPage()
-
-}
-
-
-/* 行距 */
-
-function lineUp(){
-
-lineHeight+=0.2
-renderPage()
-
-}
-
-function lineDown(){
-
-lineHeight-=0.2
-renderPage()
-
-}
-
-
-/* TTS */
-
-function startReading(){
-
-speaking=true
-
-speakIndex=0
-
-read()
-
-}
-
-function stopReading(){
-
-speechSynthesis.cancel()
-
-speaking=false
-
-}
-
-function read(){
-
-if(!speaking) return
-
-let ps=document.querySelectorAll("#page p")
-
-if(speakIndex>=ps.length){
-
-nextPage()
-
-speakIndex=0
-
-read()
-
-return
-
-}
-
-let el=ps[speakIndex]
-
-highlight(el)
-
-let u=new SpeechSynthesisUtterance(el.textContent)
-
-u.rate=speechRate
-
-u.onend=()=>{
-
-speakIndex++
-
-read()
-
-}
-
-speechSynthesis.speak(u)
-
-}
-
-function highlight(el){
-
-document.querySelectorAll("p").forEach(p=>p.classList.remove("highlight"))
-
-el.classList.add("highlight")
-
-}
-
-
-/* 書籤 */
-
-function addBookmark(){
-
-let b=JSON.parse(localStorage.getItem("bookmarks")||"[]")
-
-b.push(currentPage)
-
-localStorage.setItem("bookmarks",JSON.stringify(b))
-
-alert("書籤已加入")
-
-}
-
-
-/* 記錄 */
-
-function saveProgress(){
-
-localStorage.setItem("page",currentPage)
-
-}
-
-function loadProgress(){
-
-let p=localStorage.getItem("page")
-
-if(p) currentPage=parseInt(p)
-
-}
-
+loadLibrary()
 </script>
-
 </body>
 </html>
