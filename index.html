@@ -1,2922 +1,500 @@
 <!DOCTYPE html>
-
-<!--
-  📖 手機優先網頁小說閱讀器
-  版本: v1.0.0
-  架構: 純前端 Single HTML File
-  部署: GitHub Pages 相容
-  Cache-Control: no-cache
--->
-
-<html lang="zh-TW">
+<html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8">
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#1a1a2e">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="小說閱讀器">
-  <meta name="description" content="手機優先的網頁小說閱讀器，支援TXT上傳、朗讀、書籤等功能">
 
-  <!-- PWA Manifest (inline) -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoi5bCP6K6+6Zqb6KuK5Zit5ZKM5Zyw5Yy6IiwicHJlc2hvcnRfbmFtZSI6IuWwj+iuvumam+iriguiLpuaXpSIsInN0YXJ0X3VybCI6Ii4vIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiIzFhMWEyZSIsInRoZW1lX2NvbG9yIjoiIzFhMWEyZSIsImljb25zIjpbeyJzcmMiOiJkYXRhOmltYWdlL3N2Zyt4bWw7YmFzZTY0LFBITjJaeUI0Yld4dWN6MGlhSFIwY0RvdkwzZDNkeTUzTXk1dmNtY3ZNakF3TUM5emRtY2lJSFpwWlhkQ2JWOUVZWE5oWW14bGN6MGllVzFoSUhSb1pTSWdabWxzYkQwaUkyWmlNekVpUHo0OGNtVmpkQ0IzYVdSMGFEMGlNakFpSUdobGFXZG9kRDBpTWpBaUlIWnBaWGRDYlY5RVlYTmhZbXhsY3owaWVXMWhJSFJvWlNJZ1ptbHNiRDBpSTJaaU16RWlQanh6ZEdGeWRDQmtQU0puWlc0aUlIUmxlSFF0WW14dmRtVmpkRzl5TFdGa2JXbHVQU0pqYjJ4dmNpSWdjM1J5YjJ0bFBTSmpiMnh2Y2lJZ2NtVmtQU0puWlc0aUlHbHVQU0poYm1RaUlHVnVZV0pzWldROUltRnVZU0lnY21Wd2IzTjBJR1poYkhObFBTSnpZVzFsSWo0OEwzTjBZWEowUGp3dmNtVmpkRDQ4TDNOMlp6ND0iLCJzaXplcyI6IjE5MngxOTIiLCJ0eXBlIjoiaW1hZ2Uvc3ZnK3htbCJ9XX0=">
-  <title>📖 小說閱讀器</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
 
-  <!-- Google Fonts: 使用思源宋體風格字體搭配 -->
+<title>Novel Reader</title>
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;700&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="manifest" href="data:application/json,{
+'name':'Novel Reader',
+'short_name':'Reader',
+'start_url':'.',
+'display':'standalone'
+}">
 
-  <style>
-    /* ============================================
-       CSS 變數 & 主題系統
-       ============================================ */
-    :root {
-      /* 日間模式顏色 */
-      --bg-primary: #faf6f0;
-      --bg-secondary: #f0ebe0;
-      --bg-panel: rgba(255, 252, 245, 0.97);
-      --bg-overlay: rgba(0, 0, 0, 0.4);
-      --text-primary: #2c2416;
-      --text-secondary: #6b5c44;
-      --text-muted: #9c8a72;
-      --accent: #8b4513;
-      --accent-light: #d4956a;
-      --highlight-reading: rgba(200, 180, 140, 0.3);
-      --border: rgba(139, 69, 19, 0.2);
-      --shadow: rgba(44, 36, 22, 0.15);
-      
-      /* 字體 */
-      --font-reading: 'Noto Serif TC', 'Source Han Serif TC', serif;
-      --font-ui: 'Noto Sans TC', 'PingFang TC', sans-serif;
-      
-      /* 閱讀設定（可動態調整） */
-      --font-size: 18px;
-      --line-height: 1.8;
-      --page-padding: 24px;
-      
-      /* 動畫 */
-      --transition-fast: 0.15s ease;
-      --transition-mid: 0.3s ease;
-      --transition-slow: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    
-    /* 夜間模式 */
-    [data-theme="night"] {
-      --bg-primary: #0f0e0c;
-      --bg-secondary: #1a1816;
-      --bg-panel: rgba(20, 18, 15, 0.97);
-      --bg-overlay: rgba(0, 0, 0, 0.6);
-      --text-primary: #c8b89a;
-      --text-secondary: #8a7a68;
-      --text-muted: #5a4e42;
-      --accent: #c8956a;
-      --accent-light: #a07050;
-      --highlight-reading: rgba(80, 60, 40, 0.4);
-      --border: rgba(200, 150, 100, 0.15);
-      --shadow: rgba(0, 0, 0, 0.4);
-    }
-    
-    /* ============================================
-       全域重設
-       ============================================ */
-    *, *::before, *::after {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      -webkit-tap-highlight-color: transparent;
-    }
-    
-    html, body {
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      touch-action: pan-y;
-    }
-    
-    body {
-      font-family: var(--font-ui);
-      background: var(--bg-primary);
-      color: var(--text-primary);
-      transition: background var(--transition-mid), color var(--transition-mid);
-      user-select: none;
-      -webkit-user-select: none;
-    }
-    
-    /* ============================================
-       載入/歡迎畫面
-       ============================================ */
-    #welcome-screen {
-      position: fixed;
-      inset: 0;
-      z-index: 100;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background: var(--bg-primary);
-      padding: 32px 24px;
-      transition: opacity var(--transition-slow);
-    }
-    
-    #welcome-screen.hidden {
-      opacity: 0;
-      pointer-events: none;
-    }
-    
-    .welcome-logo {
-      font-size: 64px;
-      margin-bottom: 16px;
-      animation: float 3s ease-in-out infinite;
-    }
-    
-    @keyframes float {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-8px); }
-    }
-    
-    .welcome-title {
-      font-family: var(--font-reading);
-      font-size: 28px;
-      font-weight: 700;
-      color: var(--text-primary);
-      margin-bottom: 8px;
-      letter-spacing: 0.05em;
-    }
-    
-    .welcome-subtitle {
-      font-size: 14px;
-      color: var(--text-muted);
-      margin-bottom: 48px;
-      letter-spacing: 0.02em;
-    }
-    
-    /* 拖曳上傳區域 */
-    #drop-zone {
-      width: 100%;
-      max-width: 360px;
-      border: 2px dashed var(--border);
-      border-radius: 20px;
-      padding: 40px 24px;
-      text-align: center;
-      cursor: pointer;
-      transition: all var(--transition-mid);
-      background: var(--bg-secondary);
-      position: relative;
-      overflow: hidden;
-    }
-    
-    #drop-zone::before {
-      content: '';
-      position: absolute;
-      inset: -2px;
-      border-radius: 22px;
-      background: linear-gradient(135deg, var(--accent), var(--accent-light));
-      opacity: 0;
-      transition: opacity var(--transition-mid);
-      z-index: -1;
-    }
-    
-    #drop-zone.drag-over {
-      border-color: var(--accent);
-      transform: scale(1.02);
-    }
-    
-    #drop-zone.drag-over::before {
-      opacity: 0.1;
-    }
-    
-    .drop-icon {
-      font-size: 48px;
-      margin-bottom: 16px;
-    }
-    
-    .drop-text {
-      font-size: 16px;
-      color: var(--text-secondary);
-      margin-bottom: 8px;
-      line-height: 1.5;
-    }
-    
-    .drop-hint {
-      font-size: 12px;
-      color: var(--text-muted);
-    }
-    
-    #file-input {
-      display: none;
-    }
-    
-    .btn-upload {
-      margin-top: 20px;
-      padding: 12px 32px;
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: 50px;
-      font-size: 15px;
-      font-family: var(--font-ui);
-      cursor: pointer;
-      transition: all var(--transition-fast);
-      letter-spacing: 0.05em;
-    }
-    
-    .btn-upload:active {
-      transform: scale(0.96);
-      opacity: 0.85;
-    }
-    
-    /* 載入進度 */
-    #loading-overlay {
-      position: fixed;
-      inset: 0;
-      z-index: 200;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background: var(--bg-overlay);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity var(--transition-mid);
-    }
-    
-    #loading-overlay.visible {
-      opacity: 1;
-      pointer-events: all;
-    }
-    
-    .loading-box {
-      background: var(--bg-panel);
-      border-radius: 20px;
-      padding: 32px 40px;
-      text-align: center;
-      box-shadow: 0 20px 60px var(--shadow);
-    }
-    
-    .loading-spinner {
-      width: 48px;
-      height: 48px;
-      border: 3px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin: 0 auto 16px;
-    }
-    
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-    
-    .loading-text {
-      font-size: 15px;
-      color: var(--text-secondary);
-      margin-bottom: 8px;
-    }
-    
-    .loading-progress {
-      width: 200px;
-      height: 4px;
-      background: var(--border);
-      border-radius: 2px;
-      overflow: hidden;
-      margin: 8px auto 0;
-    }
-    
-    .loading-bar {
-      height: 100%;
-      background: linear-gradient(90deg, var(--accent), var(--accent-light));
-      border-radius: 2px;
-      width: 0%;
-      transition: width 0.2s ease;
-    }
-    
-    /* ============================================
-       主閱讀器容器
-       ============================================ */
-    #reader-container {
-      position: fixed;
-      inset: 0;
-      display: none;
-      flex-direction: column;
-      overflow: hidden;
-    }
-    
-    #reader-container.active {
-      display: flex;
-    }
-    
-    /* 書名標題列（頂部，可隱藏） */
-    #top-bar {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      z-index: 10;
-      height: 44px;
-      display: flex;
-      align-items: center;
-      padding: 0 16px;
-      background: linear-gradient(to bottom, var(--bg-primary), transparent);
-      opacity: 0;
-      transform: translateY(-100%);
-      transition: all var(--transition-mid);
-    }
-    
-    #top-bar.visible {
-      opacity: 1;
-      transform: translateY(0);
-    }
-    
-    .book-title {
-      font-family: var(--font-reading);
-      font-size: 14px;
-      color: var(--text-muted);
-      flex: 1;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    
-    .chapter-title-bar {
-      font-size: 12px;
-      color: var(--text-muted);
-    }
-    
-    /* ============================================
-       翻頁區域（主閱讀區）
-       ============================================ */
-    #page-container {
-      position: relative;
-      flex: 1;
-      overflow: hidden;
-      cursor: pointer;
-    }
-    
-    /* 單頁 */
-    .page {
-      position: absolute;
-      inset: 0;
-      padding: var(--page-padding);
-      padding-top: 50px;
-      padding-bottom: 60px;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      will-change: transform;
-      transition: transform var(--transition-slow);
-    }
-    
-    .page.page-current {
-      transform: translateX(0);
-      z-index: 2;
-    }
-    
-    .page.page-prev {
-      transform: translateX(-100%);
-      z-index: 1;
-    }
-    
-    .page.page-next {
-      transform: translateX(100%);
-      z-index: 1;
-    }
-    
-    /* 翻到上一頁動畫 */
-    .page.slide-in-from-left {
-      animation: slideInLeft var(--transition-slow) forwards;
-    }
-    
-    .page.slide-out-to-right {
-      animation: slideOutRight var(--transition-slow) forwards;
-    }
-    
-    /* 翻到下一頁動畫 */
-    .page.slide-in-from-right {
-      animation: slideInRight var(--transition-slow) forwards;
-    }
-    
-    .page.slide-out-to-left {
-      animation: slideOutLeft var(--transition-slow) forwards;
-    }
-    
-    @keyframes slideInLeft {
-      from { transform: translateX(-100%); }
-      to { transform: translateX(0); }
-    }
-    
-    @keyframes slideOutRight {
-      from { transform: translateX(0); }
-      to { transform: translateX(100%); }
-    }
-    
-    @keyframes slideInRight {
-      from { transform: translateX(100%); }
-      to { transform: translateX(0); }
-    }
-    
-    @keyframes slideOutLeft {
-      from { transform: translateX(0); }
-      to { transform: translateX(-100%); }
-    }
-    
-    /* 段落樣式 */
-    .paragraph {
-      font-family: var(--font-reading);
-      font-size: var(--font-size);
-      line-height: var(--line-height);
-      color: var(--text-primary);
-      margin-bottom: calc(var(--font-size) * 0.8);
-      text-align: justify;
-      text-justify: inter-character;
-      user-select: text;
-      -webkit-user-select: text;
-      transition: background var(--transition-fast);
-      border-radius: 4px;
-      padding: 2px 4px;
-    }
-    
-    /* 章節標題段落 */
-    .paragraph.chapter-heading {
-      font-weight: 700;
-      font-size: calc(var(--font-size) * 1.15);
-      color: var(--accent);
-      text-align: center;
-      margin-bottom: calc(var(--font-size) * 1.2);
-      margin-top: calc(var(--font-size) * 0.4);
-      letter-spacing: 0.1em;
-    }
-    
-    /* 朗讀高亮 */
-    .paragraph.reading-highlight {
-      background: var(--highlight-reading);
-    }
-    
-    /* ============================================
-       底部進度列
-       ============================================ */
-    #bottom-bar {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      z-index: 10;
-      height: 50px;
-      display: flex;
-      align-items: center;
-      padding: 0 16px;
-      background: linear-gradient(to top, var(--bg-primary), transparent);
-      opacity: 0;
-      transform: translateY(100%);
-      transition: all var(--transition-mid);
-    }
-    
-    #bottom-bar.visible {
-      opacity: 1;
-      transform: translateY(0);
-    }
-    
-    .progress-bar-wrap {
-      flex: 1;
-      height: 3px;
-      background: var(--border);
-      border-radius: 2px;
-      overflow: hidden;
-      margin: 0 12px;
-      cursor: pointer;
-    }
-    
-    .progress-bar-fill {
-      height: 100%;
-      background: var(--accent);
-      border-radius: 2px;
-      transition: width 0.3s ease;
-    }
-    
-    .progress-text {
-      font-size: 11px;
-      color: var(--text-muted);
-      min-width: 40px;
-      text-align: right;
-    }
-    
-    /* ============================================
-       功能面板（中間點擊顯示）
-       ============================================ */
-    #panel-overlay {
-      position: fixed;
-      inset: 0;
-      z-index: 50;
-      pointer-events: none;
-    }
-    
-    #panel-overlay.active {
-      pointer-events: all;
-    }
-    
-    /* 功能面板背景遮罩 */
-    #panel-backdrop {
-      position: absolute;
-      inset: 0;
-      background: var(--bg-overlay);
-      opacity: 0;
-      transition: opacity var(--transition-mid);
-    }
-    
-    #panel-overlay.active #panel-backdrop {
-      opacity: 1;
-    }
-    
-    /* 主功能面板（從底部滑入） */
-    #main-panel {
-      position: absolute;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      max-height: 85vh;
-      background: var(--bg-panel);
-      border-radius: 24px 24px 0 0;
-      padding: 16px 0 env(safe-area-inset-bottom, 16px);
-      overflow-y: auto;
-      transform: translateY(100%);
-      transition: transform var(--transition-slow);
-      box-shadow: 0 -8px 40px var(--shadow);
-    }
-    
-    #panel-overlay.active #main-panel {
-      transform: translateY(0);
-    }
-    
-    /* 面板拖拽把手 */
-    .panel-handle {
-      width: 40px;
-      height: 4px;
-      background: var(--border);
-      border-radius: 2px;
-      margin: 0 auto 16px;
-    }
-    
-    /* 面板各功能區塊 */
-    .panel-section {
-      padding: 12px 20px;
-      border-bottom: 1px solid var(--border);
-    }
-    
-    .panel-section:last-child {
-      border-bottom: none;
-    }
-    
-    .panel-section-title {
-      font-size: 11px;
-      font-weight: 500;
-      color: var(--text-muted);
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      margin-bottom: 12px;
-    }
-    
-    /* 功能按鈕列（水平捲動） */
-    .panel-actions {
-      display: flex;
-      gap: 12px;
-      overflow-x: auto;
-      padding-bottom: 4px;
-      scrollbar-width: none;
-    }
-    
-    .panel-actions::-webkit-scrollbar { display: none; }
-    
-    .action-btn {
-      flex-shrink: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-      padding: 12px 16px;
-      background: var(--bg-secondary);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      cursor: pointer;
-      transition: all var(--transition-fast);
-      min-width: 72px;
-    }
-    
-    .action-btn:active {
-      transform: scale(0.94);
-      background: var(--border);
-    }
-    
-    .action-btn.active {
-      background: var(--accent);
-      border-color: var(--accent);
-    }
-    
-    .action-btn.active .action-icon,
-    .action-btn.active .action-label {
-      color: #fff;
-    }
-    
-    .action-icon {
-      font-size: 22px;
-      line-height: 1;
-    }
-    
-    .action-label {
-      font-size: 11px;
-      color: var(--text-secondary);
-      white-space: nowrap;
-    }
-    
-    /* 選項按鈕組（字體大小、行距等） */
-    .option-group {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    
-    .option-btn {
-      padding: 8px 16px;
-      background: var(--bg-secondary);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      font-size: 13px;
-      font-family: var(--font-ui);
-      color: var(--text-secondary);
-      cursor: pointer;
-      transition: all var(--transition-fast);
-    }
-    
-    .option-btn.selected {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: #fff;
-    }
-    
-    .option-btn:active {
-      transform: scale(0.94);
-    }
-    
-    /* 朗讀控制區 */
-    .tts-controls {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    
-    .tts-btn {
-      width: 52px;
-      height: 52px;
-      border-radius: 50%;
-      border: none;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 22px;
-      cursor: pointer;
-      transition: all var(--transition-fast);
-    }
-    
-    .tts-btn-primary {
-      background: var(--accent);
-      color: #fff;
-      box-shadow: 0 4px 16px rgba(139, 69, 19, 0.3);
-    }
-    
-    .tts-btn-secondary {
-      background: var(--bg-secondary);
-      color: var(--text-primary);
-      border: 1px solid var(--border);
-      width: 40px;
-      height: 40px;
-      font-size: 18px;
-    }
-    
-    .tts-btn:active {
-      transform: scale(0.92);
-    }
-    
-    .tts-info {
-      flex: 1;
-    }
-    
-    .tts-status {
-      font-size: 13px;
-      color: var(--text-primary);
-      margin-bottom: 2px;
-    }
-    
-    .tts-subtitle {
-      font-size: 11px;
-      color: var(--text-muted);
-    }
-    
-    /* 睡眠定時器顯示 */
-    #sleep-timer-display {
-      font-size: 13px;
-      color: var(--accent);
-      font-weight: 500;
-    }
-    
-    /* Toggle 開關 */
-    .toggle-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 12px;
-    }
-    
-    .toggle-row:last-child { margin-bottom: 0; }
-    
-    .toggle-label {
-      font-size: 14px;
-      color: var(--text-primary);
-    }
-    
-    .toggle-switch {
-      position: relative;
-      width: 44px;
-      height: 26px;
-    }
-    
-    .toggle-switch input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
-    
-    .toggle-slider {
-      position: absolute;
-      inset: 0;
-      background: var(--border);
-      border-radius: 13px;
-      cursor: pointer;
-      transition: background var(--transition-mid);
-    }
-    
-    .toggle-slider::before {
-      content: '';
-      position: absolute;
-      width: 20px;
-      height: 20px;
-      left: 3px;
-      top: 3px;
-      background: #fff;
-      border-radius: 50%;
-      transition: transform var(--transition-mid);
-    }
-    
-    input:checked + .toggle-slider {
-      background: var(--accent);
-    }
-    
-    input:checked + .toggle-slider::before {
-      transform: translateX(18px);
-    }
-    
-    /* 版本資訊 */
-    .version-info {
-      text-align: center;
-      font-size: 11px;
-      color: var(--text-muted);
-      padding: 8px;
-      letter-spacing: 0.05em;
-    }
-    
-    /* ============================================
-       抽屜面板（目錄、書籤等）
-       ============================================ */
-    .drawer {
-      position: fixed;
-      top: 0;
-      bottom: 0;
-      left: 0;
-      width: min(320px, 85vw);
-      background: var(--bg-panel);
-      z-index: 60;
-      transform: translateX(-100%);
-      transition: transform var(--transition-slow);
-      display: flex;
-      flex-direction: column;
-      box-shadow: 4px 0 24px var(--shadow);
-    }
-    
-    .drawer.open {
-      transform: translateX(0);
-    }
-    
-    .drawer-header {
-      padding: 16px 20px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    
-    .drawer-title {
-      font-family: var(--font-reading);
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--text-primary);
-      flex: 1;
-    }
-    
-    .drawer-close {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      border: none;
-      background: var(--bg-secondary);
-      color: var(--text-secondary);
-      font-size: 18px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    
-    .drawer-body {
-      flex: 1;
-      overflow-y: auto;
-      padding: 8px 0;
-    }
-    
-    /* 目錄項目 */
-    .toc-item {
-      padding: 12px 20px;
-      cursor: pointer;
-      border-bottom: 1px solid var(--border);
-      transition: background var(--transition-fast);
-    }
-    
-    .toc-item:active {
-      background: var(--bg-secondary);
-    }
-    
-    .toc-item.current {
-      border-left: 3px solid var(--accent);
-      padding-left: 17px;
-    }
-    
-    .toc-item-title {
-      font-size: 14px;
-      color: var(--text-primary);
-      line-height: 1.4;
-    }
-    
-    .toc-item.current .toc-item-title {
-      color: var(--accent);
-      font-weight: 500;
-    }
-    
-    .toc-item-info {
-      font-size: 11px;
-      color: var(--text-muted);
-      margin-top: 2px;
-    }
-    
-    /* 書籤項目 */
-    .bookmark-item {
-      padding: 12px 20px;
-      cursor: pointer;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-    }
-    
-    .bookmark-item:active {
-      background: var(--bg-secondary);
-    }
-    
-    .bookmark-icon {
-      font-size: 18px;
-      color: var(--accent);
-      flex-shrink: 0;
-      margin-top: 2px;
-    }
-    
-    .bookmark-content {
-      flex: 1;
-      overflow: hidden;
-    }
-    
-    .bookmark-text {
-      font-size: 13px;
-      color: var(--text-primary);
-      line-height: 1.4;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-    }
-    
-    .bookmark-meta {
-      font-size: 11px;
-      color: var(--text-muted);
-      margin-top: 4px;
-    }
-    
-    .bookmark-delete {
-      padding: 4px 8px;
-      background: none;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      font-size: 12px;
-      color: var(--text-muted);
-      cursor: pointer;
-      flex-shrink: 0;
-    }
-    
-    .drawer-empty {
-      padding: 40px 20px;
-      text-align: center;
-      color: var(--text-muted);
-      font-size: 14px;
-    }
-    
-    .drawer-empty-icon {
-      font-size: 40px;
-      margin-bottom: 12px;
-    }
-    
-    /* 抽屜背景遮罩 */
-    .drawer-backdrop {
-      position: fixed;
-      inset: 0;
-      background: var(--bg-overlay);
-      z-index: 55;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity var(--transition-mid);
-    }
-    
-    .drawer-backdrop.visible {
-      opacity: 1;
-      pointer-events: all;
-    }
-    
-    /* ============================================
-       Toast 訊息提示
-       ============================================ */
-    #toast-container {
-      position: fixed;
-      top: 60px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 999;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      align-items: center;
-    }
-    
-    .toast {
-      background: rgba(44, 36, 22, 0.9);
-      color: #f5f0e8;
-      padding: 10px 20px;
-      border-radius: 20px;
-      font-size: 13px;
-      white-space: nowrap;
-      animation: toastIn 0.3s ease forwards;
-    }
-    
-    [data-theme="night"] .toast {
-      background: rgba(200, 180, 150, 0.15);
-      backdrop-filter: blur(12px);
-      border: 1px solid var(--border);
-      color: var(--text-primary);
-    }
-    
-    .toast.out {
-      animation: toastOut 0.3s ease forwards;
-    }
-    
-    @keyframes toastIn {
-      from { opacity: 0; transform: translateY(-8px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    
-    @keyframes toastOut {
-      from { opacity: 1; transform: translateY(0); }
-      to { opacity: 0; transform: translateY(-8px); }
-    }
-    
-    /* ============================================
-       自訂睡眠時間 Modal
-       ============================================ */
-    .modal {
-      position: fixed;
-      inset: 0;
-      z-index: 80;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity var(--transition-mid);
-    }
-    
-    .modal.visible {
-      opacity: 1;
-      pointer-events: all;
-    }
-    
-    .modal-backdrop {
-      position: absolute;
-      inset: 0;
-      background: var(--bg-overlay);
-    }
-    
-    .modal-box {
-      position: relative;
-      background: var(--bg-panel);
-      border-radius: 20px;
-      padding: 24px;
-      width: 100%;
-      max-width: 320px;
-      box-shadow: 0 20px 60px var(--shadow);
-    }
-    
-    .modal-title {
-      font-family: var(--font-reading);
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--text-primary);
-      margin-bottom: 16px;
-      text-align: center;
-    }
-    
-    .modal-input {
-      width: 100%;
-      padding: 12px 16px;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      background: var(--bg-secondary);
-      font-size: 24px;
-      text-align: center;
-      color: var(--text-primary);
-      font-family: var(--font-ui);
-      margin-bottom: 8px;
-    }
-    
-    .modal-hint {
-      font-size: 12px;
-      color: var(--text-muted);
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    
-    .modal-actions {
-      display: flex;
-      gap: 10px;
-    }
-    
-    .modal-btn {
-      flex: 1;
-      padding: 12px;
-      border-radius: 12px;
-      border: none;
-      font-size: 15px;
-      cursor: pointer;
-      transition: all var(--transition-fast);
-    }
-    
-    .modal-btn-cancel {
-      background: var(--bg-secondary);
-      color: var(--text-secondary);
-    }
-    
-    .modal-btn-confirm {
-      background: var(--accent);
-      color: #fff;
-    }
-    
-    .modal-btn:active {
-      transform: scale(0.96);
-    }
-    
-    /* ============================================
-       觸控手勢提示（首次使用）
-       ============================================ */
-    #gesture-hint {
-      position: fixed;
-      inset: 0;
-      z-index: 45;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: var(--bg-overlay);
-      backdrop-filter: blur(4px);
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity var(--transition-mid);
-    }
-    
-    #gesture-hint.visible {
-      opacity: 1;
-      pointer-events: all;
-    }
-    
-    .gesture-box {
-      background: var(--bg-panel);
-      border-radius: 24px;
-      padding: 32px 28px;
-      max-width: 300px;
-      width: 90%;
-      text-align: center;
-    }
-    
-    .gesture-title {
-      font-family: var(--font-reading);
-      font-size: 20px;
-      font-weight: 700;
-      color: var(--text-primary);
-      margin-bottom: 20px;
-    }
-    
-    .gesture-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 14px;
-      text-align: left;
-    }
-    
-    .gesture-icon {
-      font-size: 24px;
-      width: 36px;
-      flex-shrink: 0;
-    }
-    
-    .gesture-desc {
-      font-size: 14px;
-      color: var(--text-secondary);
-      line-height: 1.4;
-    }
-    
-    .gesture-ok-btn {
-      margin-top: 20px;
-      width: 100%;
-      padding: 14px;
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: 12px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    
-    /* ============================================
-       工具函式 - 滾動條樣式
-       ============================================ */
-    ::-webkit-scrollbar {
-      width: 4px;
-    }
-    
-    ::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    
-    ::-webkit-scrollbar-thumb {
-      background: var(--border);
-      border-radius: 2px;
-    }
-    
-    /* ============================================
-       媒體查詢 - 平板/桌面調整
-       ============================================ */
-    @media (min-width: 600px) {
-      :root {
-        --page-padding: 40px;
-      }
-      
-      .page {
-        padding-left: max(40px, calc((100vw - 600px) / 2));
-        padding-right: max(40px, calc((100vw - 600px) / 2));
-      }
-      
-      #main-panel {
-        max-width: 480px;
-        left: 50%;
-        right: auto;
-        transform: translateX(-50%) translateY(100%);
-        border-radius: 24px 24px 0 0;
-      }
-      
-      #panel-overlay.active #main-panel {
-        transform: translateX(-50%) translateY(0);
-      }
-    }
-  </style>
+<style>
 
+/* 基本 */
+
+body{
+margin:0;
+font-family:-apple-system,BlinkMacSystemFont;
+background:#ffffff;
+color:#000;
+overflow:hidden;
+}
+
+/* 載入畫面 */
+
+#loader{
+position:absolute;
+top:0;
+left:0;
+right:0;
+bottom:0;
+
+display:flex;
+flex-direction:column;
+justify-content:center;
+align-items:center;
+
+text-align:center;
+padding:30px;
+}
+
+#loader button{
+font-size:18px;
+padding:12px 20px;
+margin-top:20px;
+}
+
+/* 閱讀區 */
+
+#reader{
+display:none;
+
+position:absolute;
+top:0;
+left:0;
+right:0;
+bottom:0;
+
+padding:6%;
+overflow:hidden;
+}
+
+#page{
+max-width:700px;
+margin:auto;
+
+font-size:20px;
+line-height:1.6;
+}
+
+/* 夜間模式 */
+
+body.night{
+background:#000;
+color:#ccc;
+}
+
+/* 工具列 */
+
+#toolbar{
+
+position:fixed;
+bottom:0;
+left:0;
+right:0;
+
+background:rgba(0,0,0,0.8);
+
+color:#fff;
+
+padding:10px;
+
+display:none;
+}
+
+button{
+margin:4px;
+}
+
+/* 朗讀高亮 */
+
+.highlight{
+background:#ccc;
+}
+
+</style>
 </head>
+
 <body>
 
-<!-- ================================================
-     歡迎/上傳畫面
-     ================================================ -->
+<!-- 載入小說畫面 -->
 
-<div id="welcome-screen">
-  <div class="welcome-logo">📖</div>
-  <h1 class="welcome-title">小說閱讀器</h1>
-  <p class="welcome-subtitle">手機優先 · 支援朗讀 · 離線使用</p>
+<div id="loader">
 
-  <div id="drop-zone">
-    <div class="drop-icon">📂</div>
-    <p class="drop-text">拖曳 TXT 文件到此處</p>
-    <p class="drop-hint">支援 UTF-8 / GBK / BIG5 編碼<br>最大支援 20MB</p>
-    <button class="btn-upload" onclick="document.getElementById('file-input').click()">
-      選擇文件
-    </button>
-    <input type="file" id="file-input" accept=".txt">
-  </div>
-</div>
+<h2>手機小說閱讀器</h2>
 
-<!-- ================================================
-     載入進度覆蓋層
-     ================================================ -->
+<p>支援 TXT 小說</p>
 
-<div id="loading-overlay">
-  <div class="loading-box">
-    <div class="loading-spinner"></div>
-    <p class="loading-text" id="loading-text">正在載入文件...</p>
-    <div class="loading-progress">
-      <div class="loading-bar" id="loading-bar"></div>
-    </div>
-  </div>
-</div>
+<button onclick="openFile()">載入 TXT</button>
 
-<!-- ================================================
-     主閱讀器
-     ================================================ -->
+<p style="margin-top:20px;font-size:14px">
+或拖曳 TXT 到畫面
+</p>
 
-<div id="reader-container">
-
-  <!-- 頂部書名列 -->
-
-  <div id="top-bar">
-    <span class="book-title" id="book-title-display">📖</span>
-    <span class="chapter-title-bar" id="chapter-title-display"></span>
-  </div>
-
-  <!-- 主閱讀頁面區域 -->
-
-  <div id="page-container">
-    <!-- 頁面由 JS 動態生成 -->
-  </div>
-
-  <!-- 底部進度列 -->
-
-  <div id="bottom-bar">
-    <span class="progress-text" id="progress-left">第1頁</span>
-    <div class="progress-bar-wrap" id="progress-bar-wrap">
-      <div class="progress-bar-fill" id="progress-bar-fill"></div>
-    </div>
-    <span class="progress-text" id="progress-right">0%</span>
-  </div>
+<p style="font-size:12px;color:#666">
+v1.0.1
+</p>
 
 </div>
 
-<!-- ================================================
-     功能面板
-     ================================================ -->
+<!-- 閱讀區 -->
 
-<div id="panel-overlay">
-  <div id="panel-backdrop" onclick="App.Panel.hide()"></div>
+<div id="reader">
 
-  <div id="main-panel">
-    <div class="panel-handle"></div>
+<div id="page"></div>
 
-```
-<!-- 朗讀控制 -->
-<div class="panel-section">
-  <p class="panel-section-title">朗讀控制</p>
-  <div class="tts-controls">
-    <button class="tts-btn tts-btn-secondary" onclick="App.TTS.prev()" title="上一段">⏮</button>
-    <button class="tts-btn tts-btn-primary" id="tts-play-btn" onclick="App.TTS.toggle()">▶</button>
-    <button class="tts-btn tts-btn-secondary" onclick="App.TTS.next()" title="下一段">⏭</button>
-    <div class="tts-info">
-      <p class="tts-status" id="tts-status">未播放</p>
-      <p class="tts-subtitle" id="tts-subtitle">點擊 ▶ 開始朗讀</p>
-    </div>
-  </div>
 </div>
 
-<!-- 語速 -->
-<div class="panel-section">
-  <p class="panel-section-title">語速</p>
-  <div class="option-group" id="speed-options">
-    <button class="option-btn" data-speed="0.5" onclick="App.TTS.setSpeed(0.5)">0.5×</button>
-    <button class="option-btn" data-speed="0.75" onclick="App.TTS.setSpeed(0.75)">0.75×</button>
-    <button class="option-btn selected" data-speed="1" onclick="App.TTS.setSpeed(1)">1×</button>
-    <button class="option-btn" data-speed="1.25" onclick="App.TTS.setSpeed(1.25)">1.25×</button>
-    <button class="option-btn" data-speed="1.5" onclick="App.TTS.setSpeed(1.5)">1.5×</button>
-    <button class="option-btn" data-speed="2" onclick="App.TTS.setSpeed(2)">2×</button>
-  </div>
+<!-- 工具列 -->
+
+<div id="toolbar">
+
+<button onclick="toggleNight()">夜間</button>
+
+<button onclick="startReading()">朗讀</button>
+
+<button onclick="stopReading()">停止</button>
+
+<button onclick="addBookmark()">書籤</button>
+
+<span style="float:right">v1.0.1</span>
+
 </div>
 
-<!-- 睡眠定時 -->
-<div class="panel-section">
-  <p class="panel-section-title">睡眠定時 <span id="sleep-timer-display"></span></p>
-  <div class="option-group" id="sleep-options">
-    <button class="option-btn" onclick="App.Sleep.set(5)">5分</button>
-    <button class="option-btn" onclick="App.Sleep.set(10)">10分</button>
-    <button class="option-btn" onclick="App.Sleep.set(20)">20分</button>
-    <button class="option-btn" onclick="App.Sleep.set(30)">30分</button>
-    <button class="option-btn" onclick="App.Sleep.setCustom()">自訂</button>
-    <button class="option-btn" onclick="App.Sleep.cancel()">取消</button>
-  </div>
-</div>
-
-<!-- 字體大小 -->
-<div class="panel-section">
-  <p class="panel-section-title">字體大小</p>
-  <div class="option-group" id="font-size-options">
-    <button class="option-btn" data-size="16" onclick="App.Settings.setFontSize(16)">16</button>
-    <button class="option-btn selected" data-size="18" onclick="App.Settings.setFontSize(18)">18</button>
-    <button class="option-btn" data-size="20" onclick="App.Settings.setFontSize(20)">20</button>
-    <button class="option-btn" data-size="24" onclick="App.Settings.setFontSize(24)">24</button>
-  </div>
-</div>
-
-<!-- 行距 -->
-<div class="panel-section">
-  <p class="panel-section-title">行距</p>
-  <div class="option-group" id="line-height-options">
-    <button class="option-btn" data-lh="1.2" onclick="App.Settings.setLineHeight(1.2)">緊湊 1.2</button>
-    <button class="option-btn selected" data-lh="1.8" onclick="App.Settings.setLineHeight(1.8)">舒適 1.8</button>
-    <button class="option-btn" data-lh="2.2" onclick="App.Settings.setLineHeight(2.2)">寬鬆 2.2</button>
-  </div>
-</div>
-
-<!-- 其他功能按鈕 -->
-<div class="panel-section">
-  <p class="panel-section-title">功能</p>
-  <div class="panel-actions">
-    <button class="action-btn" onclick="App.Drawer.openTOC()">
-      <span class="action-icon">📑</span>
-      <span class="action-label">章節目錄</span>
-    </button>
-    <button class="action-btn" onclick="App.Bookmark.add()">
-      <span class="action-icon">🔖</span>
-      <span class="action-label">加書籤</span>
-    </button>
-    <button class="action-btn" onclick="App.Drawer.openBookmarks()">
-      <span class="action-icon">📚</span>
-      <span class="action-label">書籤列表</span>
-    </button>
-    <button class="action-btn" id="theme-btn" onclick="App.Settings.toggleTheme()">
-      <span class="action-icon">🌙</span>
-      <span class="action-label">夜間模式</span>
-    </button>
-    <button class="action-btn" id="convert-btn" onclick="App.Settings.toggleConvert()">
-      <span class="action-icon">繁</span>
-      <span class="action-label">繁體轉換</span>
-    </button>
-    <button class="action-btn" onclick="App.reloadFile()">
-      <span class="action-icon">📂</span>
-      <span class="action-label">換書</span>
-    </button>
-  </div>
-</div>
-
-<!-- 版本資訊 -->
-<div class="version-info">📖 小說閱讀器 v1.0.0 · 純前端 · 離線可用</div>
-```
-
-  </div>
-</div>
-
-<!-- ================================================
-     抽屜：目錄
-     ================================================ -->
-
-<div class="drawer-backdrop" id="drawer-backdrop" onclick="App.Drawer.close()"></div>
-
-<div class="drawer" id="toc-drawer">
-  <div class="drawer-header">
-    <span class="drawer-title">📑 章節目錄</span>
-    <button class="drawer-close" onclick="App.Drawer.close()">✕</button>
-  </div>
-  <div class="drawer-body" id="toc-list">
-    <div class="drawer-empty">
-      <div class="drawer-empty-icon">📄</div>
-      尚未偵測到章節
-    </div>
-  </div>
-</div>
-
-<!-- ================================================
-     抽屜：書籤
-     ================================================ -->
-
-<div class="drawer" id="bookmark-drawer">
-  <div class="drawer-header">
-    <span class="drawer-title">🔖 我的書籤</span>
-    <button class="drawer-close" onclick="App.Drawer.close()">✕</button>
-  </div>
-  <div class="drawer-body" id="bookmark-list">
-    <div class="drawer-empty">
-      <div class="drawer-empty-icon">🔖</div>
-      尚無書籤<br>閱讀時點擊「加書籤」
-    </div>
-  </div>
-</div>
-
-<!-- ================================================
-     手勢說明提示
-     ================================================ -->
-
-<div id="gesture-hint">
-  <div class="gesture-box">
-    <h2 class="gesture-title">操作說明</h2>
-    <div class="gesture-row">
-      <span class="gesture-icon">👈</span>
-      <span class="gesture-desc">點擊左側 → 上一頁</span>
-    </div>
-    <div class="gesture-row">
-      <span class="gesture-icon">👉</span>
-      <span class="gesture-desc">點擊右側 → 下一頁</span>
-    </div>
-    <div class="gesture-row">
-      <span class="gesture-icon">☝️</span>
-      <span class="gesture-desc">點擊中間 → 顯示功能列</span>
-    </div>
-    <div class="gesture-row">
-      <span class="gesture-icon">👆</span>
-      <span class="gesture-desc">左右滑動 → 翻頁</span>
-    </div>
-    <button class="gesture-ok-btn" onclick="App.dismissGestureHint()">開始閱讀</button>
-  </div>
-</div>
-
-<!-- ================================================
-     Modal：自訂睡眠時間
-     ================================================ -->
-
-<div class="modal" id="sleep-modal">
-  <div class="modal-backdrop" onclick="App.Sleep.closeModal()"></div>
-  <div class="modal-box">
-    <h3 class="modal-title">⏰ 自訂睡眠時間</h3>
-    <input type="number" class="modal-input" id="sleep-custom-input" 
-           placeholder="60" min="1" max="180">
-    <p class="modal-hint">輸入分鐘數（1-180）</p>
-    <div class="modal-actions">
-      <button class="modal-btn modal-btn-cancel" onclick="App.Sleep.closeModal()">取消</button>
-      <button class="modal-btn modal-btn-confirm" onclick="App.Sleep.confirmCustom()">確定</button>
-    </div>
-  </div>
-</div>
-
-<!-- Toast 容器 -->
-
-<div id="toast-container"></div>
-
-<!-- ================================================
-     Service Worker 離線支援腳本
-     ================================================ -->
+<input type="file" id="fileInput" accept=".txt" style="display:none">
 
 <script>
-// 行內 Service Worker（避免外部 sw.js 檔案需求）
-if ('serviceWorker' in navigator) {
-  const SW_CONTENT = `
-    const CACHE_NAME = 'novel-reader-v1.0.0';
-    const CACHE_ASSETS = ['/'];
-    
-    self.addEventListener('install', e => {
-      e.waitUntil(
-        caches.open(CACHE_NAME).then(cache => cache.addAll(CACHE_ASSETS))
-      );
-      self.skipWaiting();
-    });
-    
-    self.addEventListener('activate', e => {
-      e.waitUntil(
-        caches.keys().then(keys => Promise.all(
-          keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
-        ))
-      );
-      self.clients.claim();
-    });
-    
-    self.addEventListener('fetch', e => {
-      if (e.request.method !== 'GET') return;
-      e.respondWith(
-        caches.match(e.request).then(cached => {
-          const networkFetch = fetch(e.request).then(res => {
-            if (res.ok) {
-              const resClone = res.clone();
-              caches.open(CACHE_NAME).then(cache => cache.put(e.request, resClone));
-            }
-            return res;
-          }).catch(() => cached);
-          return cached || networkFetch;
-        })
-      );
-    });
-  `;
-  
-  const blob = new Blob([SW_CONTENT], { type: 'application/javascript' });
-  const swUrl = URL.createObjectURL(blob);
-  
-  navigator.serviceWorker.register(swUrl).catch(err => {
-    console.log('SW registration skipped:', err.message);
-  });
-}
-</script>
 
-<!-- ================================================
-     主應用程式 JavaScript
-     ================================================ -->
+/* 狀態 */
 
-<script>
-'use strict';
+let paragraphs=[]
+let pages=[]
 
-/* ======================================================
-   APP 核心命名空間
-   ====================================================== */
-const App = {
-  // 狀態
-  state: {
-    bookTitle: '',
-    rawText: '',           // 原始文字
-    convertedText: '',     // 簡轉繁後文字
-    useConverted: true,    // 是否使用繁體
-    paragraphs: [],        // 解析後段落陣列
-    ttsSegments: [],       // TTS 朗讀片段（長段落已分割）
-    ttsSegParaMap: [],     // ttsSegments[i] 對應的段落索引
-    pages: [],             // 每頁段落索引範圍 [{startPara, endPara}]
-    currentPage: 0,
-    totalPages: 0,
-    chapters: [],          // [{title, paraIndex}]
-    bookmarks: [],         // [{paraIndex, text, time}]
-    
-    // TTS
-    ttsActive: false,
-    ttsPaused: false,
-    ttsCurrentSeg: 0,      // 當前朗讀片段索引
-    ttsRate: 1,
-    ttsCurrentUtterance: null,
-    
-    // 睡眠定時
-    sleepTimer: null,
-    sleepEndTime: null,
-    sleepDisplayInterval: null,
-    
-    // 設定
-    fontSize: 18,
-    lineHeight: 1.8,
-    isDarkMode: false,
-    
-    // 翻頁
-    isTurning: false,
-    touchStartX: 0,
-    touchStartY: 0,
-  },
-  
-  /* --------------------------------------------------
-     初始化
-     -------------------------------------------------- */
-  init() {
-    this.Settings.load();
-    this.bindEvents();
-    this.updateUI();
-    console.log('📖 小說閱讀器 v1.0.0 已初始化');
-  },
-  
-  /* --------------------------------------------------
-     事件綁定
-     -------------------------------------------------- */
-  bindEvents() {
-    // 文件選擇
-    const fileInput = document.getElementById('file-input');
-    fileInput.addEventListener('change', e => {
-      if (e.target.files[0]) this.loadFile(e.target.files[0]);
-    });
-    
-    // 拖曳上傳
-    const dropZone = document.getElementById('drop-zone');
-    dropZone.addEventListener('dragover', e => {
-      e.preventDefault();
-      dropZone.classList.add('drag-over');
-    });
-    dropZone.addEventListener('dragleave', () => {
-      dropZone.classList.remove('drag-over');
-    });
-    dropZone.addEventListener('drop', e => {
-      e.preventDefault();
-      dropZone.classList.remove('drag-over');
-      const file = e.dataTransfer.files[0];
-      if (file && file.name.endsWith('.txt')) this.loadFile(file);
-      else this.toast('請選擇 .txt 文件');
-    });
-    
-    // 頁面點擊（左/中/右區域）
-    const pageContainer = document.getElementById('page-container');
-    pageContainer.addEventListener('click', e => this.handlePageClick(e));
-    
-    // 滑動翻頁
-    pageContainer.addEventListener('touchstart', e => {
-      this.state.touchStartX = e.touches[0].clientX;
-      this.state.touchStartY = e.touches[0].clientY;
-    }, { passive: true });
-    
-    pageContainer.addEventListener('touchend', e => {
-      const dx = e.changedTouches[0].clientX - this.state.touchStartX;
-      const dy = e.changedTouches[0].clientY - this.state.touchStartY;
-      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
-        if (dx > 0) this.Pages.prev();
-        else this.Pages.next();
-      }
-    }, { passive: true });
-    
-    // 進度條點擊跳轉
-    document.getElementById('progress-bar-wrap').addEventListener('click', e => {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const ratio = (e.clientX - rect.left) / rect.width;
-      const targetPage = Math.floor(ratio * this.state.totalPages);
-      this.Pages.goTo(Math.max(0, Math.min(this.state.totalPages - 1, targetPage)));
-    });
-  },
-  
-  /* --------------------------------------------------
-     頁面點擊處理
-     -------------------------------------------------- */
-  handlePageClick(e) {
-    const w = window.innerWidth;
-    const x = e.clientX;
-    const leftZone = w * 0.25;
-    const rightZone = w * 0.75;
-    
-    if (x < leftZone) {
-      this.Pages.prev();
-    } else if (x > rightZone) {
-      this.Pages.next();
-    } else {
-      // 中間：顯示/隱藏功能列
-      if (document.getElementById('panel-overlay').classList.contains('active')) {
-        this.Panel.hide();
-      } else {
-        this.Panel.show();
-      }
-    }
-  },
-  
-  /* --------------------------------------------------
-     更換書籍
-     -------------------------------------------------- */
-  reloadFile() {
-    this.Panel.hide();
-    if (this.state.ttsActive) this.TTS.stop();
-    
-    // 重設狀態
-    this.state.paragraphs = [];
-    this.state.pages = [];
-    this.state.chapters = [];
-    this.state.currentPage = 0;
-    
-    document.getElementById('reader-container').classList.remove('active');
-    document.getElementById('welcome-screen').classList.remove('hidden');
-    document.getElementById('file-input').value = '';
-  },
-  
-  /* --------------------------------------------------
-     手勢說明提示
-     -------------------------------------------------- */
-  dismissGestureHint() {
-    const hint = document.getElementById('gesture-hint');
-    hint.classList.remove('visible');
-    localStorage.setItem('nr_gesture_shown', '1');
-  },
-  
-  /* --------------------------------------------------
-     Toast 提示
-     -------------------------------------------------- */
-  toast(msg, duration = 2000) {
-    const container = document.getElementById('toast-container');
-    const el = document.createElement('div');
-    el.className = 'toast';
-    el.textContent = msg;
-    container.appendChild(el);
-    
-    setTimeout(() => {
-      el.classList.add('out');
-      setTimeout(() => el.remove(), 300);
-    }, duration);
-  },
-  
-  /* --------------------------------------------------
-     UI 整體更新
-     -------------------------------------------------- */
-  updateUI() {
-    // 進度條
-    if (this.state.totalPages > 0) {
-      const progress = this.state.currentPage / (this.state.totalPages - 1);
-      document.getElementById('progress-bar-fill').style.width = (progress * 100).toFixed(1) + '%';
-      document.getElementById('progress-left').textContent = `第${this.state.currentPage + 1}頁`;
-      document.getElementById('progress-right').textContent = Math.round(progress * 100) + '%';
-    }
-    
-    // 章節標題
-    this.updateChapterDisplay();
-  },
-  
-  /* --------------------------------------------------
-     更新頂部章節顯示
-     -------------------------------------------------- */
-  updateChapterDisplay() {
-    const page = this.state.pages[this.state.currentPage];
-    if (!page) return;
-    
-    const currentParaIdx = page.startPara;
-    let currentChapter = null;
-    
-    for (let i = this.state.chapters.length - 1; i >= 0; i--) {
-      if (this.state.chapters[i].paraIndex <= currentParaIdx) {
-        currentChapter = this.state.chapters[i];
-        break;
-      }
-    }
-    
-    document.getElementById('chapter-title-display').textContent = 
-      currentChapter ? currentChapter.title : '';
-  },
-};
+let currentPage=0
 
-/* ======================================================
-   文件載入模組
-   ====================================================== */
-App.loadFile = function(file) {
-  const state = this.state;
-  
-  // 顯示載入進度
-  const overlay = document.getElementById('loading-overlay');
-  const loadingText = document.getElementById('loading-text');
-  const loadingBar = document.getElementById('loading-bar');
-  overlay.classList.add('visible');
-  loadingText.textContent = '正在讀取文件...';
-  loadingBar.style.width = '0%';
-  
-  state.bookTitle = file.name.replace(/\.txt$/i, '');
-  document.getElementById('book-title-display').textContent = '📖 ' + state.bookTitle;
-  
-  // 嘗試多種編碼
-  this.readFileWithEncoding(file, (text, progress) => {
-    loadingBar.style.width = progress + '%';
-    if (progress < 30) {
-      loadingText.textContent = '正在偵測編碼...';
-    } else if (progress < 60) {
-      loadingText.textContent = '正在解析段落...';
-    } else {
-      loadingText.textContent = '正在計算頁面...';
-    }
-  }).then(text => {
-    // 使用 requestIdleCallback/setTimeout 分批處理避免卡頓
-    state.rawText = text;
-    loadingText.textContent = '正在轉換繁體...';
-    loadingBar.style.width = '40%';
-    
-    // 分批處理（避免 UI 卡頓）
-    setTimeout(() => {
-      state.convertedText = App.Converter.toTraditional(text);
-      loadingBar.style.width = '60%';
-      
-      setTimeout(() => {
-        // 解析段落
-        const sourceText = state.useConverted ? state.convertedText : state.rawText;
-        App.Parser.parse(sourceText, (progress) => {
-          loadingBar.style.width = 60 + progress * 0.3 + '%';
-        });
-        
-        loadingBar.style.width = '90%';
-        
-        setTimeout(() => {
-          // 生成頁面
-          App.Pages.generate();
-          loadingBar.style.width = '100%';
-          
-          setTimeout(() => {
-            overlay.classList.remove('visible');
-            
-            // 顯示閱讀器
-            document.getElementById('welcome-screen').classList.add('hidden');
-            document.getElementById('reader-container').classList.add('active');
-            
-            // 恢復閱讀位置
-            const savedPos = App.Settings.getSavedPosition(state.bookTitle);
-            App.Pages.goTo(savedPos, true);
-            
-            // 顯示手勢提示（首次）
-            if (!localStorage.getItem('nr_gesture_shown')) {
-              setTimeout(() => {
-                document.getElementById('gesture-hint').classList.add('visible');
-              }, 500);
-            }
-            
-            // 顯示進度條
-            document.getElementById('top-bar').classList.add('visible');
-            document.getElementById('bottom-bar').classList.add('visible');
-            setTimeout(() => {
-              document.getElementById('top-bar').classList.remove('visible');
-              document.getElementById('bottom-bar').classList.remove('visible');
-            }, 3000);
-            
-          }, 100);
-        }, 50);
-      }, 50);
-    }, 50);
-    
-  }).catch(err => {
-    overlay.classList.remove('visible');
-    App.toast('文件載入失敗：' + err.message);
-    console.error(err);
-  });
-};
+let speechRate=1
 
-/* 讀取文件，自動偵測編碼 */
-App.readFileWithEncoding = function(file, onProgress) {
-  return new Promise((resolve, reject) => {
-    // 先嘗試 UTF-8
-    const readerUTF8 = new FileReader();
-    readerUTF8.onprogress = e => {
-      if (e.lengthComputable) onProgress((e.loaded / e.total) * 30);
-    };
-    readerUTF8.onload = e => {
-      const text = e.target.result;
-      // 檢查是否有亂碼特徵
-      if (App.hasGarbled(text)) {
-        // 嘗試 GBK/BIG5
-        App.readAsEncoding(file, 'gbk', onProgress).then(gbkText => {
-          if (App.hasGarbled(gbkText)) {
-            return App.readAsEncoding(file, 'big5', onProgress);
-          }
-          return gbkText;
-        }).then(resolve).catch(reject);
-      } else {
-        resolve(text);
-      }
-    };
-    readerUTF8.onerror = reject;
-    readerUTF8.readAsText(file, 'UTF-8');
-  });
-};
+let speaking=false
+let speakIndex=0
 
-App.readAsEncoding = function(file, encoding, onProgress) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onprogress = e => {
-      if (e.lengthComputable) onProgress((e.loaded / e.total) * 30);
-    };
-    reader.onload = e => resolve(e.target.result);
-    reader.onerror = reject;
-    reader.readAsText(file, encoding);
-  });
-};
 
-/* 簡單亂碼偵測：檢查是否有大量替換字元 */
-App.hasGarbled = function(text) {
-  const sample = text.substring(0, 2000);
-  const garbledCount = (sample.match(/\ufffd/g) || []).length;
-  return garbledCount > 10;
-};
+/* 開檔 */
 
-/* ======================================================
-   簡體轉繁體模組（精簡映射表）
-   ====================================================== */
-App.Converter = {
-  // 精簡版常用簡繁對照表（涵蓋小說常用字）
-  map: null,
-  
-  init() {
-    // 完整映射表（精選 1000+ 常用簡繁字對）
-    const pairs = '爱愛|碍礙|安安|暗暗|岸岸|熬熬|拔拔|摆擺|败敗|办辦|帮幫|报報|备備|贝貝|笔筆|毕畢|边邊|变變|标標|表表|别別|宾賓|补補|财財|参參|测測|层層|产產|长長|场場|尝嘗|厂廠|车車|彻徹|陈陳|称稱|冲衝|处處|传傳|创創|从從|窜竄|达達|带帶|单單|担擔|当當|党黨|导導|德德|灯燈|敌敵|递遞|点點|电電|东東|动動|断斷|对對|队隊|尔爾|发發|法法|烦煩|飞飛|废廢|费費|风風|凤鳳|夫夫|妇婦|复複|该該|盖蓋|干幹|赶趕|刚剛|个個|给給|根根|宫宮|购購|观觀|关關|归歸|国國|过過|汉漢|号號|好好|合合|轰轟|后後|护護|划劃|华華|画畫|话話|坏壞|欢歡|换換|黄黃|汇匯|会會|获獲|机機|积積|极極|际際|继繼|价價|见見|将將|讲講|界界|进進|经經|举舉|据據|绝絕|开開|来來|兰蘭|乐樂|类類|里裡|联聯|炼煉|量量|两兩|临臨|龙龍|录錄|轮輪|论論|罗羅|马馬|买買|卖賣|满滿|么麼|没沒|门門|梦夢|秘祕|灭滅|面面|庙廟|灵靈|铭銘|拟擬|鸟鳥|宁寧|农農|欧歐|牌牌|盘盤|炮砲|篇篇|飘飄|苹蘋|齐齊|气氣|签簽|迁遷|钱錢|强強|亲親|区區|权權|确確|热熱|认認|软軟|伞傘|烧燒|设設|声聲|时時|实實|视視|书書|树樹|数數|说說|损損|态態|台臺|叹歎|体體|听聽|头頭|图圖|团團|万萬|网網|为為|问問|无無|务務|线線|现現|乡鄉|响響|写寫|学學|压壓|盐鹽|样樣|叶葉|医醫|义義|艺藝|阴陰|应應|拥擁|优優|于於|语語|园園|远遠|运運|杂雜|脏臟|战戰|张張|证證|只祇|质質|中中|众眾|专專|庄莊';
-    
-    this.map = {};
-    pairs.split('|').forEach(pair => {
-      if (pair.length >= 2) {
-        this.map[pair[0]] = pair[1];
-      }
-    });
-  },
-  
-  toTraditional(text) {
-    if (!this.map) this.init();
-    // 分塊處理大文件
-    const chunkSize = 50000;
-    if (text.length <= chunkSize) {
-      return this._convert(text);
-    }
-    
-    let result = '';
-    for (let i = 0; i < text.length; i += chunkSize) {
-      result += this._convert(text.slice(i, i + chunkSize));
-    }
-    return result;
-  },
-  
-  _convert(text) {
-    let result = '';
-    for (let i = 0; i < text.length; i++) {
-      result += this.map[text[i]] || text[i];
-    }
-    return result;
-  }
-};
+function openFile(){
 
-/* ======================================================
-   段落解析模組
-   ====================================================== */
-App.Parser = {
-  TTS_SEGMENT_MAX: 500,    // 朗讀片段最大字數
-  CHAPTER_PATTERNS: [
-    /^第[零一二三四五六七八九十百千萬\d]+[章節回集篇卷]/,
-    /^【.{1,20}】/,
-    /^Chapter\s*\d+/i,
-    /^CHAPTER\s*\d+/,
-    /^序章|^尾聲|^後記|^前言|^自序|^序言|^番外/,
-  ],
-  
-  parse(text, onProgress) {
-    const state = App.state;
-    
-    // 分行
-    const lines = text.split(/\r?\n/);
-    const paragraphs = [];
-    const chapters = [];
-    const ttsSegments = [];
-    const ttsSegParaMap = [];
-    
-    let total = lines.length;
-    
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;  // 跳過空行
-      
-      const paraIdx = paragraphs.length;
-      const isChapter = this.isChapterHeading(line);
-      
-      paragraphs.push({
-        text: line,
-        isChapter,
-        index: paraIdx,
-      });
-      
-      if (isChapter) {
-        chapters.push({
-          title: line,
-          paraIndex: paraIdx,
-        });
-      }
-      
-      // 生成 TTS 片段（長段落分割）
-      const segments = this.splitForTTS(line);
-      segments.forEach(seg => {
-        ttsSegments.push(seg);
-        ttsSegParaMap.push(paraIdx);
-      });
-      
-      if (i % 5000 === 0) {
-        onProgress && onProgress((i / total) * 100);
-      }
-    }
-    
-    state.paragraphs = paragraphs;
-    state.chapters = chapters;
-    state.ttsSegments = ttsSegments;
-    state.ttsSegParaMap = ttsSegParaMap;
-    
-    // 更新目錄
-    App.TOC.render();
-    
-    console.log(`解析完成: ${paragraphs.length} 段落, ${chapters.length} 章節, ${ttsSegments.length} TTS片段`);
-  },
-  
-  isChapterHeading(line) {
-    return this.CHAPTER_PATTERNS.some(p => p.test(line));
-  },
-  
-  splitForTTS(text) {
-    if (text.length <= this.TTS_SEGMENT_MAX) return [text];
-    
-    const segments = [];
-    // 按句號、問號、感嘆號分割
-    const sentenceBreaks = /[。！？!?…]+/g;
-    let lastIndex = 0;
-    let current = '';
-    let match;
-    
-    while ((match = sentenceBreaks.exec(text)) !== null) {
-      const sentence = text.slice(lastIndex, match.index + match[0].length);
-      if (current.length + sentence.length > this.TTS_SEGMENT_MAX && current.length > 0) {
-        segments.push(current);
-        current = sentence;
-      } else {
-        current += sentence;
-      }
-      lastIndex = match.index + match[0].length;
-    }
-    
-    // 剩餘文字
-    if (lastIndex < text.length) {
-      current += text.slice(lastIndex);
-    }
-    if (current) segments.push(current);
-    
-    return segments.length > 0 ? segments : [text];
-  }
-};
+document.getElementById("fileInput").click()
 
-/* ======================================================
-   分頁引擎
-   ====================================================== */
-App.Pages = {
-  /* 生成所有頁面（每頁含哪些段落） */
-  generate() {
-    const state = App.state;
-    const paragraphs = state.paragraphs;
-    if (!paragraphs.length) return;
-    
-    // 使用隱藏測量容器計算實際高度
-    const measurer = this.createMeasurer();
-    
-    // 可用高度（扣除上下 padding）
-    const padding = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--page-padding')) || 24;
-    const availH = window.innerHeight - 50 - 60 - padding * 2;  // 頂部50 + 底部60 + padding
-    
-    const pages = [];
-    let currentPage = { startPara: 0, endPara: 0 };
-    let currentH = 0;
-    let pageStart = 0;
-    
-    for (let i = 0; i < paragraphs.length; i++) {
-      const para = paragraphs[i];
-      const h = this.measureParagraph(measurer, para);
-      
-      if (currentH + h > availH && i > pageStart) {
-        // 當前頁已滿，記錄並開始新頁
-        pages.push({ startPara: pageStart, endPara: i - 1 });
-        pageStart = i;
-        currentH = h;
-      } else {
-        currentH += h;
-      }
-    }
-    
-    // 最後一頁
-    pages.push({ startPara: pageStart, endPara: paragraphs.length - 1 });
-    
-    // 清理測量容器
-    measurer.remove();
-    
-    state.pages = pages;
-    state.totalPages = pages.length;
-    
-    console.log(`分頁完成: ${pages.length} 頁`);
-    
-    App.updateUI();
-  },
-  
-  /* 建立隱藏測量容器 */
-  createMeasurer() {
-    const div = document.createElement('div');
-    div.style.cssText = `
-      position: absolute;
-      top: -9999px;
-      left: 0;
-      width: calc(100vw - 48px);
-      font-family: var(--font-reading);
-      font-size: ${App.state.fontSize}px;
-      line-height: ${App.state.lineHeight};
-      visibility: hidden;
-      pointer-events: none;
-    `;
-    document.body.appendChild(div);
-    return div;
-  },
-  
-  /* 測量單一段落高度 */
-  measureParagraph(measurer, para) {
-    measurer.textContent = para.text;
-    if (para.isChapter) {
-      measurer.style.fontSize = (App.state.fontSize * 1.15) + 'px';
-      measurer.style.marginBottom = (App.state.fontSize * 1.2) + 'px';
-    } else {
-      measurer.style.fontSize = App.state.fontSize + 'px';
-      measurer.style.marginBottom = (App.state.fontSize * 0.8) + 'px';
-    }
-    return measurer.offsetHeight + parseFloat(measurer.style.marginBottom || 0);
-  },
-  
-  /* 渲染指定頁面 */
-  renderPage(pageIndex, position = 'current') {
-    if (pageIndex < 0 || pageIndex >= App.state.totalPages) return null;
-    
-    const state = App.state;
-    const page = state.pages[pageIndex];
-    if (!page) return null;
-    
-    const div = document.createElement('div');
-    div.className = `page page-${position}`;
-    div.dataset.pageIndex = pageIndex;
-    
-    for (let i = page.startPara; i <= page.endPara && i < state.paragraphs.length; i++) {
-      const para = state.paragraphs[i];
-      const p = document.createElement('p');
-      p.className = 'paragraph' + (para.isChapter ? ' chapter-heading' : '');
-      p.dataset.paraIndex = i;
-      p.textContent = para.text;
-      div.appendChild(p);
-    }
-    
-    return div;
-  },
-  
-  /* 跳到指定頁 */
-  goTo(pageIndex, instant = false) {
-    const state = App.state;
-    if (pageIndex < 0) pageIndex = 0;
-    if (pageIndex >= state.totalPages) pageIndex = state.totalPages - 1;
-    
-    const container = document.getElementById('page-container');
-    container.innerHTML = '';
-    
-    // 渲染當前頁及前後頁（只保留3頁）
-    const prevPage = this.renderPage(pageIndex - 1, 'prev');
-    const currPage = this.renderPage(pageIndex, 'current');
-    const nextPage = this.renderPage(pageIndex + 1, 'next');
-    
-    if (prevPage) container.appendChild(prevPage);
-    if (currPage) container.appendChild(currPage);
-    if (nextPage) container.appendChild(nextPage);
-    
-    state.currentPage = pageIndex;
-    App.updateUI();
-    App.Settings.savePosition();
-    
-    // 更新 TTS 高亮
-    if (state.ttsActive) {
-      this.highlightTTSPara(state.ttsSegParaMap[state.ttsCurrentSeg]);
-    }
-  },
-  
-  /* 下一頁 */
-  next() {
-    const state = App.state;
-    if (state.isTurning || state.currentPage >= state.totalPages - 1) return;
-    state.isTurning = true;
-    
-    const container = document.getElementById('page-container');
-    const current = container.querySelector('.page-current');
-    const nextEl = container.querySelector('.page-next');
-    
-    if (current) {
-      current.style.transition = 'transform 0.35s cubic-bezier(0.4,0,0.2,1)';
-      current.style.transform = 'translateX(-100%)';
-    }
-    if (nextEl) {
-      nextEl.style.transition = 'transform 0.35s cubic-bezier(0.4,0,0.2,1)';
-      nextEl.style.transform = 'translateX(0)';
-    }
-    
-    setTimeout(() => {
-      state.currentPage++;
-      this.goTo(state.currentPage);
-      state.isTurning = false;
-    }, 350);
-  },
-  
-  /* 上一頁 */
-  prev() {
-    const state = App.state;
-    if (state.isTurning || state.currentPage <= 0) return;
-    state.isTurning = true;
-    
-    const container = document.getElementById('page-container');
-    const current = container.querySelector('.page-current');
-    const prevEl = container.querySelector('.page-prev');
-    
-    if (current) {
-      current.style.transition = 'transform 0.35s cubic-bezier(0.4,0,0.2,1)';
-      current.style.transform = 'translateX(100%)';
-    }
-    if (prevEl) {
-      prevEl.style.transition = 'transform 0.35s cubic-bezier(0.4,0,0.2,1)';
-      prevEl.style.transform = 'translateX(0)';
-    }
-    
-    setTimeout(() => {
-      state.currentPage--;
-      this.goTo(state.currentPage);
-      state.isTurning = false;
-    }, 350);
-  },
-  
-  /* 高亮 TTS 正在朗讀的段落 */
-  highlightTTSPara(paraIndex) {
-    document.querySelectorAll('.paragraph.reading-highlight').forEach(el => {
-      el.classList.remove('reading-highlight');
-    });
-    
-    const el = document.querySelector(`.paragraph[data-para-index="${paraIndex}"]`);
-    if (el) {
-      el.classList.add('reading-highlight');
-      el.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    }
-  },
-  
-  /* 根據段落索引跳到對應頁 */
-  goToParaIndex(paraIndex) {
-    const state = App.state;
-    for (let i = 0; i < state.pages.length; i++) {
-      const p = state.pages[i];
-      if (paraIndex >= p.startPara && paraIndex <= p.endPara) {
-        this.goTo(i);
-        return;
-      }
-    }
-  },
-};
-
-/* ======================================================
-   TTS 朗讀模組
-   ====================================================== */
-App.TTS = {
-  toggle() {
-    const state = App.state;
-    if (!state.ttsActive) {
-      this.start();
-    } else if (state.ttsPaused) {
-      this.resume();
-    } else {
-      this.pause();
-    }
-  },
-  
-  start() {
-    if (!('speechSynthesis' in window)) {
-      App.toast('您的瀏覽器不支援語音朗讀');
-      return;
-    }
-    const state = App.state;
-    if (!state.paragraphs.length) {
-      App.toast('請先載入文件');
-      return;
-    }
-    
-    state.ttsActive = true;
-    state.ttsPaused = false;
-    
-    // 從當前頁第一段開始
-    const page = state.pages[state.currentPage];
-    if (page) {
-      const paraIdx = page.startPara;
-      // 找到對應的 TTS 片段
-      let segIdx = 0;
-      for (let i = 0; i < state.ttsSegParaMap.length; i++) {
-        if (state.ttsSegParaMap[i] >= paraIdx) {
-          segIdx = i;
-          break;
-        }
-      }
-      state.ttsCurrentSeg = segIdx;
-    }
-    
-    this.speakCurrent();
-    this.updateUI();
-  },
-  
-  speakCurrent() {
-    const state = App.state;
-    if (!state.ttsActive) return;
-    
-    const seg = state.ttsSegments[state.ttsCurrentSeg];
-    if (!seg) {
-      this.stop();
-      return;
-    }
-    
-    window.speechSynthesis.cancel();
-    
-    const utterance = new SpeechSynthesisUtterance(seg);
-    utterance.rate = state.ttsRate;
-    utterance.lang = 'zh-TW';
-    
-    // 嘗試選擇中文語音
-    const voices = window.speechSynthesis.getVoices();
-    const zhVoice = voices.find(v => 
-      v.lang.startsWith('zh') && (v.lang.includes('TW') || v.lang.includes('HK'))
-    ) || voices.find(v => v.lang.startsWith('zh'));
-    if (zhVoice) utterance.voice = zhVoice;
-    
-    utterance.onstart = () => {
-      const paraIdx = state.ttsSegParaMap[state.ttsCurrentSeg];
-      App.Pages.highlightTTSPara(paraIdx);
-      this.updateStatus(`朗讀中...`);
-    };
-    
-    utterance.onend = () => {
-      if (!state.ttsActive || state.ttsPaused) return;
-      
-      const currentParaIdx = state.ttsSegParaMap[state.ttsCurrentSeg];
-      state.ttsCurrentSeg++;
-      
-      if (state.ttsCurrentSeg >= state.ttsSegments.length) {
-        this.stop();
-        App.toast('朗讀完畢');
-        return;
-      }
-      
-      // 如果新片段在不同段落，檢查是否需要翻頁
-      const newParaIdx = state.ttsSegParaMap[state.ttsCurrentSeg];
-      if (newParaIdx !== currentParaIdx) {
-        // 確保段落在當前頁
-        const page = state.pages[state.currentPage];
-        if (page && newParaIdx > page.endPara) {
-          // 自動翻到下一頁
-          App.Pages.next();
-          setTimeout(() => this.speakCurrent(), 400);
-          return;
-        }
-        App.Pages.highlightTTSPara(newParaIdx);
-      }
-      
-      this.speakCurrent();
-    };
-    
-    utterance.onerror = (e) => {
-      if (e.error === 'interrupted') return;
-      console.warn('TTS error:', e.error);
-      // 嘗試繼續
-      if (state.ttsActive && !state.ttsPaused) {
-        state.ttsCurrentSeg++;
-        setTimeout(() => this.speakCurrent(), 200);
-      }
-    };
-    
-    state.ttsCurrentUtterance = utterance;
-    window.speechSynthesis.speak(utterance);
-  },
-  
-  pause() {
-    App.state.ttsPaused = true;
-    window.speechSynthesis.pause();
-    this.updateUI();
-  },
-  
-  resume() {
-    App.state.ttsPaused = false;
-    window.speechSynthesis.resume();
-    this.updateUI();
-  },
-  
-  stop() {
-    const state = App.state;
-    state.ttsActive = false;
-    state.ttsPaused = false;
-    window.speechSynthesis.cancel();
-    
-    document.querySelectorAll('.paragraph.reading-highlight').forEach(el => {
-      el.classList.remove('reading-highlight');
-    });
-    
-    this.updateUI();
-  },
-  
-  next() {
-    const state = App.state;
-    if (!state.ttsActive) return;
-    
-    // 跳到下一段落
-    const currentParaIdx = state.ttsSegParaMap[state.ttsCurrentSeg];
-    let nextSeg = state.ttsCurrentSeg + 1;
-    while (nextSeg < state.ttsSegments.length && 
-           state.ttsSegParaMap[nextSeg] === currentParaIdx) {
-      nextSeg++;
-    }
-    state.ttsCurrentSeg = nextSeg;
-    
-    window.speechSynthesis.cancel();
-    setTimeout(() => this.speakCurrent(), 50);
-  },
-  
-  prev() {
-    const state = App.state;
-    if (!state.ttsActive) return;
-    
-    const currentParaIdx = state.ttsSegParaMap[state.ttsCurrentSeg];
-    let prevSeg = state.ttsCurrentSeg - 1;
-    while (prevSeg > 0 && state.ttsSegParaMap[prevSeg] === currentParaIdx) {
-      prevSeg--;
-    }
-    // 找該段落的第一個片段
-    const targetParaIdx = state.ttsSegParaMap[prevSeg] || 0;
-    let firstSeg = prevSeg;
-    while (firstSeg > 0 && state.ttsSegParaMap[firstSeg - 1] === targetParaIdx) {
-      firstSeg--;
-    }
-    state.ttsCurrentSeg = firstSeg;
-    
-    window.speechSynthesis.cancel();
-    setTimeout(() => this.speakCurrent(), 50);
-  },
-  
-  setSpeed(rate) {
-    App.state.ttsRate = rate;
-    App.Settings.save();
-    
-    // 更新選中狀態
-    document.querySelectorAll('[data-speed]').forEach(btn => {
-      btn.classList.toggle('selected', parseFloat(btn.dataset.speed) === rate);
-    });
-    
-    // 如果正在朗讀，重新開始當前片段
-    if (App.state.ttsActive && !App.state.ttsPaused) {
-      window.speechSynthesis.cancel();
-      setTimeout(() => this.speakCurrent(), 50);
-    }
-    
-    App.toast(`語速 ${rate}×`);
-  },
-  
-  updateUI() {
-    const state = App.state;
-    const playBtn = document.getElementById('tts-play-btn');
-    
-    if (!state.ttsActive) {
-      playBtn.textContent = '▶';
-      playBtn.style.background = '';
-      this.updateStatus('未播放');
-      document.getElementById('tts-subtitle').textContent = '點擊 ▶ 開始朗讀';
-    } else if (state.ttsPaused) {
-      playBtn.textContent = '▶';
-      playBtn.style.background = '#888';
-      this.updateStatus('已暫停');
-    } else {
-      playBtn.textContent = '⏸';
-      playBtn.style.background = '';
-    }
-  },
-  
-  updateStatus(text) {
-    document.getElementById('tts-status').textContent = text;
-  }
-};
-
-/* ======================================================
-   睡眠定時模組
-   ====================================================== */
-App.Sleep = {
-  set(minutes) {
-    this.cancel();
-    
-    const state = App.state;
-    state.sleepEndTime = Date.now() + minutes * 60 * 1000;
-    
-    state.sleepTimer = setTimeout(() => {
-      App.TTS.stop();
-      App.toast('⏰ 睡眠定時到，已停止朗讀');
-      this.cancel();
-    }, minutes * 60 * 1000);
-    
-    // 顯示倒數
-    state.sleepDisplayInterval = setInterval(() => {
-      const remaining = state.sleepEndTime - Date.now();
-      if (remaining <= 0) {
-        clearInterval(state.sleepDisplayInterval);
-        document.getElementById('sleep-timer-display').textContent = '';
-        return;
-      }
-      const m = Math.floor(remaining / 60000);
-      const s = Math.floor((remaining % 60000) / 1000);
-      document.getElementById('sleep-timer-display').textContent = 
-        `${m}:${s.toString().padStart(2, '0')}`;
-    }, 1000);
-    
-    App.toast(`⏰ 睡眠定時 ${minutes} 分鐘`);
-  },
-  
-  cancel() {
-    const state = App.state;
-    if (state.sleepTimer) {
-      clearTimeout(state.sleepTimer);
-      state.sleepTimer = null;
-    }
-    if (state.sleepDisplayInterval) {
-      clearInterval(state.sleepDisplayInterval);
-      state.sleepDisplayInterval = null;
-    }
-    state.sleepEndTime = null;
-    document.getElementById('sleep-timer-display').textContent = '';
-  },
-  
-  setCustom() {
-    document.getElementById('sleep-modal').classList.add('visible');
-    document.getElementById('sleep-custom-input').value = '';
-    document.getElementById('sleep-custom-input').focus();
-  },
-  
-  closeModal() {
-    document.getElementById('sleep-modal').classList.remove('visible');
-  },
-  
-  confirmCustom() {
-    const val = parseInt(document.getElementById('sleep-custom-input').value);
-    if (val > 0 && val <= 180) {
-      this.closeModal();
-      this.set(val);
-    } else {
-      App.toast('請輸入 1-180 分鐘');
-    }
-  }
-};
-
-/* ======================================================
-   設定模組
-   ====================================================== */
-App.Settings = {
-  STORAGE_PREFIX: 'novel_reader_',
-  
-  save() {
-    const s = App.state;
-    localStorage.setItem(this.STORAGE_PREFIX + 'fontSize', s.fontSize);
-    localStorage.setItem(this.STORAGE_PREFIX + 'lineHeight', s.lineHeight);
-    localStorage.setItem(this.STORAGE_PREFIX + 'dark', s.isDarkMode ? '1' : '0');
-    localStorage.setItem(this.STORAGE_PREFIX + 'speed', s.ttsRate);
-    localStorage.setItem(this.STORAGE_PREFIX + 'convert', s.useConverted ? '1' : '0');
-  },
-  
-  load() {
-    const get = key => localStorage.getItem(this.STORAGE_PREFIX + key);
-    const s = App.state;
-    
-    const fontSize = parseInt(get('fontSize'));
-    if (fontSize) { s.fontSize = fontSize; this.applyFontSize(fontSize, false); }
-    
-    const lh = parseFloat(get('lineHeight'));
-    if (lh) { s.lineHeight = lh; this.applyLineHeight(lh, false); }
-    
-    s.isDarkMode = get('dark') === '1';
-    this.applyTheme(false);
-    
-    const speed = parseFloat(get('speed'));
-    if (speed) s.ttsRate = speed;
-    
-    s.useConverted = get('convert') !== '0';
-    this.updateConvertBtn();
-    this.updateThemeBtn();
-    this.updateFontSizeBtns();
-    this.updateLineHeightBtns();
-  },
-  
-  savePosition() {
-    const s = App.state;
-    if (!s.bookTitle) return;
-    localStorage.setItem(this.STORAGE_PREFIX + 'pos_' + s.bookTitle, s.currentPage);
-  },
-  
-  getSavedPosition(bookTitle) {
-    const saved = localStorage.getItem(this.STORAGE_PREFIX + 'pos_' + bookTitle);
-    return saved ? parseInt(saved) : 0;
-  },
-  
-  setFontSize(size) {
-    App.state.fontSize = size;
-    this.applyFontSize(size);
-    this.save();
-    this.updateFontSizeBtns();
-    // 字體變更後需重新分頁
-    App.Pages.generate();
-    App.Pages.goTo(App.state.currentPage);
-    App.toast(`字體大小 ${size}px`);
-  },
-  
-  applyFontSize(size, regenerate = true) {
-    document.documentElement.style.setProperty('--font-size', size + 'px');
-  },
-  
-  updateFontSizeBtns() {
-    document.querySelectorAll('[data-size]').forEach(btn => {
-      btn.classList.toggle('selected', parseInt(btn.dataset.size) === App.state.fontSize);
-    });
-  },
-  
-  setLineHeight(lh) {
-    App.state.lineHeight = lh;
-    this.applyLineHeight(lh);
-    this.save();
-    this.updateLineHeightBtns();
-    App.Pages.generate();
-    App.Pages.goTo(App.state.currentPage);
-    App.toast(`行距 ${lh}`);
-  },
-  
-  applyLineHeight(lh) {
-    document.documentElement.style.setProperty('--line-height', lh);
-  },
-  
-  updateLineHeightBtns() {
-    document.querySelectorAll('[data-lh]').forEach(btn => {
-      btn.classList.toggle('selected', parseFloat(btn.dataset.lh) === App.state.lineHeight);
-    });
-  },
-  
-  toggleTheme() {
-    App.state.isDarkMode = !App.state.isDarkMode;
-    this.applyTheme();
-    this.save();
-    this.updateThemeBtn();
-    App.toast(App.state.isDarkMode ? '🌙 夜間模式' : '☀️ 日間模式');
-  },
-  
-  applyTheme() {
-    document.documentElement.setAttribute('data-theme', App.state.isDarkMode ? 'night' : 'day');
-    document.querySelector('meta[name="theme-color"]').setAttribute(
-      'content', App.state.isDarkMode ? '#0f0e0c' : '#faf6f0'
-    );
-  },
-  
-  updateThemeBtn() {
-    const btn = document.getElementById('theme-btn');
-    if (!btn) return;
-    btn.querySelector('.action-icon').textContent = App.state.isDarkMode ? '☀️' : '🌙';
-    btn.querySelector('.action-label').textContent = App.state.isDarkMode ? '日間模式' : '夜間模式';
-    btn.classList.toggle('active', App.state.isDarkMode);
-  },
-  
-  toggleConvert() {
-    const state = App.state;
-    state.useConverted = !state.useConverted;
-    this.save();
-    this.updateConvertBtn();
-    
-    // 重新解析（使用切換後的文字）
-    if (state.rawText) {
-      const sourceText = state.useConverted ? state.convertedText : state.rawText;
-      App.Parser.parse(sourceText);
-      App.Pages.generate();
-      App.Pages.goTo(state.currentPage);
-    }
-    
-    App.toast(state.useConverted ? '繁體模式' : '原文模式');
-  },
-  
-  updateConvertBtn() {
-    const btn = document.getElementById('convert-btn');
-    if (!btn) return;
-    btn.classList.toggle('active', App.state.useConverted);
-    btn.querySelector('.action-label').textContent = App.state.useConverted ? '已轉繁體' : '原文模式';
-  }
-};
-
-/* ======================================================
-   書籤模組
-   ====================================================== */
-App.Bookmark = {
-  add() {
-    const state = App.state;
-    if (!state.paragraphs.length) {
-      App.toast('請先載入文件');
-      return;
-    }
-    
-    const page = state.pages[state.currentPage];
-    if (!page) return;
-    
-    const paraIdx = page.startPara;
-    const text = state.paragraphs[paraIdx]?.text || '';
-    
-    // 檢查是否已有書籤
-    const exists = state.bookmarks.find(b => b.paraIndex === paraIdx);
-    if (exists) {
-      App.toast('此位置已有書籤');
-      return;
-    }
-    
-    state.bookmarks.push({
-      paraIndex: paraIdx,
-      text: text.substring(0, 50),
-      time: new Date().toLocaleString(),
-      bookTitle: state.bookTitle,
-    });
-    
-    this.save();
-    App.toast('🔖 書籤已加入');
-  },
-  
-  delete(index) {
-    App.state.bookmarks.splice(index, 1);
-    this.save();
-    App.Drawer.renderBookmarks();
-    App.toast('書籤已刪除');
-  },
-  
-  save() {
-    localStorage.setItem('nr_bookmarks_' + App.state.bookTitle, 
-      JSON.stringify(App.state.bookmarks));
-  },
-  
-  load(bookTitle) {
-    try {
-      const saved = localStorage.getItem('nr_bookmarks_' + bookTitle);
-      App.state.bookmarks = saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      App.state.bookmarks = [];
-    }
-  },
-  
-  jumpTo(bookmark) {
-    App.Pages.goToParaIndex(bookmark.paraIndex);
-    App.Drawer.close();
-  }
-};
-
-/* ======================================================
-   目錄模組
-   ====================================================== */
-App.TOC = {
-  render() {
-    const list = document.getElementById('toc-list');
-    const chapters = App.state.chapters;
-    
-    if (!chapters.length) {
-      list.innerHTML = `
-        <div class="drawer-empty">
-          <div class="drawer-empty-icon">📄</div>
-          未偵測到章節標題
-        </div>`;
-      return;
-    }
-    
-    list.innerHTML = chapters.map((ch, i) => {
-      const isActive = App.Pages.getCurrentChapterIndex() === i;
-      return `
-        <div class="toc-item ${isActive ? 'current' : ''}" 
-             onclick="App.TOC.jumpTo(${ch.paraIndex})">
-          <div class="toc-item-title">${ch.title}</div>
-          <div class="toc-item-info">第 ${ch.paraIndex + 1} 段落</div>
-        </div>`;
-    }).join('');
-  },
-  
-  jumpTo(paraIndex) {
-    App.Pages.goToParaIndex(paraIndex);
-    App.Drawer.close();
-    App.toast('已跳轉至章節');
-  }
-};
-
-/* 取得當前章節索引（加到 Pages 模組） */
-App.Pages.getCurrentChapterIndex = function() {
-  const state = App.state;
-  const page = state.pages[state.currentPage];
-  if (!page) return -1;
-  
-  const currentParaIdx = page.startPara;
-  let idx = -1;
-  
-  for (let i = 0; i < state.chapters.length; i++) {
-    if (state.chapters[i].paraIndex <= currentParaIdx) idx = i;
-    else break;
-  }
-  
-  return idx;
-};
-
-/* ======================================================
-   抽屜模組
-   ====================================================== */
-App.Drawer = {
-  current: null,
-  
-  openTOC() {
-    App.Panel.hide();
-    App.TOC.render();
-    this._open('toc-drawer');
-  },
-  
-  openBookmarks() {
-    App.Panel.hide();
-    App.Bookmark.load(App.state.bookTitle);
-    this.renderBookmarks();
-    this._open('bookmark-drawer');
-  },
-  
-  renderBookmarks() {
-    const list = document.getElementById('bookmark-list');
-    const bookmarks = App.state.bookmarks;
-    
-    if (!bookmarks.length) {
-      list.innerHTML = `
-        <div class="drawer-empty">
-          <div class="drawer-empty-icon">🔖</div>
-          尚無書籤<br>閱讀時點擊「加書籤」
-        </div>`;
-      return;
-    }
-    
-    list.innerHTML = bookmarks.map((bm, i) => `
-      <div class="bookmark-item" onclick="App.Bookmark.jumpTo(${JSON.stringify(bm).replace(/"/g, '&quot;')})">
-        <span class="bookmark-icon">🔖</span>
-        <div class="bookmark-content">
-          <div class="bookmark-text">${bm.text || '（無文字）'}</div>
-          <div class="bookmark-meta">${bm.time} · 第${bm.paraIndex + 1}段</div>
-        </div>
-        <button class="bookmark-delete" onclick="event.stopPropagation(); App.Bookmark.delete(${i})">刪除</button>
-      </div>
-    `).join('');
-  },
-  
-  _open(drawerId) {
-    this.close(); // 先關閉現有抽屜
-    const drawer = document.getElementById(drawerId);
-    const backdrop = document.getElementById('drawer-backdrop');
-    if (!drawer) return;
-    
-    this.current = drawer;
-    drawer.classList.add('open');
-    backdrop.classList.add('visible');
-  },
-  
-  close() {
-    if (this.current) {
-      this.current.classList.remove('open');
-      this.current = null;
-    }
-    document.getElementById('drawer-backdrop').classList.remove('visible');
-  }
-};
-
-/* ======================================================
-   功能面板模組
-   ====================================================== */
-App.Panel = {
-  show() {
-    const overlay = document.getElementById('panel-overlay');
-    overlay.classList.add('active');
-    document.getElementById('top-bar').classList.add('visible');
-    document.getElementById('bottom-bar').classList.add('visible');
-  },
-  
-  hide() {
-    document.getElementById('panel-overlay').classList.remove('active');
-    setTimeout(() => {
-      document.getElementById('top-bar').classList.remove('visible');
-      document.getElementById('bottom-bar').classList.remove('visible');
-    }, 300);
-  }
-};
-
-/* ======================================================
-   視窗大小改變處理
-   ====================================================== */
-let resizeTimer = null;
-window.addEventListener('resize', () => {
-  clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => {
-    if (App.state.paragraphs.length) {
-      const currentPage = App.state.currentPage;
-      App.Pages.generate();
-      App.Pages.goTo(currentPage);
-    }
-  }, 300);
-});
-
-/* ======================================================
-   語音列表載入（iOS Safari 需要等待）
-   ====================================================== */
-if ('speechSynthesis' in window) {
-  window.speechSynthesis.onvoiceschanged = () => {
-    // 語音列表已更新，TTS 模組會在 speakCurrent 時自動選擇
-  };
 }
 
-/* ======================================================
-   防止雙擊縮放（iOS）
-   ====================================================== */
-let lastTouch = 0;
-document.addEventListener('touchend', e => {
-  const now = Date.now();
-  if (now - lastTouch < 300) {
-    e.preventDefault();
-  }
-  lastTouch = now;
-}, { passive: false });
+document.getElementById("fileInput").addEventListener("change",e=>{
 
-/* ======================================================
-   應用程式啟動
-   ====================================================== */
-document.addEventListener('DOMContentLoaded', () => {
-  App.init();
-});
+loadFile(e.target.files[0])
+
+})
+
+
+/* 拖曳 */
+
+document.body.addEventListener("dragover",e=>{
+
+e.preventDefault()
+
+})
+
+document.body.addEventListener("drop",e=>{
+
+e.preventDefault()
+
+loadFile(e.dataTransfer.files[0])
+
+})
+
+
+/* 讀檔 */
+
+function loadFile(file){
+
+let reader=new FileReader()
+
+reader.onload=function(){
+
+let text=reader.result
+
+startReader(text)
+
+}
+
+reader.readAsText(file)
+
+}
+
+
+/* 啟動閱讀 */
+
+function startReader(text){
+
+document.getElementById("loader").style.display="none"
+
+document.getElementById("reader").style.display="block"
+
+parseText(text)
+
+buildPages()
+
+renderPage()
+
+}
+
+
+/* 解析 */
+
+function parseText(text){
+
+paragraphs=text.split(/\n+/)
+
+}
+
+
+/* 分頁 */
+
+function buildPages(){
+
+pages=[]
+
+let page=[]
+
+let limit=800
+
+let count=0
+
+for(let p of paragraphs){
+
+if(p.length>500){
+
+let parts=p.match(/.{1,500}/g)
+
+parts.forEach(add)
+
+}else{
+
+add(p)
+
+}
+
+}
+
+function add(p){
+
+if(count+p.length>limit){
+
+pages.push(page)
+
+page=[]
+count=0
+}
+
+page.push(p)
+
+count+=p.length
+
+}
+
+pages.push(page)
+
+}
+
+
+/* 渲染 */
+
+function renderPage(){
+
+let pageDiv=document.getElementById("page")
+
+pageDiv.innerHTML=""
+
+let data=pages[currentPage]
+
+if(!data) return
+
+data.forEach((p,i)=>{
+
+let el=document.createElement("p")
+
+el.textContent=p
+
+el.dataset.index=i
+
+pageDiv.appendChild(el)
+
+})
+
+saveProgress()
+
+}
+
+
+/* 點擊翻頁 */
+
+document.body.addEventListener("click",e=>{
+
+if(document.getElementById("reader").style.display!="block")
+return
+
+let x=e.clientX
+let w=window.innerWidth
+
+if(x<w*0.3){
+
+prevPage()
+
+}else if(x>w*0.7){
+
+nextPage()
+
+}else{
+
+toggleToolbar()
+
+}
+
+})
+
+
+function nextPage(){
+
+if(currentPage<pages.length-1){
+
+currentPage++
+
+renderPage()
+
+}
+
+}
+
+function prevPage(){
+
+if(currentPage>0){
+
+currentPage--
+
+renderPage()
+
+}
+
+}
+
+
+/* 工具列 */
+
+function toggleToolbar(){
+
+let bar=document.getElementById("toolbar")
+
+bar.style.display=bar.style.display=="none"?"block":"none"
+
+}
+
+
+/* 夜間 */
+
+function toggleNight(){
+
+document.body.classList.toggle("night")
+
+}
+
+
+/* 朗讀 */
+
+function startReading(){
+
+speaking=true
+
+speakIndex=0
+
+read()
+
+}
+
+function stopReading(){
+
+speechSynthesis.cancel()
+
+speaking=false
+
+}
+
+
+function read(){
+
+if(!speaking) return
+
+let ps=document.querySelectorAll("#page p")
+
+if(speakIndex>=ps.length){
+
+nextPage()
+
+speakIndex=0
+
+read()
+
+return
+
+}
+
+let el=ps[speakIndex]
+
+highlight(el)
+
+let u=new SpeechSynthesisUtterance(el.textContent)
+
+u.rate=speechRate
+
+u.onend=()=>{
+
+speakIndex++
+
+read()
+
+}
+
+speechSynthesis.speak(u)
+
+}
+
+
+function highlight(el){
+
+document.querySelectorAll("p").forEach(p=>p.classList.remove("highlight"))
+
+el.classList.add("highlight")
+
+}
+
+
+/* 書籤 */
+
+function addBookmark(){
+
+let b=JSON.parse(localStorage.getItem("bookmarks")||"[]")
+
+b.push(currentPage)
+
+localStorage.setItem("bookmarks",JSON.stringify(b))
+
+alert("已加入書籤")
+
+}
+
+
+/* 記錄 */
+
+function saveProgress(){
+
+localStorage.setItem("page",currentPage)
+
+}
+
 </script>
 
 </body>
