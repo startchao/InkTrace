@@ -1,501 +1,280 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-TW">
 <head>
-
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
-
-<title>Novel Reader</title>
-
-<link rel="manifest" href="data:application/json,{
-'name':'Novel Reader',
-'short_name':'Reader',
-'start_url':'.',
-'display':'standalone'
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>手機小說閱讀器 v1.0.0</title>
+<meta name="theme-color" content="#ffffff">
+<link rel="manifest" href="data:application/manifest+json,{
+  \"name\": \"小說閱讀器\",
+  \"short_name\": \"閱讀器\",
+  \"start_url\": \".\",
+  \"display\": \"standalone\",
+  \"background_color\": \"#fff\",
+  \"theme_color\": \"#000\"
 }">
-
 <style>
-
-/* 基本 */
-
-body{
-margin:0;
-font-family:-apple-system,BlinkMacSystemFont;
-background:#ffffff;
-color:#000;
-overflow:hidden;
-}
-
-/* 載入畫面 */
-
-#loader{
-position:absolute;
-top:0;
-left:0;
-right:0;
-bottom:0;
-
-display:flex;
-flex-direction:column;
-justify-content:center;
-align-items:center;
-
-text-align:center;
-padding:30px;
-}
-
-#loader button{
-font-size:18px;
-padding:12px 20px;
-margin-top:20px;
-}
-
-/* 閱讀區 */
-
-#reader{
-display:none;
-
-position:absolute;
-top:0;
-left:0;
-right:0;
-bottom:0;
-
-padding:6%;
-overflow:hidden;
-}
-
-#page{
-max-width:700px;
-margin:auto;
-
-font-size:20px;
-line-height:1.6;
-}
-
-/* 夜間模式 */
-
-body.night{
-background:#000;
-color:#ccc;
-}
-
-/* 工具列 */
-
-#toolbar{
-
-position:fixed;
-bottom:0;
-left:0;
-right:0;
-
-background:rgba(0,0,0,0.8);
-
-color:#fff;
-
-padding:10px;
-
-display:none;
-}
-
-button{
-margin:4px;
-}
-
-/* 朗讀高亮 */
-
-.highlight{
-background:#ccc;
-}
-
+:root{--bg:#fff;--txt:#000;--hl:#eee;--fs:18px;--lh:1.5;}
+body{margin:0;height:100vh;font-family:system-ui;background:var(--bg);color:var(--txt);overflow:hidden;}
+#reader{position:absolute;inset:0;padding:2% 4%;font-size:var(--fs);line-height:var(--lh);overflow:hidden;}
+.page{opacity:0;transition:opacity .4s, transform .4s;position:absolute;inset:0;padding:2% 4%;box-sizing:border-box;transform:translateX(0);}
+.page.active{opacity:1;z-index:10;}
+.page.prev{transform:translateX(-100%);}
+.page.next{transform:translateX(100%);}
+#toolbar{position:fixed;bottom:0;left:0;right:0;background:#000c;color:#fff;padding:10px;display:none;flex-wrap:wrap;gap:8px;z-index:20;}
+#toolbar button,#toolbar select{font-size:14px;padding:6px 10px;}
+#menu{display:none;position:fixed;inset:0;background:#0008;z-index:15;}
+#menu>div{background:#111;color:#fff;margin:10% auto;padding:20px;max-width:90%;max-height:80%;overflow:auto;border-radius:8px;}
+#upload-area{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#eee;flex-direction:column;}
+label[for="fileInput"]{display:inline-block;padding:12px 24px;background:#007bff;color:white;border-radius:6px;cursor:pointer;margin:20px;}
+#highlight{background:var(--hl);position:absolute;pointer-events:none;transition:all .2s;}
+.night{--bg:#111;--txt:#ccc;--hl:#222;}
 </style>
 </head>
-
 <body>
 
-<!-- 載入小說畫面 -->
-
-<div id="loader">
-
-<h2>手機小說閱讀器</h2>
-
-<p>支援 TXT 小說</p>
-
-<button onclick="openFile()">載入 TXT</button>
-
-<p style="margin-top:20px;font-size:14px">
-或拖曳 TXT 到畫面
-</p>
-
-<p style="font-size:12px;color:#666">
-v1.0.1
-</p>
-
+<div id="upload-area">
+  <p>拖曳 TXT 小說檔到此處，或</p>
+  <label for="fileInput">點擊選擇檔案</label>
+  <input type="file" accept=".txt" id="fileInput">
 </div>
 
-<!-- 閱讀區 -->
-
-<div id="reader">
-
-<div id="page"></div>
-
-</div>
-
-<!-- 工具列 -->
+<div id="reader"></div>
+<div id="highlight"></div>
 
 <div id="toolbar">
-
-<button onclick="toggleNight()">夜間</button>
-
-<button onclick="startReading()">朗讀</button>
-
-<button onclick="stopReading()">停止</button>
-
-<button onclick="addBookmark()">書籤</button>
-
-<span style="float:right">v1.0.1</span>
-
+  <button onclick="togglePlay()">朗讀</button>
+  <select id="rate" onchange="setRate(this.value)">
+    <option value="0.5">0.5x</option><option value="0.75">0.75x</option>
+    <option value="1" selected>1x</option><option value="1.25">1.25x</option>
+    <option value="1.5">1.5x</option><option value="2">2x</option>
+  </select>
+  <select id="timer" onchange="setTimer(this.value)">
+    <option value="0">無</option><option value="300">5分</option><option value="600">10分</option>
+    <option value="1200">20分</option><option value="1800">30分</option>
+  </select>
+  <button onclick="toggleMode()">日/夜</button>
+  <button onclick="toggleConvert()">原文/繁</button>
+  <button onclick="showChapters()">目錄</button>
+  <button onclick="showMenu()">設定</button>
+  <span>v1.0.0</span>
 </div>
 
-<input type="file" id="fileInput" accept=".txt" style="display:none">
+<div id="menu">
+  <div>
+    <h3>設定</h3>
+    <label>字體大小: <select id="fontSize" onchange="setFont(this.value)">
+      <option value="16">16</option><option value="18" selected>18</option>
+      <option value="20">20</option><option value="24">24</option>
+    </select></label><br>
+    <label>行距: <select id="lineHeight" onchange="setLine(this.value)">
+      <option value="1.2">1.2</option><option value="1.5" selected>1.5</option>
+      <option value="2.0">2.0</option>
+    </select></label><br>
+    <button onclick="addBookmark()">新增書籤</button>
+    <button onclick="showBookmarks()">書籤</button>
+    <button onclick="closeMenu()">關閉</button>
+  </div>
+</div>
 
 <script>
+// 核心變數
+let rawText = '', text = '', paragraphs = [], pages = [], chapters = [], currentPage = 0;
+let isTraditional = true, isNight = false;
+let utterance = null, synth = window.speechSynthesis;
+let timerId = null;
+let bookmarks = JSON.parse(localStorage.getItem('bookmarks') || '[]');
 
-/* 狀態 */
+// 載入 TXT
+const dropArea = document.body;
+dropArea.ondragover = e => e.preventDefault();
+dropArea.ondrop = e => { e.preventDefault(); loadFile(e.dataTransfer.files[0]); };
+document.getElementById('fileInput').onchange = e => loadFile(e.target.files[0]);
 
-let paragraphs=[]
-let pages=[]
+async function loadFile(file) {
+  if (!file || !file.name.endsWith('.txt')) return alert('請選擇 TXT 檔');
+  document.getElementById('upload-area').style.display = 'none';
+  document.getElementById('toolbar').style.display = 'flex';
 
-let currentPage=0
-
-let speechRate=1
-
-let speaking=false
-let speakIndex=0
-
-
-/* 開檔 */
-
-function openFile(){
-
-document.getElementById("fileInput").click()
-
+  let content = '';
+  const reader = new FileReader();
+  reader.onload = e => {
+    content = e.target.result;
+    rawText = content;
+    text = isTraditional ? s2t(rawText) : rawText;
+    parseText();
+    parseChapters();
+    paginate();
+    loadSettings();
+    renderPage(0);
+  };
+  reader.readAsText(file);
 }
 
-document.getElementById("fileInput").addEventListener("change",e=>{
-
-loadFile(e.target.files[0])
-
-})
-
-
-/* 拖曳 */
-
-document.body.addEventListener("dragover",e=>{
-
-e.preventDefault()
-
-})
-
-document.body.addEventListener("drop",e=>{
-
-e.preventDefault()
-
-loadFile(e.dataTransfer.files[0])
-
-})
-
-
-/* 讀檔 */
-
-function loadFile(file){
-
-let reader=new FileReader()
-
-reader.onload=function(){
-
-let text=reader.result
-
-startReader(text)
-
+function s2t(str) {
+  const map = {'着':'著','里':'裡','只':'隻','干':'乾','后':'後','发':'發','台':'臺','余':'餘','丑':'醜','云':'雲','汇':'匯','并':'並','冲':'衝','划':'劃','历':'歷','别':'別','制':'製','当':'當','几':'幾','出':'齣','向':'嚮','回':'迴'};
+  return str.replace(/./g, c => map[c] || c);
 }
 
-reader.readAsText(file)
-
+function parseText() {
+  paragraphs = text.split(/\n\s*\n/).map(p => p.trim().replace(/\n/g, ' ')).filter(p => p);
+  let split = [];
+  paragraphs.forEach(p => {
+    while (p.length > 500) {
+      split.push(p.slice(0,500));
+      p = p.slice(500);
+    }
+    if (p) split.push(p);
+  });
+  paragraphs = split;
 }
 
-
-/* 啟動閱讀 */
-
-function startReader(text){
-
-document.getElementById("loader").style.display="none"
-
-document.getElementById("reader").style.display="block"
-
-parseText(text)
-
-buildPages()
-
-renderPage()
-
+function parseChapters() {
+  chapters = [];
+  paragraphs.forEach((p, i) => {
+    if (/^第\s*[\d一二三四五六七八九十百千]+章/.test(p)) {
+      chapters.push({title: p.slice(0,30), index: i});
+    }
+  });
 }
 
+function paginate() {
+  pages = [];
+  let pageContent = '';
+  const test = document.createElement('div');
+  test.style.position = 'absolute';
+  test.style.visibility = 'hidden';
+  test.style.width = '92vw';
+  test.style.fontSize = getComputedStyle(document.documentElement).getPropertyValue('--fs');
+  test.style.lineHeight = getComputedStyle(document.documentElement).getPropertyValue('--lh');
+  test.style.padding = '2% 4%';
+  document.body.appendChild(test);
 
-/* 解析 */
-
-function parseText(text){
-
-paragraphs=text.split(/\n+/)
-
+  for (let p of paragraphs) {
+    test.innerHTML = pageContent + p + '<br><br>';
+    if (test.offsetHeight > window.innerHeight * 0.88) {
+      pages.push(pageContent);
+      pageContent = p + '<br><br>';
+    } else {
+      pageContent += p + '<br><br>';
+    }
+  }
+  if (pageContent) pages.push(pageContent);
+  document.body.removeChild(test);
 }
 
+function renderPage(idx) {
+  const reader = document.getElementById('reader');
+  reader.innerHTML = '';
+  currentPage = idx;
 
-/* 分頁 */
-
-function buildPages(){
-
-pages=[]
-
-let page=[]
-
-let limit=800
-
-let count=0
-
-for(let p of paragraphs){
-
-if(p.length>500){
-
-let parts=p.match(/.{1,500}/g)
-
-parts.forEach(add)
-
-}else{
-
-add(p)
-
+  for (let i = Math.max(0, idx-1); i <= idx+1; i++) {
+    if (i >= pages.length) break;
+    const div = document.createElement('div');
+    div.className = 'page';
+    if (i === idx) div.classList.add('active');
+    if (i === idx-1) div.classList.add('prev');
+    if (i === idx+1) div.classList.add('next');
+    div.innerHTML = pages[i];
+    reader.appendChild(div);
+  }
+  saveProgress();
 }
 
+document.getElementById('reader').onclick = e => {
+  const w = window.innerWidth;
+  if (e.clientX < w*0.3) prevPage();
+  else if (e.clientX > w*0.7) nextPage();
+  else document.getElementById('toolbar').style.display = document.getElementById('toolbar').style.display==='flex'?'none':'flex';
+};
+
+function nextPage() { if (currentPage < pages.length-1) renderPage(currentPage+1); }
+function prevPage() { if (currentPage > 0) renderPage(currentPage-1); }
+
+// 朗讀
+function togglePlay() {
+  if (synth.speaking) { synth.cancel(); return; }
+  const page = document.querySelector('.page.active');
+  if (!page) return;
+  utterance = new SpeechSynthesisUtterance(page.textContent);
+  utterance.rate = +document.getElementById('rate').value;
+  utterance.lang = 'zh-TW';
+  utterance.onend = () => { if (currentPage < pages.length-1) setTimeout(() => { nextPage(); togglePlay(); }, 300); };
+  synth.speak(utterance);
 }
 
-function add(p){
-
-if(count+p.length>limit){
-
-pages.push(page)
-
-page=[]
-count=0
+function setRate(v) { if (utterance) utterance.rate = +v; }
+function setTimer(v) {
+  clearTimeout(timerId);
+  if (+v > 0) timerId = setTimeout(() => synth.cancel(), +v * 1000);
+}
+function toggleMode() {
+  isNight = !isNight;
+  document.body.classList.toggle('night', isNight);
+  localStorage.setItem('night', isNight);
+}
+function toggleConvert() {
+  isTraditional = !isTraditional;
+  text = isTraditional ? s2t(rawText) : rawText;
+  parseText();
+  paginate();
+  renderPage(currentPage);
+}
+function setFont(v) {
+  document.documentElement.style.setProperty('--fs', v+'px');
+  localStorage.setItem('fs', v);
+  paginate(); renderPage(currentPage);
+}
+function setLine(v) {
+  document.documentElement.style.setProperty('--lh', v);
+  localStorage.setItem('lh', v);
+  paginate(); renderPage(currentPage);
 }
 
-page.push(p)
+function showChapters() {
+  let html = chapters.map((c,i)=>`<div onclick="jump(${c.index})">${c.title}</div>`).join('');
+  document.getElementById('menu').innerHTML = `<div><h3>目錄</h3>${html}<button onclick="closeMenu()">關閉</button></div>`;
+  document.getElementById('menu').style.display='block';
+}
+function jump(paraIdx) {
+  let page = 0;
+  for (let i=0; i<pages.length; i++) {
+    if (pages[i].includes(paragraphs[paraIdx])) { page = i; break; }
+  }
+  renderPage(page);
+  closeMenu();
+}
+function addBookmark() {
+  bookmarks.push({page:currentPage, time:new Date().toLocaleString()});
+  localStorage.setItem('bookmarks', JSON.stringify(bookmarks));
+}
+function showBookmarks() {
+  let html = bookmarks.map((b,i)=>`<div onclick="renderPage(${b.page})">${i+1}. ${b.time}</div>`).join('');
+  document.getElementById('menu').innerHTML = `<div><h3>書籤</h3>${html}<button onclick="closeMenu()">關閉</button></div>`;
+  document.getElementById('menu').style.display='block';
+}
+function closeMenu() { document.getElementById('menu').style.display='none'; }
 
-count+=p.length
-
+function saveProgress() {
+  localStorage.setItem('progress', JSON.stringify({page:currentPage, fs:document.documentElement.style.getPropertyValue('--fs'), lh:document.documentElement.style.getPropertyValue('--lh'), night:isNight, trad:isTraditional}));
+}
+function loadSettings() {
+  const s = JSON.parse(localStorage.getItem('progress')||'{}');
+  if (s.page) renderPage(s.page);
+  if (s.fs) document.documentElement.style.setProperty('--fs', s.fs);
+  if (s.lh) document.documentElement.style.setProperty('--lh', s.lh);
+  if (s.night) { isNight=true; document.body.classList.add('night'); }
+  if (s.trad !== undefined) isTraditional = s.trad;
 }
 
-pages.push(page)
-
-}
-
-
-/* 渲染 */
-
-function renderPage(){
-
-let pageDiv=document.getElementById("page")
-
-pageDiv.innerHTML=""
-
-let data=pages[currentPage]
-
-if(!data) return
-
-data.forEach((p,i)=>{
-
-let el=document.createElement("p")
-
-el.textContent=p
-
-el.dataset.index=i
-
-pageDiv.appendChild(el)
-
-})
-
-saveProgress()
-
-}
-
-
-/* 點擊翻頁 */
-
-document.body.addEventListener("click",e=>{
-
-if(document.getElementById("reader").style.display!="block")
-return
-
-let x=e.clientX
-let w=window.innerWidth
-
-if(x<w*0.3){
-
-prevPage()
-
-}else if(x>w*0.7){
-
-nextPage()
-
-}else{
-
-toggleToolbar()
-
-}
-
-})
-
-
-function nextPage(){
-
-if(currentPage<pages.length-1){
-
-currentPage++
-
-renderPage()
-
-}
-
-}
-
-function prevPage(){
-
-if(currentPage>0){
-
-currentPage--
-
-renderPage()
-
-}
-
-}
-
-
-/* 工具列 */
-
-function toggleToolbar(){
-
-let bar=document.getElementById("toolbar")
-
-bar.style.display=bar.style.display=="none"?"block":"none"
-
-}
-
-
-/* 夜間 */
-
-function toggleNight(){
-
-document.body.classList.toggle("night")
-
-}
-
-
-/* 朗讀 */
-
-function startReading(){
-
-speaking=true
-
-speakIndex=0
-
-read()
-
-}
-
-function stopReading(){
-
-speechSynthesis.cancel()
-
-speaking=false
-
-}
-
-
-function read(){
-
-if(!speaking) return
-
-let ps=document.querySelectorAll("#page p")
-
-if(speakIndex>=ps.length){
-
-nextPage()
-
-speakIndex=0
-
-read()
-
-return
-
-}
-
-let el=ps[speakIndex]
-
-highlight(el)
-
-let u=new SpeechSynthesisUtterance(el.textContent)
-
-u.rate=speechRate
-
-u.onend=()=>{
-
-speakIndex++
-
-read()
-
-}
-
-speechSynthesis.speak(u)
-
-}
-
-
-function highlight(el){
-
-document.querySelectorAll("p").forEach(p=>p.classList.remove("highlight"))
-
-el.classList.add("highlight")
-
-}
-
-
-/* 書籤 */
-
-function addBookmark(){
-
-let b=JSON.parse(localStorage.getItem("bookmarks")||"[]")
-
-b.push(currentPage)
-
-localStorage.setItem("bookmarks",JSON.stringify(b))
-
-alert("已加入書籤")
-
-}
-
-
-/* 記錄 */
-
-function saveProgress(){
-
-localStorage.setItem("page",currentPage)
-
-}
-
+if ('serviceWorker' in navigator) navigator.serviceWorker.register(new URL('', import.meta.url), {type:'module'});
+window.onbeforeunload = saveProgress;
+window.onload = () => {
+  if (localStorage.getItem('progress')) {
+    document.getElementById('upload-area').style.display = 'none';
+    document.getElementById('toolbar').style.display = 'flex';
+  }
+};
 </script>
-
 </body>
 </html>
