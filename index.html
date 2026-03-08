@@ -1,483 +1,471 @@
 <!DOCTYPE html>
 
-<!-- 書閣 Novel Reader v1.3.0 — 2026-03-08 -->
+<!-- 書閣 Novel Reader v1.4.0 -->
 
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="Expires" content="0">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>書閣 v1.3 · 小說閱讀器</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;700&family=Cinzel:wght@400;600&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>書閣 v1.4</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-/* ════════════════════════════════════════════
-   v1.3 — 主題變數
-════════════════════════════════════════════ */
+/* ════════════════════════════
+   日間（預設）
+════════════════════════════ */
 :root{
-  /* 日間 */
-  --bg:      #f7f2ea;
-  --bg2:     #fffcf6;
-  --bg3:     #fff8ed;
-  --tx:      #18120a;
-  --tx2:     #3a2c18;
-  --tx3:     #7a6548;
-  --gold:    #b8892a;
-  --gold2:   #d4a843;
-  --goldp:   rgba(184,137,42,.12);
-  --bd:      rgba(184,137,42,.2);
-  --bd2:     rgba(184,137,42,.42);
-  --sh:      rgba(26,18,8,.14);
-  --sh2:     rgba(26,18,8,.3);
-  /* 閱讀字體大小（JS 直接設定 style） */
-  --fsz:     18px;
-  --lh:      2;
-  --serif:   'Noto Serif TC','Georgia',serif;
-  --display: 'Cinzel','Noto Serif TC',serif;
-  --ease:    cubic-bezier(.22,1,.36,1);
+  --bg:    #f6f1e9;
+  --bg2:   #fffcf6;
+  --bg3:   #fff8ed;
+  --tx:    #1a1208;
+  --tx2:   #3d2f1a;
+  --tx3:   #8a7456;
+  --ac:    #a87820;        /* 主色金 */
+  --ac2:   #c99a30;
+  --acp:   rgba(168,120,32,.13);
+  --bd:    rgba(168,120,32,.22);
+  --bd2:   rgba(168,120,32,.45);
+  --sh:    rgba(20,14,4,.14);
+  --sh2:   rgba(20,14,4,.30);
+  --serif: 'Noto Serif TC','Georgia',serif;
+  --ease:  cubic-bezier(.22,1,.36,1);
 }
-[data-night]{
-  --bg:   #0c0a07;
-  --bg2:  #110f0b;
-  --bg3:  #151210;
-  --tx:   #d0c4a4;
-  --tx2:  #b0a07e;
-  --tx3:  #6a5e42;
-  --gold: #c49a35;
-  --goldp:rgba(196,154,53,.13);
-  --bd:   rgba(196,154,53,.18);
-  --bd2:  rgba(196,154,53,.4);
-  --sh:   rgba(0,0,0,.4);
-  --sh2:  rgba(0,0,0,.65);
+/* ════════════════════════════
+   夜間 — class 切換，不用 attr
+════════════════════════════ */
+body.night{
+  --bg:  #0b0907;
+  --bg2: #110e0b;
+  --bg3: #161210;
+  --tx:  #d2c6a6;
+  --tx2: #b2a27e;
+  --tx3: #6e6248;
+  --ac:  #c0922a;
+  --ac2: #d4a840;
+  --acp: rgba(192,146,42,.14);
+  --bd:  rgba(192,146,42,.2);
+  --bd2: rgba(192,146,42,.44);
+  --sh:  rgba(0,0,0,.42);
+  --sh2: rgba(0,0,0,.65);
 }
 
-/* ── 重設 ── */
+/* ════════════════════════════
+重設
+════════════════════════════ */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{width:100%;height:100%;overflow:hidden}
 body{font-family:var(–serif);background:var(–bg);color:var(–tx);transition:background .3s,color .3s}
 button{font-family:inherit;cursor:pointer;border:none;background:none;-webkit-appearance:none}
-select{font-family:inherit}
+input,select{font-family:inherit}
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-thumb{background:var(–bd2);border-radius:2px}
 
-/* ════════════════════════════════════════════
-視圖系統
-════════════════════════════════════════════ */
+/* ════════════════════════════
+視圖
+════════════════════════════ */
 .view{position:fixed;inset:0;display:none;flex-direction:column;overflow:hidden}
 .view.on{display:flex}
 
-/* ════════════════════════════════════════════
+/* ════════════════════════════
 ── 書庫 ──
-════════════════════════════════════════════ */
-#vLib{background:var(–bg);overflow-y:auto;overflow-x:hidden}
+════════════════════════════ */
+#vLib{overflow-y:auto;overflow-x:hidden;background:var(–bg)}
 
+/* 頂部列 */
 .lhd{
 position:sticky;top:0;z-index:50;
-height:58px;padding:0 20px;
-display:flex;align-items:center;gap:12px;
+height:56px;padding:0 18px;
+display:flex;align-items:center;gap:10px;
 background:var(–bg);border-bottom:1px solid var(–bd);
 backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
 }
 .lhd-logo{
-font-family:var(–display);font-size:20px;
-color:var(–gold);letter-spacing:.12em;flex:1;
-text-shadow:0 1px 8px rgba(184,137,42,.25);
+font-size:20px;font-weight:700;
+color:var(–ac);letter-spacing:.1em;flex:1;
 }
-.lhd-logo span{font-family:var(–serif);font-size:11px;color:var(–tx3);margin-left:6px;letter-spacing:.04em}
-.lhd-ver{font-size:10px;color:var(–tx3);letter-spacing:.06em;margin-right:4px}
+.lhd-logo small{font-size:11px;color:var(–tx3);margin-left:6px;font-weight:400;letter-spacing:.04em}
+.lhd-ver{font-size:10px;color:var(–tx3);letter-spacing:.06em;margin-right:2px}
+
+/* 圖示按鈕 */
 .ibt{
 width:36px;height:36px;border-radius:50%;
 display:flex;align-items:center;justify-content:center;
-font-size:18px;color:var(–tx3);
-border:1px solid transparent;
-transition:background .15s,color .15s,transform .12s;
+font-size:18px;
+border:1.5px solid var(–bd2);
+color:var(–tx2);background:var(–bg3);
+transition:background .15s,transform .12s;
 }
-.ibt:hover,.ibt:active{background:var(–goldp);color:var(–gold);border-color:var(–bd)}
-.ibt:active{transform:scale(.9)}
+.ibt:active{background:var(–acp);transform:scale(.9)}
 
-.lbody{padding:22px 18px 90px;max-width:800px;margin:0 auto}
-.lbar{display:flex;align-items:center;gap:10px;margin-bottom:18px}
-.lbar-t{font-family:var(–display);font-size:10px;letter-spacing:.22em;color:var(–gold);text-transform:uppercase}
+/* 書庫主體 */
+.lbody{padding:20px 16px 90px;max-width:800px;margin:0 auto}
+.lbar{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.lbar-t{font-size:11px;letter-spacing:.18em;color:var(–ac);text-transform:uppercase;font-weight:600}
 .lbar-l{flex:1;height:1px;background:linear-gradient(90deg,var(–bd2),transparent)}
 .lbar-c{font-size:11px;color:var(–tx3)}
 
 /* 書籍網格 */
-.bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:16px}
-@media(max-width:400px){.bgrid{grid-template-columns:repeat(2,1fr);gap:12px}}
+.bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:14px}
+@media(max-width:400px){.bgrid{grid-template-columns:repeat(2,1fr);gap:10px}}
 
 .bcard{
 position:relative;cursor:pointer;
 border-radius:3px 10px 10px 3px;overflow:hidden;
-box-shadow:-4px 4px 16px var(–sh),-1px 0 0 rgba(0,0,0,.12);
+box-shadow:-4px 4px 16px var(–sh),-1px 0 0 rgba(0,0,0,.1);
 transition:transform .25s var(–ease),box-shadow .25s;
 animation:cin .4s var(–ease) both;
 }
-@keyframes cin{from{opacity:0;transform:translateY(14px) scale(.95)}to{opacity:1;transform:none}}
-.bcard:hover{transform:translateY(-4px) rotate(-.3deg);box-shadow:-4px 12px 28px var(–sh2)}
+@keyframes cin{from{opacity:0;transform:translateY(12px) scale(.95)}to{opacity:1;transform:none}}
 .bcard:active{transform:scale(.97)}
 .bcov{
 aspect-ratio:3/4;
 display:flex;flex-direction:column;align-items:center;justify-content:center;
-padding:16px 10px;position:relative;overflow:hidden;
+padding:14px 10px;position:relative;overflow:hidden;
 }
 .bcov::before{content:’’;position:absolute;inset:0;background:var(–cvbg,#2a3a5a)}
-.bcov::after{content:’’;position:absolute;left:0;top:0;bottom:0;width:12px;background:linear-gradient(90deg,rgba(0,0,0,.3),rgba(0,0,0,.06),transparent)}
-.bcov-lines{position:absolute;inset:0;background-image:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(255,255,255,.022) 3px,rgba(255,255,255,.022) 4px)}
-.bcov-title{position:relative;z-index:1;font-weight:700;font-size:14px;color:rgba(255,255,255,.93);text-align:center;line-height:1.5;word-break:break-all;text-shadow:0 2px 8px rgba(0,0,0,.5);letter-spacing:.05em;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
-.bcov-rule{position:relative;z-index:1;margin-top:10px;width:26px;height:1px;background:rgba(255,255,255,.38)}
+.bcov::after{content:’’;position:absolute;left:0;top:0;bottom:0;width:11px;background:linear-gradient(90deg,rgba(0,0,0,.28),rgba(0,0,0,.05),transparent)}
+.bcov-ln{position:absolute;inset:0;background-image:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(255,255,255,.02) 3px,rgba(255,255,255,.02) 4px)}
+.bcov-t{position:relative;z-index:1;font-weight:700;font-size:13px;color:#fff;text-align:center;line-height:1.5;word-break:break-all;text-shadow:0 2px 8px rgba(0,0,0,.5);display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.bcov-r{position:relative;z-index:1;margin-top:9px;width:24px;height:1px;background:rgba(255,255,255,.36)}
 .binfo{padding:8px 10px;background:var(–bg2);border-top:1px solid var(–bd)}
 .bname{font-size:12px;font-weight:500;color:var(–tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bmeta{font-size:10px;color:var(–tx3);margin-top:3px;display:flex;justify-content:space-between}
 .bprog{height:2px;background:var(–bd);border-radius:1px;margin-top:6px;overflow:hidden}
-.bprog-f{height:100%;background:linear-gradient(90deg,var(–gold),var(–gold2));border-radius:1px;transition:width .4s}
+.bprog-f{height:100%;background:linear-gradient(90deg,var(–ac),var(–ac2));border-radius:1px}
 .bdel{
 position:absolute;top:6px;right:6px;z-index:5;
 opacity:0;transition:opacity .15s;
 width:26px;height:26px;border-radius:50%;
 display:flex;align-items:center;justify-content:center;
-font-size:13px;color:#fff;font-weight:700;
-background:rgba(0,0,0,.55);backdrop-filter:blur(3px);
+font-size:14px;font-weight:700;
+color:#fff;background:rgba(0,0,0,.6);
 }
 .bcard:hover .bdel{opacity:1}
-.bdel:hover{background:rgba(180,30,30,.8)!important}
+.bdel:active{background:rgba(180,30,30,.85)!important}
 
 /* 空書庫 */
-.bempty{grid-column:1/-1;padding:48px 16px;text-align:center}
-.bempty-ico{font-size:52px;margin-bottom:14px;opacity:.4}
+.bempty{grid-column:1/-1;padding:48px 16px;text-align:center;animation:cin .4s var(–ease)}
+.bempty-ico{font-size:50px;margin-bottom:12px;opacity:.45}
 .bempty-txt{font-size:14px;color:var(–tx3);line-height:1.8}
+
+/* ★ 上傳按鈕 — 明確的金色，文字強制白色 */
 .bempty-btn{
-display:inline-flex;align-items:center;gap:7px;
-margin-top:20px;padding:12px 28px;
-background:var(–gold);color:#fff!important;
-border-radius:24px;font-size:15px;font-weight:600;letter-spacing:.05em;
-transition:background .18s,transform .14s,box-shadow .18s;
-box-shadow:0 4px 16px rgba(184,137,42,.38);
+display:inline-flex;align-items:center;gap:6px;
+margin-top:18px;padding:13px 30px;
+background:#a87820;   /* 固定色，不用變數 */
+color:#ffffff;        /* 強制白色 */
+border-radius:26px;
+font-size:16px;font-weight:700;letter-spacing:.04em;
+box-shadow:0 4px 18px rgba(168,120,32,.42);
 -webkit-appearance:none;appearance:none;
+border:none;
 }
-.bempty-btn:active{background:var(–gold2);transform:scale(.96)}
+.bempty-btn:active{background:#c99a30;transform:scale(.96)}
+body.night .bempty-btn{background:#c0922a;color:#ffffff}
 
 /* FAB */
 .fab{
-position:fixed;right:20px;bottom:24px;
+position:fixed;right:20px;bottom:22px;
 width:52px;height:52px;border-radius:50%;
-background:linear-gradient(135deg,var(–gold),var(–gold2));
-color:#fff;font-size:26px;font-weight:300;
+background:#a87820;color:#fff;font-size:26px;
 display:flex;align-items:center;justify-content:center;
-box-shadow:0 5px 20px rgba(184,137,42,.42);z-index:200;
-transition:transform .2s var(–ease),box-shadow .2s;
--webkit-appearance:none;
+box-shadow:0 5px 20px rgba(168,120,32,.45);
+z-index:200;-webkit-appearance:none;
 }
-.fab:active{transform:scale(.9);box-shadow:0 2px 10px rgba(184,137,42,.3)}
+.fab:active{transform:scale(.9)}
+body.night .fab{background:#c0922a}
 #fi{display:none}
 
-/* ════════════════════════════════════════════
-── 閱讀視圖（翻頁模式）──
-════════════════════════════════════════════ */
+/* ════════════════════════════
+── 閱讀器（翻頁） ──
+════════════════════════════ */
 #vRdr{background:var(–bg);overflow:hidden}
 
-/* 頂部欄 */
+/* 頂部 */
 .rhd{
 height:48px;flex-shrink:0;
 display:flex;align-items:center;padding:0 10px;gap:6px;
-background:var(–bg);border-bottom:1px solid var(–bd);
-transition:background .3s;z-index:30;
+background:var(–bg);border-bottom:1.5px solid var(–bd2);
+z-index:30;
 }
 .rbk{
 display:flex;align-items:center;gap:4px;
 padding:6px 10px 6px 4px;border-radius:16px;
-font-size:13px;color:var(–gold);white-space:nowrap;
-transition:background .15s;
+font-size:14px;font-weight:600;color:var(–ac);
+white-space:nowrap;
 }
-.rbk:active{background:var(–goldp)}
+.rbk:active{background:var(–acp)}
 .rtitle{
 flex:1;font-size:13px;font-weight:500;color:var(–tx2);
-text-align:center;overflow:hidden;text-overflow:ellipsis;
-white-space:nowrap;letter-spacing:.04em;
+text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
-.rtool{display:flex;gap:2px}
+.rtool{display:flex;gap:4px}
 
-/* ── 翻頁主體 ── */
-.rbook{
-flex:1;position:relative;overflow:hidden;
-touch-action:none; /* 防止滾動，讓JS處理 */
-}
+/* 翻頁書體 */
+.rbook{flex:1;position:relative;overflow:hidden}
 
-/* 翻頁點擊區域（左/右） */
+/* 點擊區 */
 .rzone{
-position:absolute;top:0;bottom:0;width:30%;z-index:10;
+position:absolute;top:0;bottom:0;width:28%;z-index:10;
 display:flex;align-items:center;
-opacity:0;transition:opacity .15s;
-pointer-events:all;
 }
-.rzone:active{opacity:1}
-.rzone-L{left:0;justify-content:flex-start;padding-left:8px}
-.rzone-R{right:0;justify-content:flex-end;padding-right:8px}
+.rzone-L{left:0;justify-content:flex-start;padding-left:6px}
+.rzone-R{right:0;justify-content:flex-end;padding-right:6px}
 .rzone-ico{
-width:32px;height:32px;border-radius:50%;
-background:rgba(184,137,42,.18);
+width:30px;height:30px;border-radius:50%;
+background:rgba(168,120,32,.16);border:1px solid rgba(168,120,32,.3);
 display:flex;align-items:center;justify-content:center;
-font-size:16px;color:var(–gold);
-backdrop-filter:blur(4px);
+font-size:17px;color:var(–ac);
+opacity:0;transition:opacity .15s;
 }
+.rzone:active .rzone-ico{opacity:1}
 
-/* 頁面容器 */
-.rpage-wrap{
+/* 頁面滑動容器 */
+.rpwrap{
 position:absolute;inset:0;
-display:flex;align-items:stretch;
-transition:transform .32s cubic-bezier(.4,0,.2,1);
+display:flex;
+transition:transform .3s cubic-bezier(.4,0,.2,1);
 will-change:transform;
 }
-/* 每個頁面 */
 .rpage{
-width:100%;flex-shrink:0;
-overflow:hidden;
-padding:20px 22px 16px;
+width:100%;flex-shrink:0;overflow:hidden;
+padding:14px 20px 10px;
 display:flex;flex-direction:column;
 }
-@media(max-width:400px){.rpage{padding:16px 16px 12px}}
+@media(max-width:400px){.rpage{padding:12px 14px 8px}}
 
-/* 頁面頂部章節標題 */
-.rpage-chap{
-font-size:11px;color:var(–tx3);letter-spacing:.08em;
-text-align:center;margin-bottom:12px;flex-shrink:0;
+/* 頁眉（章節名） */
+.rp-chap{
+font-size:11px;color:var(–tx3);
+text-align:center;margin-bottom:10px;flex-shrink:0;
 overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+letter-spacing:.06em;
 }
-/* 正文容器 */
-.rpage-body{
-flex:1;overflow:hidden;
-font-size:var(–fsz);
-line-height:var(–lh);
-color:var(–tx);
-}
-/* 段落 */
+/* 正文 */
+.rp-body{flex:1;overflow:hidden}
 .para{
-margin-bottom:.65em;
-text-align:justify;
-text-indent:2em;
-transition:background .2s;
-border-radius:3px;
-padding:1px 3px;
+margin-bottom:.6em;text-align:justify;text-indent:2em;
+border-radius:3px;padding:1px 3px;
 }
 .para.ch{
-font-weight:700;font-size:1.05em;
+font-weight:700;font-size:1.06em;
 text-align:center;text-indent:0;
-color:var(–tx);letter-spacing:.08em;
-padding:4px 0 8px;
+letter-spacing:.08em;padding:6px 0 8px;
 }
-.para.ch::after{content:‘✦’;display:block;font-size:.65em;color:var(–gold);margin-top:4px;opacity:.6}
+.para.ch::after{content:‘✦’;display:block;font-size:.6em;color:var(–ac);margin-top:4px;opacity:.55}
 .para.tts-hi{
-background:rgba(184,137,42,.14);
-border-left:2px solid var(–gold);
+background:rgba(168,120,32,.15);
+border-left:2px solid var(–ac);
 padding-left:8px;text-indent:0;
 }
-/* 頁面底部頁碼 */
-.rpage-foot{
-flex-shrink:0;padding-top:8px;
+/* 頁腳 */
+.rp-foot{
+flex-shrink:0;padding-top:7px;
 display:flex;align-items:center;justify-content:space-between;
-border-top:1px solid var(–bd);margin-top:8px;
+border-top:1px solid var(–bd);margin-top:6px;
 }
-.rpage-num{font-size:11px;color:var(–tx3);letter-spacing:.06em}
-.rpage-pct{font-size:11px;color:var(–tx3)}
+.rp-num{font-size:10px;color:var(–tx3)}
+.rp-pct{font-size:10px;color:var(–tx3)}
 
-/* ── 底部工具列（固定） ── */
+/* 底部工具 */
 .rfoot{
 height:52px;flex-shrink:0;
 display:flex;align-items:center;justify-content:space-between;
-padding:0 12px;
-background:var(–bg);border-top:1px solid var(–bd);
-transition:background .3s;z-index:30;
+padding:0 10px;
+background:var(–bg);border-top:1.5px solid var(–bd2);
+z-index:30;
 }
 .rfprog{
-flex:1;margin:0 10px;height:3px;
+flex:1;margin:0 10px;height:4px;
 background:var(–bd);border-radius:2px;cursor:pointer;overflow:hidden;
 }
-.rfprog-f{height:100%;background:linear-gradient(90deg,var(–gold),var(–gold2));border-radius:2px;transition:width .3s}
+.rfprog-f{height:100%;background:linear-gradient(90deg,var(–ac),var(–ac2));border-radius:2px;transition:width .3s}
 .rfbtns{display:flex;gap:2px;flex-shrink:0}
+
+/* ★ 底部按鈕 — 明顯可見 */
 .rfbt{
-width:36px;height:36px;border-radius:8px;
+width:38px;height:38px;border-radius:8px;
 display:flex;align-items:center;justify-content:center;
-font-size:16px;color:var(–tx3);
-transition:background .14s,color .14s;
+font-size:18px;
+color:var(–tx2);background:var(–bg3);
+border:1.5px solid var(–bd2);
+transition:background .14s;
 -webkit-appearance:none;
 }
-.rfbt:active,.rfbt.on{background:var(–goldp);color:var(–gold)}
+.rfbt:active,.rfbt.on{background:var(–ac);color:#fff;border-color:var(–ac)}
 
-/* TTS 播放指示 */
-.tts-dot{width:7px;height:7px;border-radius:50%;background:var(–gold);flex-shrink:0;animation:pu 1s ease-in-out infinite}
-@keyframes pu{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.6)}}
-
-/* ════════════════════════════════════════════
-── 目錄面板（底部滑入）──
-════════════════════════════════════════════ */
-.pnl-back{
-display:none;position:fixed;inset:0;z-index:400;
-}
-.pnl-back.on{display:block}
-.pnl-overlay{position:absolute;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
-.pnl{
+/* ════════════════════════════
+面板（底部滑入）
+════════════════════════════ */
+.pback{display:none;position:fixed;inset:0;z-index:400}
+.pback.on{display:block}
+.pov{position:absolute;inset:0;background:rgba(0,0,0,.52);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.pbox{
 position:absolute;left:0;right:0;bottom:0;
-max-height:75vh;
-background:var(–bg2);
-border-radius:20px 20px 0 0;
-display:flex;flex-direction:column;
+max-height:76vh;
+background:var(–bg2);border-radius:20px 20px 0 0;
+display:flex;flex-direction:column;overflow:hidden;
 box-shadow:0 -4px 32px var(–sh2);
-animation:pslide .3s var(–ease);
-overflow:hidden;
+animation:pup .3s var(–ease);
 }
-@keyframes pslide{from{transform:translateY(100%)}to{transform:none}}
-.pnl-hd{
+@keyframes pup{from{transform:translateY(100%)}to{transform:none}}
+.phd{
 padding:14px 18px 10px;
 display:flex;align-items:center;justify-content:space-between;
-border-bottom:1px solid var(–bd);flex-shrink:0;
+border-bottom:1.5px solid var(–bd2);flex-shrink:0;
 }
-.pnl-hd-title{
-font-family:var(–display);font-size:12px;letter-spacing:.18em;
-color:var(–gold);text-transform:uppercase;
-}
-.pnl-close{
-width:30px;height:30px;border-radius:50%;
+.phd-t{font-size:13px;font-weight:700;color:var(–ac);letter-spacing:.1em}
+
+/* ★ 面板關閉按鈕 */
+.pcls{
+width:32px;height:32px;border-radius:50%;
 display:flex;align-items:center;justify-content:center;
-font-size:16px;color:var(–tx3);
-background:var(–bd);transition:background .15s;
+font-size:16px;font-weight:700;
+color:#fff;background:var(–ac);
+border:none;-webkit-appearance:none;
 }
-.pnl-close:active{background:var(–bd2)}
-.pnl-body{flex:1;overflow-y:auto;padding:6px 0 env(safe-area-inset-bottom,0)}
+.pcls:active{background:var(–ac2)}
+
+.pbody{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
 
 /* 目錄項 */
 .toc-item{
 display:flex;align-items:baseline;gap:10px;
-padding:12px 18px;cursor:pointer;
+padding:13px 18px;cursor:pointer;
 border-bottom:1px solid var(–bd);
-transition:background .12s;
 }
 .toc-item:last-child{border-bottom:none}
-.toc-item:active{background:var(–goldp)}
-.toc-item.cur{background:var(–goldp)}
-.toc-item.cur .toc-t{color:var(–gold);font-weight:600}
-.toc-n{font-size:11px;color:var(–tx3);min-width:28px;font-family:var(–display)}
-.toc-t{font-size:15px;color:var(–tx2);line-height:1.4;flex:1}
+.toc-item:active,.toc-item.cur{background:var(–acp)}
+.toc-item.cur .toc-t{color:var(–ac);font-weight:700}
+.toc-n{font-size:11px;color:var(–tx3);min-width:26px}
+.toc-t{font-size:15px;color:var(–tx2);flex:1;line-height:1.4}
 .toc-empty{padding:24px 18px;font-size:14px;color:var(–tx3);text-align:center}
 
-/* ════════════════════════════════════════════
-── 設定面板（底部滑入）──
-════════════════════════════════════════════ */
-.set-group{padding:14px 18px;border-bottom:1px solid var(–bd)}
-.set-group:last-child{border-bottom:none}
-.set-lbl{
+/* ════════════════════════════
+設定面板
+════════════════════════════ */
+.sg{padding:16px 18px;border-bottom:1.5px solid var(–bd)}
+.sg:last-child{border-bottom:none;padding-bottom:24px}
+.sg-lbl{
 font-size:11px;color:var(–tx3);letter-spacing:.1em;
-text-transform:uppercase;margin-bottom:12px;
-font-family:var(–display);
+text-transform:uppercase;margin-bottom:12px;font-weight:600;
 }
 
-/* 字體大小 — 大按鈕 */
+/* ★ 字體按鈕 — 大且明顯 */
 .fsz-btns{display:flex;gap:8px}
 .fsz-btn{
-flex:1;padding:10px 4px;border-radius:10px;
-font-family:var(–serif);color:var(–tx2);
-border:1.5px solid var(–bd);background:var(–bg);
-transition:all .15s;display:flex;flex-direction:column;
-align-items:center;gap:4px;cursor:pointer;
--webkit-appearance:none;
+flex:1;padding:12px 4px;border-radius:10px;
+display:flex;flex-direction:column;align-items:center;gap:5px;
+cursor:pointer;-webkit-appearance:none;
+background:var(–bg3);
+border:2px solid var(–bd2);
+color:var(–tx2);
+transition:all .15s;
 }
 .fsz-btn:active{transform:scale(.94)}
-.fsz-btn.on{background:var(–gold)!important;border-color:var(–gold)!important;color:#fff!important}
-.fsz-icon{font-size:var(–fi-sz,18px);line-height:1;font-family:var(–serif)}
-.fsz-lbl{font-size:10px;letter-spacing:.04em}
+.fsz-btn.on{background:var(–ac)!important;border-color:var(–ac)!important;color:#fff!important}
+.fsz-ico{font-family:var(–serif);line-height:1}
+.fsz-lbl{font-size:11px;letter-spacing:.03em}
 
 /* Toggle 行 */
-.tog-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-.tog-row:last-child{margin-bottom:0}
+.tog-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(–bd)}
+.tog-row:last-child{border-bottom:none}
 .tog-row-l{font-size:15px;color:var(–tx)}
-.tog{position:relative;width:46px;height:26px;flex-shrink:0}
+.tog{position:relative;width:48px;height:28px;flex-shrink:0}
 .tog input{opacity:0;width:0;height:0}
-.tog-sl{position:absolute;inset:0;background:var(–bd2);border-radius:13px;cursor:pointer;transition:background .22s}
-.tog-sl::before{content:’’;position:absolute;width:20px;height:20px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .22s var(–ease);box-shadow:0 1px 4px rgba(0,0,0,.22)}
-.tog input:checked+.tog-sl{background:var(–gold)}
+.tog-sl{position:absolute;inset:0;background:var(–bd2);border-radius:14px;cursor:pointer;transition:background .22s}
+.tog-sl::before{content:’’;position:absolute;width:22px;height:22px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .22s var(–ease);box-shadow:0 1px 5px rgba(0,0,0,.25)}
+.tog input:checked+.tog-sl{background:var(–ac)}
 .tog input:checked+.tog-sl::before{transform:translateX(20px)}
 
 /* 語速 */
-.spd-wrap{display:flex;align-items:center;gap:10px}
+.spd-wrap{display:flex;align-items:center;gap:12px;padding:4px 0}
 .spd-slider{
 -webkit-appearance:none;appearance:none;
-flex:1;height:5px;border-radius:3px;
-background:var(–bd2);outline:none;
+flex:1;height:6px;border-radius:3px;background:var(–bd2);outline:none;
 }
 .spd-slider::-webkit-slider-thumb{
 -webkit-appearance:none;
-width:20px;height:20px;border-radius:50%;
-background:var(–gold);cursor:pointer;
-box-shadow:0 2px 8px rgba(184,137,42,.4);
+width:22px;height:22px;border-radius:50%;
+background:var(–ac);cursor:pointer;
+box-shadow:0 2px 8px rgba(168,120,32,.4);
 }
-.spd-val{font-size:15px;font-weight:600;color:var(–gold);min-width:40px;text-align:right}
+.spd-val{font-size:16px;font-weight:700;color:var(–ac);min-width:44px;text-align:right}
 
-/* 語音選擇 */
+/* 語音 */
 .v-sel{
-width:100%;padding:10px 12px;border-radius:10px;
-border:1.5px solid var(–bd2);background:var(–bg);
+width:100%;padding:11px 14px;border-radius:10px;
+border:2px solid var(–bd2);background:var(–bg3);
 color:var(–tx);font-size:14px;font-family:var(–serif);
-outline:none;appearance:none;-webkit-appearance:none;
-background-image:url(“data:image/svg+xml,%3Csvg xmlns=‘http://www.w3.org/2000/svg’ width=‘12’ height=‘8’%3E%3Cpath d=‘M1 1l5 5 5-5’ stroke=’%23b8892a’ stroke-width=‘1.5’ fill=‘none’/%3E%3C/svg%3E”);
-background-repeat:no-repeat;background-position:right 12px center;padding-right:34px;
+outline:none;-webkit-appearance:none;appearance:none;
+background-image:url(“data:image/svg+xml,%3Csvg xmlns=‘http://www.w3.org/2000/svg’ width=‘12’ height=‘8’%3E%3Cpath d=‘M1 1l5 5 5-5’ stroke=’%23a87820’ stroke-width=‘1.6’ fill=‘none’/%3E%3C/svg%3E”);
+background-repeat:no-repeat;background-position:right 14px center;padding-right:36px;
 }
 
-/* ════════════════════════════════════════════
-Toast
-════════════════════════════════════════════ */
+/* ════════════════════════════
+Toast（頂部，明顯）
+════════════════════════════ */
 #toasts{
-position:fixed;top:60px;left:50%;transform:translateX(-50%);
+position:fixed;top:62px;left:50%;transform:translateX(-50%);
 z-index:999;display:flex;flex-direction:column;
 gap:6px;align-items:center;pointer-events:none;
 }
 .toast{
-background:var(–tx);color:var(–bg);
-padding:8px 20px;border-radius:20px;
-font-size:13px;letter-spacing:.03em;
-box-shadow:0 4px 16px var(–sh2);
-animation:tin .25s var(–ease);white-space:nowrap;
-max-width:80vw;overflow:hidden;text-overflow:ellipsis;
+background:#1a1208;color:#f6f1e9;
+padding:9px 22px;border-radius:20px;
+font-size:14px;font-weight:500;
+box-shadow:0 4px 16px rgba(0,0,0,.32);
+animation:tin .25s var(–ease);
+white-space:nowrap;max-width:80vw;
+overflow:hidden;text-overflow:ellipsis;
 }
-[data-night] .toast{background:var(–bg3);color:var(–gold);border:1px solid var(–bd2)}
+body.night .toast{background:#d4a840;color:#0b0907}
 .toast.out{animation:tout .22s ease-in forwards}
 @keyframes tin{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
 @keyframes tout{to{opacity:0;transform:translateY(-6px)}}
 
-/* ════════════════════════════════════════════
+/* ════════════════════════════
 對話框
-════════════════════════════════════════════ */
-.dlg-back{
-display:none;position:fixed;inset:0;z-index:600;
-background:rgba(0,0,0,.55);backdrop-filter:blur(6px);
-align-items:center;justify-content:center;
-}
+════════════════════════════ */
+.dlg-back{display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);align-items:center;justify-content:center}
 .dlg-back.on{display:flex}
-.dlg-box{
-background:var(–bg2);border-radius:16px;
-padding:24px 20px;width:min(300px,86vw);
-box-shadow:0 12px 40px var(–sh2);animation:scin .25s var(–ease);
-}
+.dlg-box{background:var(–bg2);border-radius:16px;padding:26px 22px;width:min(300px,86vw);box-shadow:0 12px 40px var(–sh2);animation:scin .25s var(–ease)}
 @keyframes scin{from{opacity:0;transform:scale(.88)}to{opacity:1;transform:none}}
-.dlg-t{font-size:16px;font-weight:700;color:var(–tx);margin-bottom:8px}
+.dlg-t{font-size:17px;font-weight:700;color:var(–tx);margin-bottom:8px}
 .dlg-m{font-size:14px;color:var(–tx3);line-height:1.65;margin-bottom:20px}
-.dlg-bts{display:flex;gap:8px;justify-content:flex-end}
-.dlg-no{padding:8px 18px;border-radius:8px;font-size:14px;color:var(–tx3);border:1px solid var(–bd2);background:var(–bg)}
-.dlg-yes{padding:8px 18px;border-radius:8px;font-size:14px;background:#c0392b;color:#fff;box-shadow:0 3px 10px rgba(192,57,43,.28)}
+.dlg-bts{display:flex;gap:10px;justify-content:flex-end}
+.dlg-no{padding:10px 20px;border-radius:9px;font-size:14px;color:var(–tx2);border:2px solid var(–bd2);background:var(–bg3)}
 .dlg-no:active{background:var(–bd)}
-.dlg-yes:active{background:#e74c3c}
+.dlg-yes{padding:10px 20px;border-radius:9px;font-size:14px;font-weight:700;background:#b83226;color:#fff;border:none}
+.dlg-yes:active{background:#d9392b}
+
+/* 載入指示 */
+.loading-mask{
+display:none;position:fixed;inset:0;z-index:800;
+background:rgba(0,0,0,.5);backdrop-filter:blur(4px);
+align-items:center;justify-content:center;flex-direction:column;gap:16px;
+}
+.loading-mask.on{display:flex}
+.loading-spin{
+width:44px;height:44px;border-radius:50%;
+border:4px solid rgba(168,120,32,.3);
+border-top-color:var(–ac);
+animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-txt{font-size:14px;color:#fff;letter-spacing:.05em}
 </style>
 
 </head>
 <body>
 
-<!-- ══════════════════════════════════════════
+<!-- ══════════════════════════
      書庫
-══════════════════════════════════════════ -->
+══════════════════════════ -->
 
 <div id="vLib" class="view on">
   <header class="lhd">
-    <div class="lhd-logo">書閣 <span>Novel Reader</span></div>
-    <span class="lhd-ver">v1.3</span>
+    <div class="lhd-logo">書閣 <small>Novel Reader</small></div>
+    <span class="lhd-ver">v1.4</span>
     <button class="ibt" id="btnTheme" title="主題">🌙</button>
     <button class="ibt" id="btnUp" title="上傳">＋</button>
   </header>
@@ -493,12 +481,11 @@ box-shadow:0 12px 40px var(–sh2);animation:scin .25s var(–ease);
   <input type="file" id="fi" accept=".txt">
 </div>
 
-<!-- ══════════════════════════════════════════
-     閱讀器（翻頁模式）
-══════════════════════════════════════════ -->
+<!-- ══════════════════════════
+     閱讀器
+══════════════════════════ -->
 
 <div id="vRdr" class="view">
-  <!-- 頂部 -->
   <header class="rhd">
     <button class="rbk" id="btnBack">◀ 書庫</button>
     <div class="rtitle" id="rdTitle">—</div>
@@ -507,95 +494,76 @@ box-shadow:0 12px 40px var(–sh2);animation:scin .25s var(–ease);
       <button class="ibt" id="btnSet" title="設定">⚙</button>
     </div>
   </header>
-
-  <!-- 翻頁主體 -->
-
   <div class="rbook" id="rbook">
-    <!-- 左點擊區 -->
-    <div class="rzone rzone-L" id="zoneL">
-      <div class="rzone-ico">‹</div>
-    </div>
-    <!-- 右點擊區 -->
-    <div class="rzone rzone-R" id="zoneR">
-      <div class="rzone-ico">›</div>
-    </div>
-    <!-- 頁面滑動容器 -->
-    <div class="rpage-wrap" id="rpageWrap">
-      <!-- 頁面由 JS 動態生成 -->
-    </div>
+    <div class="rzone rzone-L" id="zoneL"><div class="rzone-ico">‹</div></div>
+    <div class="rzone rzone-R" id="zoneR"><div class="rzone-ico">›</div></div>
+    <div class="rpwrap" id="rpwrap"></div>
   </div>
-
-  <!-- 底部工具列 -->
-
   <footer class="rfoot">
     <div class="rfbtns">
-      <button class="rfbt" id="btnPrev" title="上一段">⏮</button>
-      <button class="rfbt" id="btnPlay" title="播放">▶</button>
-      <button class="rfbt" id="btnNext" title="下一段">⏭</button>
-      <button class="rfbt" id="btnStop" title="停止">⏹</button>
+      <button class="rfbt" id="btnPrev">⏮</button>
+      <button class="rfbt" id="btnPlay">▶</button>
+      <button class="rfbt" id="btnNext">⏭</button>
+      <button class="rfbt" id="btnStop">⏹</button>
     </div>
-    <div class="rfprog" id="rfprog">
-      <div class="rfprog-f" id="rfprogF" style="width:0%"></div>
-    </div>
-    <div style="font-size:11px;color:var(--tx3);flex-shrink:0" id="rfLabel">0%</div>
+    <div class="rfprog" id="rfprog"><div class="rfprog-f" id="rfprogF" style="width:0%"></div></div>
+    <div id="rfLbl" style="font-size:11px;color:var(--tx3);flex-shrink:0;min-width:28px;text-align:right">0%</div>
   </footer>
 </div>
 
-<!-- ══════════════════════════════════════════
+<!-- ══════════════════════════
      目錄面板
-══════════════════════════════════════════ -->
+══════════════════════════ -->
 
-<div class="pnl-back" id="tocBack">
-  <div class="pnl-overlay" id="tocOverlay"></div>
-  <div class="pnl">
-    <div class="pnl-hd">
-      <span class="pnl-hd-title">章節目錄</span>
-      <button class="pnl-close" id="tocClose">✕</button>
+<div class="pback" id="tocBack">
+  <div class="pov" id="tocOv"></div>
+  <div class="pbox">
+    <div class="phd">
+      <span class="phd-t">📖 章節目錄</span>
+      <button class="pcls" id="tocCls">✕</button>
     </div>
-    <div class="pnl-body" id="tocBody"></div>
+    <div class="pbody" id="tocBody"></div>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════
+<!-- ══════════════════════════
      設定面板
-══════════════════════════════════════════ -->
+══════════════════════════ -->
 
-<div class="pnl-back" id="setBack">
-  <div class="pnl-overlay" id="setOverlay"></div>
-  <div class="pnl">
-    <div class="pnl-hd">
-      <span class="pnl-hd-title">閱讀設定</span>
-      <button class="pnl-close" id="setClose">✕</button>
+<div class="pback" id="setBack">
+  <div class="pov" id="setOv"></div>
+  <div class="pbox">
+    <div class="phd">
+      <span class="phd-t">⚙ 閱讀設定</span>
+      <button class="pcls" id="setCls">✕</button>
     </div>
-    <div class="pnl-body">
+    <div class="pbody">
 
 ```
-  <!-- 字體大小 -->
-  <div class="set-group">
-    <div class="set-lbl">字體大小</div>
+  <div class="sg">
+    <div class="sg-lbl">字體大小（點擊立即套用）</div>
     <div class="fsz-btns" id="fszBtns">
       <button class="fsz-btn" data-sz="15">
-        <span class="fsz-icon" style="--fi-sz:15px">文</span>
+        <span class="fsz-ico" style="font-size:15px">文</span>
         <span class="fsz-lbl">小</span>
       </button>
       <button class="fsz-btn" data-sz="18">
-        <span class="fsz-icon" style="--fi-sz:18px">文</span>
+        <span class="fsz-ico" style="font-size:18px">文</span>
         <span class="fsz-lbl">中</span>
       </button>
       <button class="fsz-btn" data-sz="21">
-        <span class="fsz-icon" style="--fi-sz:21px">文</span>
+        <span class="fsz-ico" style="font-size:21px">文</span>
         <span class="fsz-lbl">大</span>
       </button>
       <button class="fsz-btn" data-sz="26">
-        <span class="fsz-icon" style="--fi-sz:26px">文</span>
+        <span class="fsz-ico" style="font-size:26px">文</span>
         <span class="fsz-lbl">特大</span>
       </button>
     </div>
   </div>
 
-  <!-- 顯示設定 -->
-  <div class="set-group">
-    <div class="set-lbl">顯示</div>
+  <div class="sg">
+    <div class="sg-lbl">顯示主題</div>
     <div class="tog-row">
       <span class="tog-row-l">🌙 夜間模式</span>
       <label class="tog"><input type="checkbox" id="togNight"><span class="tog-sl"></span></label>
@@ -606,21 +574,17 @@ box-shadow:0 12px 40px var(–sh2);animation:scin .25s var(–ease);
     </div>
   </div>
 
-  <!-- 聽書語速 -->
-  <div class="set-group">
-    <div class="set-lbl">聽書語速</div>
+  <div class="sg">
+    <div class="sg-lbl">聽書語速</div>
     <div class="spd-wrap">
       <input type="range" class="spd-slider" id="spdSlider" min="0.5" max="2.5" step="0.1" value="1">
       <span class="spd-val" id="spdVal">1.0×</span>
     </div>
   </div>
 
-  <!-- 語音 -->
-  <div class="set-group">
-    <div class="set-lbl">朗讀語音</div>
-    <select class="v-sel" id="voiceSel">
-      <option value="">自動選擇</option>
-    </select>
+  <div class="sg">
+    <div class="sg-lbl">朗讀語音</div>
+    <select class="v-sel" id="voiceSel"><option value="">自動選擇</option></select>
   </div>
 
 </div>
@@ -642,138 +606,151 @@ box-shadow:0 12px 40px var(–sh2);animation:scin .25s var(–ease);
   </div>
 </div>
 
+<!-- 載入遮罩 -->
+
+<div class="loading-mask" id="loadMask">
+  <div class="loading-spin"></div>
+  <div class="loading-txt" id="loadTxt">處理中…</div>
+</div>
+
 <div id="toasts"></div>
 
-<!-- ══════════════════════════════════════════
+<!-- ══════════════════════════
      JavaScript
-══════════════════════════════════════════ -->
+══════════════════════════ -->
 
 <script>
-/* ════════════════════════════════════════════
-   簡繁轉換表
-════════════════════════════════════════════ */
+'use strict';
+/* ══ 簡繁對照 ══ */
 const S2T=(()=>{
   const r='爱愛碍礙暗暗拔拔摆擺败敗办辦帮幫报報备備贝貝笔筆毕畢边邊变變标標别別宾賓补補财財参參测測层層产產长長场場尝嘗厂廠车車彻徹陈陳称稱冲衝处處传傳创創从從达達带帶单單担擔当當党黨导導灯燈敌敵递遞点點电電东東动動断斷对對队隊尔爾发發烦煩飞飛废廢费費风風凤鳳妇婦复複该該盖蓋干幹赶趕刚剛个個给給购購观觀关關归歸国國过過汉漢号號护護划劃华華画畫话話坏壞欢歡换換汇匯会會获獲机機积積极極际際继繼价價见見将將讲講进進经經举舉据據绝絕开開来來兰蘭乐樂类類里裡联聯炼煉两兩临臨龙龍录錄轮輪论論罗羅马馬买買卖賣满滿么麼门門梦夢灭滅庙廟灵靈拟擬鸟鳥宁寧农農欧歐盘盤飘飄苹蘋齐齊气氣签簽迁遷钱錢强強亲親区區权權确確热熱认認软軟烧燒设設声聲时時实實视視书書树樹数數说說态態台臺体體听聽头頭图圖团團万萬网網为為问問无無务務线線现現乡鄉响響写寫学學压壓样樣叶葉医醫义義艺藝阴陰应應拥擁优優语語园園远遠运運杂雜战戰张張证證质質众眾专專庄莊钟鐘种種终終转轉装裝状狀总總组組词詞错錯调調读讀额額儿兒恶惡档檔兑兌';
-  const m={};
-  for(let i=0;i+1<r.length;i+=2)m[r[i]]=r[i+1];
-  return m;
+  const m={};for(let i=0;i+1<r.length;i+=2)m[r[i]]=r[i+1];return m;
 })();
 const s2t=t=>{let r='';for(let i=0;i<t.length;i++)r+=S2T[t[i]]||t[i];return r};
 
-/* ════════════════════════════════════════════
-   IndexedDB + localStorage 雙層 DB
-════════════════════════════════════════════ */
-const DB={
-  KP:'sg_prefs',KM:'sg_meta',
-  IDB:'ShugeDB',VER:1,STORE:'paras',
-  _db:null,
-  openIDB(){
-    if(this._db)return Promise.resolve(this._db);
-    return new Promise((ok,err)=>{
-      const q=indexedDB.open(this.IDB,this.VER);
-      q.onupgradeneeded=e=>{
-        const db=e.target.result;
-        if(!db.objectStoreNames.contains(this.STORE))
-          db.createObjectStore(this.STORE,{keyPath:'id'});
-      };
-      q.onsuccess=e=>{this._db=e.target.result;ok(this._db)};
-      q.onerror=e=>err(e.target.error);
-    });
+/* ══ 儲存層：IDB 優先，失敗自動降級 localStorage ══ */
+const Store={
+  _idb:null,
+  _useLS:false,   // 降級旗標
+  IDB:'ShugeDB4',VER:1,ST:'paras',
+
+  async init(){
+    // 偵測 IDB 是否可用（Private Browsing 下 Safari 會拒絕）
+    try{
+      this._idb=await new Promise((ok,err)=>{
+        const q=indexedDB.open(this.IDB,this.VER);
+        q.onupgradeneeded=e=>{
+          const db=e.target.result;
+          if(!db.objectStoreNames.contains(this.ST))
+            db.createObjectStore(this.ST,{keyPath:'id'});
+        };
+        q.onsuccess=e=>ok(e.target.result);
+        q.onerror=e=>err(e.target.error);
+        q.onblocked=()=>err(new Error('IDB blocked'));
+      });
+      this._useLS=false;
+      console.log('[Store] IndexedDB ready');
+    }catch(e){
+      console.warn('[Store] IDB unavailable, fallback to localStorage chunked:',e.message);
+      this._useLS=true;
+    }
   },
+
+  /* ── 寫入段落 ── */
   async putParas(id,paras){
-    const db=await this.openIDB();
-    return new Promise((ok,err)=>{
-      const tx=db.transaction(this.STORE,'readwrite');
-      tx.objectStore(this.STORE).put({id,paras});
+    if(this._useLS){
+      // localStorage 分塊（每塊 200k 字元）
+      const chunk=200000;
+      const keys=[];
+      for(let i=0,ci=0;i<paras.length;ci++){
+        const sl=paras.slice(i,i+chunk);
+        const k=`sg_p_${id}_${ci}`;
+        try{localStorage.setItem(k,JSON.stringify(sl))}
+        catch(e){console.error('[Store] LS chunk fail',e);throw e}
+        keys.push(k);i+=chunk;
+      }
+      localStorage.setItem(`sg_pk_${id}`,JSON.stringify(keys));
+      return;
+    }
+    // IDB
+    await new Promise((ok,err)=>{
+      const tx=this._idb.transaction(this.ST,'readwrite');
+      tx.objectStore(this.ST).put({id,paras});
       tx.oncomplete=ok;tx.onerror=e=>err(e.target.error);
     });
   },
+
+  /* ── 讀取段落 ── */
   async getParas(id){
-    const db=await this.openIDB();
+    if(this._useLS){
+      const raw=localStorage.getItem(`sg_pk_${id}`);
+      if(!raw)return[];
+      const keys=JSON.parse(raw);
+      let all=[];
+      for(const k of keys){
+        const v=localStorage.getItem(k);
+        if(v)all=all.concat(JSON.parse(v));
+      }
+      return all;
+    }
     return new Promise((ok,err)=>{
-      const q=db.transaction(this.STORE,'readonly').objectStore(this.STORE).get(id);
+      const q=this._idb.transaction(this.ST,'readonly').objectStore(this.ST).get(id);
       q.onsuccess=e=>ok(e.target.result?.paras||[]);
       q.onerror=e=>err(e.target.error);
     });
   },
+
+  /* ── 刪除段落 ── */
   async delParas(id){
-    const db=await this.openIDB();
-    return new Promise((ok,err)=>{
-      const tx=db.transaction(this.STORE,'readwrite');
-      tx.objectStore(this.STORE).delete(id);
+    if(this._useLS){
+      const raw=localStorage.getItem(`sg_pk_${id}`);
+      if(raw)JSON.parse(raw).forEach(k=>localStorage.removeItem(k));
+      localStorage.removeItem(`sg_pk_${id}`);
+      return;
+    }
+    await new Promise((ok,err)=>{
+      const tx=this._idb.transaction(this.ST,'readwrite');
+      tx.objectStore(this.ST).delete(id);
       tx.oncomplete=ok;tx.onerror=e=>err(e.target.error);
     });
-  },
-  loadMeta(){try{return JSON.parse(localStorage.getItem(this.KM)||'{}')}catch{return{}}},
-  saveMeta(d){localStorage.setItem(this.KM,JSON.stringify(d))},
-  loadPrefs(){try{return JSON.parse(localStorage.getItem(this.KP)||'{}')}catch{return{}}},
-  savePrefs(p){localStorage.setItem(this.KP,JSON.stringify(p))},
-  books(){return Object.values(this.loadMeta()).sort((a,b)=>(b.addedAt||0)-(a.addedAt||0))},
-  async saveBook(book){
-    const{paras,...meta}=book;
-    const d=this.loadMeta();d[meta.id]=meta;this.saveMeta(d);
-    await this.putParas(book.id,paras);
-  },
-  async delBook(id){
-    const d=this.loadMeta();delete d[id];this.saveMeta(d);
-    await this.delParas(id);
-  },
-  setPos(id,pg){
-    const d=this.loadMeta();
-    if(d[id]){d[id].pos=pg;d[id].lastRead=Date.now();}
-    this.saveMeta(d);
   }
 };
 
-/* ════════════════════════════════════════════
-   章節解析
-════════════════════════════════════════════ */
+/* ══ Metadata（輕量，localStorage）══ */
+const Meta={
+  KM:'sg_meta4',KP:'sg_prefs4',
+  load(){try{return JSON.parse(localStorage.getItem(this.KM)||'{}')}catch{return{}}},
+  save(d){localStorage.setItem(this.KM,JSON.stringify(d))},
+  loadP(){try{return JSON.parse(localStorage.getItem(this.KP)||'{}')}catch{return{}}},
+  saveP(p){localStorage.setItem(this.KP,JSON.stringify(p))},
+  books(){return Object.values(this.load()).sort((a,b)=>(b.addedAt||0)-(a.addedAt||0))},
+  saveBook(m){const d=this.load();d[m.id]=m;this.save(d)},
+  delBook(id){const d=this.load();delete d[id];this.save(d)},
+  setPos(id,pg){const d=this.load();if(d[id]){d[id].pos=pg;d[id].lastRead=Date.now();}this.save(d)}
+};
+
+/* ══ 章節解析 ══ */
 const CH_RE=/^(第\s*[零一二三四五六七八九十百千萬0-9]+\s*[章節回卷集篇部]|Chapter\s+\d+|CHAPTER\s+\d+|序章|尾聲|後記|前言|番外|卷首|楔子|【.{1,30}】|《.{1,30}》)/i;
-const parseChapters=paras=>{
-  const chs=[];
-  paras.forEach((p,i)=>{if(CH_RE.test(p.trim()))chs.push({title:p.trim(),idx:i})});
-  return chs;
-};
+const parseChs=paras=>{const c=[];paras.forEach((p,i)=>{if(CH_RE.test(p.trim()))c.push({title:p.trim(),idx:i})});return c};
 
-/* ════════════════════════════════════════════
-   封面顏色（雜湊）
-════════════════════════════════════════════ */
-const PALETTES=[
-  ['#2a3a5a','#162238'],['#3a2a5a','#1e1238'],['#2a4a3a','#162d22'],
-  ['#5a3a1a','#32200a'],['#1a3a5a','#0c2238'],['#4a1a2a','#2a0a14'],
-  ['#1a4a3a','#0a2e22'],['#5a2a1a','#38170a'],['#3a1a4a','#20082e'],
-  ['#1a3a4a','#0a2430'],['#4a3a1a','#2a2408'],['#2a4a5a','#12303c'],
-];
-const cvGrad=title=>{
-  let h=0;for(let i=0;i<title.length;i++)h=(h*31+title.charCodeAt(i))|0;
-  const[a,b]=PALETTES[Math.abs(h)%PALETTES.length];
-  return`linear-gradient(150deg,${a},${b})`;
-};
-
-/* ════════════════════════════════════════════
-   編碼偵測
-════════════════════════════════════════════ */
+/* ══ 編碼偵測 ══ */
 const readFile=file=>{
-  const try_=enc=>new Promise((ok,err)=>{
-    const fr=new FileReader();
-    fr.onload=e=>ok(e.target.result);fr.onerror=err;
-    fr.readAsText(file,enc);
-  });
+  const try_=enc=>new Promise((ok,er)=>{const fr=new FileReader();fr.onload=e=>ok(e.target.result);fr.onerror=er;fr.readAsText(file,enc)});
   return try_('UTF-8').then(t=>{
     const g=(t.match(/\ufffd/g)||[]).length;
-    if(g>5)return try_('GBK').then(t2=>{
-      const g2=(t2.match(/\ufffd/g)||[]).length;
-      return g2<g?t2:try_('BIG5');
-    });
+    if(g>5)return try_('GBK').then(t2=>(t2.match(/\ufffd/g)||[]).length<g?t2:try_('BIG5'));
     return t;
   });
 };
 
-/* ════════════════════════════════════════════
-   工具函式
-════════════════════════════════════════════ */
+/* ══ 封面顏色 ══ */
+const PALS=[['#2a3a5a','#162238'],['#3a2a5a','#1e1238'],['#2a4a3a','#162d22'],['#5a3a1a','#32200a'],['#1a3a5a','#0c2238'],['#4a1a2a','#2a0a14'],['#1a4a3a','#0a2e22'],['#3a1a4a','#20082e'],['#1a3a4a','#0a2430'],['#4a3a1a','#2a2408']];
+const cvGrad=t=>{let h=0;for(let i=0;i<t.length;i++)h=(h*31+t.charCodeAt(i))|0;const[a,b]=PALS[Math.abs(h)%PALS.length];return`linear-gradient(150deg,${a},${b})`};
+
+/* ══ esc ══ */
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
+/* ══ Toast ══ */
 function toast(msg,dur=2200){
   const c=document.getElementById('toasts');
   const el=Object.assign(document.createElement('div'),{className:'toast',textContent:msg});
@@ -781,24 +758,35 @@ function toast(msg,dur=2200){
   setTimeout(()=>{el.classList.add('out');setTimeout(()=>el.remove(),250)},dur);
 }
 
-function confirm_(t,m){
-  return new Promise(res=>{
-    document.getElementById('dlgT').textContent=t;
-    document.getElementById('dlgM').textContent=m;
-    document.getElementById('dlgBack').classList.add('on');
-    const done=r=>{document.getElementById('dlgBack').classList.remove('on');res(r)};
-    document.getElementById('dlgYes').onclick=()=>done(true);
-    document.getElementById('dlgNo').onclick=()=>done(false);
-  });
+/* ══ 載入遮罩 ══ */
+function showLoad(txt){document.getElementById('loadTxt').textContent=txt||'處理中…';document.getElementById('loadMask').classList.add('on')}
+function hideLoad(){document.getElementById('loadMask').classList.remove('on')}
+
+/* ══ 確認框 ══ */
+function confirm_(t,m){return new Promise(r=>{
+  document.getElementById('dlgT').textContent=t;
+  document.getElementById('dlgM').textContent=m;
+  document.getElementById('dlgBack').classList.add('on');
+  const done=v=>{document.getElementById('dlgBack').classList.remove('on');r(v)};
+  document.getElementById('dlgYes').onclick=()=>done(true);
+  document.getElementById('dlgNo').onclick=()=>done(false);
+})}
+
+/* ══ 主題 ══ */
+function applyTheme(night){
+  if(night)document.body.classList.add('night');
+  else document.body.classList.remove('night');
+  document.getElementById('togNight').checked=!!night;
+  document.getElementById('btnTheme').textContent=night?'☀':'🌙';
 }
 
-/* ════════════════════════════════════════════
+/* ══════════════════════════════
    書庫
-════════════════════════════════════════════ */
+══════════════════════════════ */
 const Lib={
   render(){
     const g=document.getElementById('bgrid');
-    const books=DB.books();
+    const books=Meta.books();
     document.getElementById('libCnt').textContent=books.length+' 本';
     if(!books.length){
       g.innerHTML=`<div class="bempty">
@@ -811,9 +799,9 @@ const Lib={
       const pct=b.total>0?Math.round((b.pos||0)/b.total*100):0;
       return`<div class="bcard" onclick="Reader.open('${b.id}')">
         <div class="bcov" style="--cvbg:${cvGrad(b.title)}">
-          <div class="bcov-lines"></div>
-          <div class="bcov-title">${esc(b.title)}</div>
-          <div class="bcov-rule"></div>
+          <div class="bcov-ln"></div>
+          <div class="bcov-t">${esc(b.title)}</div>
+          <div class="bcov-r"></div>
         </div>
         <div class="binfo">
           <div class="bname">${esc(b.title)}</div>
@@ -827,68 +815,68 @@ const Lib={
 
   async del(id,title){
     if(!await confirm_('刪除書籍',`確定要移除《${title}》嗎？`))return;
-    await DB.delBook(id);this.render();toast(`已刪除《${title}》`);
+    showLoad('刪除中…');
+    await Store.delParas(id);Meta.delBook(id);
+    hideLoad();this.render();toast(`已刪除《${title}》`);
   },
 
   async addFile(file){
     if(!file)return;
-    if(!file.name.toLowerCase().endsWith('.txt')){toast('請選擇 .txt 格式文件');return}
+    if(!file.name.toLowerCase().endsWith('.txt')){toast('請選擇 .txt 格式');return}
     if(file.size>30*1024*1024){toast('文件過大（上限 30MB）');return}
-    toast('正在讀取文件…');
+    showLoad('正在讀取文件…');
     try{
       let raw=await readFile(file);
-      const pr=DB.loadPrefs();
+      const pr=Meta.loadP();
       if(pr.conv!==false)raw=s2t(raw);
       const paras=raw.split(/\r?\n/).map(l=>l.trim()).filter(l=>l.length>0);
       raw=null;
-      const chapters=parseChapters(paras);
+      const chapters=parseChs(paras);
       const id='b'+Date.now();
       const title=file.name.replace(/\.txt$/i,'');
-      toast('正在儲存，請稍候…');
-      await DB.saveBook({id,title,chapters,total:paras.length,pos:0,addedAt:Date.now(),paras});
-      this.render();
+      document.getElementById('loadTxt').textContent='正在儲存，請稍候…';
+      await Store.putParas(id,paras);
+      Meta.saveBook({id,title,chapters,total:paras.length,pos:0,addedAt:Date.now()});
+      hideLoad();this.render();
       toast(`✓ 已加入《${title}》（${paras.length} 段 · ${chapters.length} 章）`);
-    }catch(e){console.error(e);toast('讀取失敗：'+(e.message||'未知錯誤'))}
+    }catch(e){
+      hideLoad();console.error(e);
+      toast('讀取失敗：'+(e.message||'未知錯誤').substring(0,40));
+    }
   }
 };
 
-/* ════════════════════════════════════════════
+/* ══════════════════════════════
    翻頁閱讀器
-════════════════════════════════════════════ */
+══════════════════════════════ */
 const Reader={
-  id:null,
-  paras:[],       // 全書段落
-  chapters:[],    // 章節索引
-  pages:[],       // [{startPara,endPara}] 每頁對應段落範圍
-  curPage:0,      // 當前頁碼（0-based）
-  totalPages:0,
-  fontSize:18,    // 當前字體大小
-  lineH:2,
-  _turning:false, // 防止快速連點
+  id:null,paras:[],chapters:[],
+  pages:[],curPage:0,totalPages:0,
+  fontSize:18,lineH:2,
+  _busy:false,
 
-  /* ── 開啟書籍 ── */
   async open(id){
-    const meta=DB.loadMeta()[id];
+    const meta=Meta.load()[id];
     if(!meta){toast('找不到書籍');return}
-    toast('載入中…');
-    const paras=await DB.getParas(id);
-    this.id=id;
-    this.paras=paras;
-    this.chapters=meta.chapters||[];
-    // 切換視圖
-    document.getElementById('vLib').classList.remove('on');
-    document.getElementById('vRdr').classList.add('on');
-    document.getElementById('rdTitle').textContent=meta.title;
-    // 套用設定
-    this.applyPrefs();
-    // 分頁
-    this.paginate();
-    // 恢復位置
-    const saved=meta.pos||0;
-    this.goToPage(this.paraToPage(saved),false);
+    showLoad('載入中…');
+    try{
+      const paras=await Store.getParas(id);
+      this.id=id;this.paras=paras;this.chapters=meta.chapters||[];
+      document.getElementById('vLib').classList.remove('on');
+      document.getElementById('vRdr').classList.add('on');
+      document.getElementById('rdTitle').textContent=meta.title;
+      this.applyPrefs();
+      // 等頁面渲染後再分頁
+      requestAnimationFrame(()=>{
+        requestAnimationFrame(()=>{
+          this.paginate();
+          this.goToPage(this.paraToPage(meta.pos||0),false);
+          hideLoad();
+        });
+      });
+    }catch(e){hideLoad();console.error(e);toast('開啟失敗：'+e.message)}
   },
 
-  /* ── 關閉 ── */
   close(){
     TTS.stop();
     document.getElementById('vRdr').classList.remove('on');
@@ -896,100 +884,91 @@ const Reader={
     Lib.render();
   },
 
-  /* ── 分頁計算 ── */
+  /* ── 分頁（用量測器）── */
   paginate(){
-    // 用隱藏量測器計算每頁能放幾個段落
     const rbook=document.getElementById('rbook');
-    const availH=rbook.clientHeight-48-32; // 扣掉頁眉(chap)、頁腳(foot)、padding
-    const availW=rbook.clientWidth-44;
+    const bH=rbook.clientHeight;
+    const bW=rbook.clientWidth;
     const fs=this.fontSize;
     const lh=this.lineH;
-    const pxPerLine=fs*lh;
+    const padV=14+10+10+6; // top+bottom padding + chap + foot
+    const footH=28;        // 頁腳高度
+    const chapH=24;        // 頁眉
+    const availH=bH-padV-footH-chapH;
+    const availW=bW-40;
 
-    // 建一個隱藏 div 量測
+    // 隱藏量測 div
     const m=document.createElement('div');
-    m.style.cssText=`position:absolute;top:-9999px;left:0;width:${availW}px;font-size:${fs}px;line-height:${lh};font-family:'Noto Serif TC',serif;visibility:hidden;`;
+    m.style.cssText=`position:fixed;top:-9999px;left:0;visibility:hidden;`+
+      `width:${availW}px;font-size:${fs}px;line-height:${lh};`+
+      `font-family:'Noto Serif TC',Georgia,serif;word-break:break-all;`;
     document.body.appendChild(m);
 
     const pages=[];
-    let startPara=0;
-    let usedH=0;
+    let startPara=0,usedH=0;
 
     for(let i=0;i<this.paras.length;i++){
       const isCh=this.chapters.some(c=>c.idx===i);
-      m.style.fontSize=isCh?(fs*1.05)+'px':''+fs+'px';
-      m.style.textIndent=isCh?'0':'2em';
+      if(isCh){m.style.textIndent='0';m.style.fontSize=(fs*1.06)+'px'}
+      else{m.style.textIndent='2em';m.style.fontSize=fs+'px'}
       m.textContent=this.paras[i];
-      const h=m.offsetHeight + fs*0.65; // + margin-bottom
-      const extra=isCh?fs*1.2:0; // chapter 額外 padding
-      const total=h+extra;
+      const ph=m.offsetHeight+(isCh?fs*1.2:fs*0.6);
 
-      if(usedH+total>availH && i>startPara){
+      if(usedH+ph>availH && i>startPara){
         pages.push({startPara,endPara:i-1});
-        startPara=i;usedH=total;
-      } else {
-        usedH+=total;
+        startPara=i;usedH=ph;
+      }else{
+        usedH+=ph;
       }
     }
-    pages.push({startPara,endPara:this.paras.length-1});
+    if(startPara<this.paras.length)pages.push({startPara,endPara:this.paras.length-1});
     m.remove();
 
     this.pages=pages;
-    this.totalPages=pages.length;
+    this.totalPages=pages.length||1;
   },
 
-  /* ── 找段落在第幾頁 ── */
-  paraToPage(paraIdx){
+  paraToPage(pi){
     for(let i=0;i<this.pages.length;i++){
-      const p=this.pages[i];
-      if(paraIdx>=p.startPara && paraIdx<=p.endPara)return i;
+      if(pi>=this.pages[i].startPara&&pi<=this.pages[i].endPara)return i;
     }
     return 0;
   },
 
-  /* ── 跳到指定頁（核心）── */
-  goToPage(pg,animate=true){
+  goToPage(pg,anim=true){
+    if(this._busy)return;
     pg=Math.max(0,Math.min(pg,this.totalPages-1));
-    if(this._turning)return;
-    if(animate && pg!==this.curPage){
-      this._turning=true;
-      setTimeout(()=>this._turning=false,360);
-    }
-    const wrap=document.getElementById('rpageWrap');
-    const dir=pg>this.curPage?-1:1; // -1=往後,-1=往前
+    if(anim&&pg!==this.curPage){this._busy=true;setTimeout(()=>this._busy=false,360)}
 
-    // 渲染三頁（前中後）
+    const wrap=document.getElementById('rpwrap');
     wrap.innerHTML='';
-    const prev=this.renderPage(pg-1,'prev');
-    const curr=this.renderPage(pg,'curr');
-    const next=this.renderPage(pg+1,'next');
+
+    const prev=pg>0?this.mkPage(pg-1):null;
+    const curr=this.mkPage(pg);
+    const next=pg<this.totalPages-1?this.mkPage(pg+1):null;
+
     if(prev)wrap.appendChild(prev);
     wrap.appendChild(curr);
     if(next)wrap.appendChild(next);
 
-    // 定位 wrap（curr 在中心）
     const total=wrap.children.length;
-    const prevIdx=prev?1:0; // curr 在第幾個child（0-based）
-    // 用 translateX 讓 curr 顯示
     const cIdx=prev?1:0;
-    wrap.style.transform=`translateX(${-cIdx*100}%)`;
-    wrap.style.width=(total*100)+'%';
-    // 每個子元素寬度
     Array.from(wrap.children).forEach(c=>{c.style.width=(100/total)+'%'});
+    wrap.style.width=(total*100)+'%';
+    wrap.style.transition='none';
+    wrap.style.transform=`translateX(${-cIdx*(100/total)}%)`;
 
     this.curPage=pg;
-    DB.setPos(this.id,this.pages[pg]?.startPara||0);
-    this.updFooter();
-    this.updTOC();
+    Meta.setPos(this.id,this.pages[pg]?.startPara||0);
+    this.updFoot();this.updTOChl();
   },
 
-  /* ── 渲染單頁 ── */
-  renderPage(pg,role){
+  mkPage(pg){
     if(pg<0||pg>=this.totalPages)return null;
     const{startPara,endPara}=this.pages[pg];
     const fs=this.fontSize;
 
-    // 找當前章節標題
+    // 找章節名
     let chapTitle='';
     for(let i=this.chapters.length-1;i>=0;i--){
       if(this.chapters[i].idx<=startPara){chapTitle=this.chapters[i].title;break}
@@ -998,164 +977,119 @@ const Reader={
     const div=document.createElement('div');
     div.className='rpage';
     div.dataset.pg=pg;
-    div.dataset.role=role;
-    div.style.cssText=`font-size:${fs}px;line-height:${this.lineH}`;
 
-    // 頁眉
     const hd=document.createElement('div');
-    hd.className='rpage-chap';
-    hd.textContent=chapTitle||'';
+    hd.className='rp-chap';hd.textContent=chapTitle;
     div.appendChild(hd);
 
-    // 正文容器
     const body=document.createElement('div');
-    body.className='rpage-body';
+    body.className='rp-body';
+    body.style.fontSize=fs+'px';
+    body.style.lineHeight=this.lineH;
 
-    for(let i=startPara;i<=endPara && i<this.paras.length;i++){
+    for(let i=startPara;i<=endPara&&i<this.paras.length;i++){
       const isCh=this.chapters.some(c=>c.idx===i);
       const p=document.createElement('p');
       p.className='para'+(isCh?' ch':'');
       p.dataset.paraIdx=i;
-      p.style.fontSize=isCh?(fs*1.05)+'px':'';
+      if(isCh)p.style.fontSize=(fs*1.06)+'px';
       p.textContent=this.paras[i];
       body.appendChild(p);
     }
     div.appendChild(body);
 
-    // 頁腳
     const ft=document.createElement('div');
-    ft.className='rpage-foot';
+    ft.className='rp-foot';
     const pct=this.totalPages>1?Math.round(pg/(this.totalPages-1)*100):100;
-    ft.innerHTML=`<span class="rpage-num">第 ${pg+1} 頁</span><span class="rpage-pct">${pct}%</span>`;
+    ft.innerHTML=`<span class="rp-num">第 ${pg+1} 頁 / 共 ${this.totalPages} 頁</span><span class="rp-pct">${pct}%</span>`;
     div.appendChild(ft);
-
     return div;
   },
 
-  /* ── 翻頁動畫 ── */
-  turnNext(){
-    if(this.curPage>=this.totalPages-1){toast('已是最後一頁');return}
-    if(this._turning)return;
-    this.goToPage(this.curPage+1);
-  },
-  turnPrev(){
-    if(this.curPage<=0){toast('已是第一頁');return}
-    if(this._turning)return;
-    this.goToPage(this.curPage-1);
-  },
+  turnNext(){if(this.curPage>=this.totalPages-1){toast('已是最後一頁');return}this.goToPage(this.curPage+1)},
+  turnPrev(){if(this.curPage<=0){toast('已是第一頁');return}this.goToPage(this.curPage-1)},
 
-  /* ── 更新底部進度 ── */
-  updFooter(){
+  updFoot(){
     const pct=this.totalPages>1?Math.round(this.curPage/(this.totalPages-1)*100):100;
     document.getElementById('rfprogF').style.width=pct+'%';
-    document.getElementById('rfLabel').textContent=pct+'%';
+    document.getElementById('rfLbl').textContent=pct+'%';
   },
 
-  /* ── 更新目錄高亮 ── */
-  updTOC(){
-    const pg=this.pages[this.curPage];
-    if(!pg)return;
-    const paraIdx=pg.startPara;
-    let actCh=0;
-    for(let i=this.chapters.length-1;i>=0;i--){
-      if(this.chapters[i].idx<=paraIdx){actCh=i;break}
-    }
-    document.querySelectorAll('.toc-item').forEach((el,i)=>{
-      el.classList.toggle('cur',i===actCh);
-    });
-    const a=document.querySelector('.toc-item.cur');
-    if(a)a.scrollIntoView({block:'nearest'});
+  updTOChl(){
+    const pg=this.pages[this.curPage];if(!pg)return;
+    const pi=pg.startPara;
+    let ai=0;
+    for(let i=this.chapters.length-1;i>=0;i--){if(this.chapters[i].idx<=pi){ai=i;break}}
+    document.querySelectorAll('.toc-item').forEach((el,i)=>el.classList.toggle('cur',i===ai));
+    document.querySelector('.toc-item.cur')?.scrollIntoView({block:'nearest'});
   },
 
-  /* ── 渲染目錄 ── */
   renderTOC(){
-    const body=document.getElementById('tocBody');
-    if(!this.chapters.length){
-      body.innerHTML='<div class="toc-empty">未偵測到章節標題</div>';return;
-    }
-    body.innerHTML=this.chapters.map((ch,i)=>
-      `<div class="toc-item" onclick="Reader.jumpChapter(${i})">
-        <span class="toc-n">${i+1}</span>
-        <span class="toc-t">${esc(ch.title)}</span>
-      </div>`
+    const b=document.getElementById('tocBody');
+    if(!this.chapters.length){b.innerHTML='<div class="toc-empty">未偵測到章節標題</div>';return}
+    b.innerHTML=this.chapters.map((ch,i)=>
+      `<div class="toc-item" onclick="Reader.jumpCh(${i})">
+         <span class="toc-n">${i+1}</span>
+         <span class="toc-t">${esc(ch.title)}</span>
+       </div>`
     ).join('');
-    this.updTOC();
+    this.updTOChl();
   },
 
-  jumpChapter(i){
+  jumpCh(i){
     const ch=this.chapters[i];if(!ch)return;
     this.goToPage(this.paraToPage(ch.idx));
     document.getElementById('tocBack').classList.remove('on');
-    toast(`跳轉至 ${ch.title}`);
+    toast(ch.title.substring(0,20));
   },
 
-  /* ── 套用設定 ── */
   applyPrefs(){
-    const p=DB.loadPrefs();
-    // 字體
+    const p=Meta.loadP();
     this.fontSize=p.fontSize||18;
     this.lineH=p.lineH||2;
-    // 更新按鈕狀態
-    document.querySelectorAll('.fsz-btn').forEach(b=>{
-      b.classList.toggle('on',parseInt(b.dataset.sz)===this.fontSize);
-    });
-    // 夜間
-    const night=!!p.night;
-    if(night)document.documentElement.setAttribute('data-night','');
-    else document.documentElement.removeAttribute('data-night');
-    document.getElementById('togNight').checked=night;
-    document.getElementById('btnTheme').textContent=night?'☀':'🌙';
-    // 簡繁
+    document.querySelectorAll('.fsz-btn').forEach(b=>b.classList.toggle('on',+b.dataset.sz===this.fontSize));
+    applyTheme(!!p.night);
     document.getElementById('togConv').checked=p.conv!==false;
-    // 語速
     const spd=p.speed||1;
     document.getElementById('spdSlider').value=spd;
     document.getElementById('spdVal').textContent=spd.toFixed(1)+'×';
   },
 
-  /* ── 設定字體並重新分頁 ── */
   setFont(sz){
     this.fontSize=sz;
-    const p=DB.loadPrefs();p.fontSize=sz;DB.savePrefs(p);
-    // 更新按鈕
-    document.querySelectorAll('.fsz-btn').forEach(b=>{
-      b.classList.toggle('on',parseInt(b.dataset.sz)===sz);
-    });
+    const p=Meta.loadP();p.fontSize=sz;Meta.saveP(p);
+    document.querySelectorAll('.fsz-btn').forEach(b=>b.classList.toggle('on',+b.dataset.sz===sz));
     if(this.id){
-      const oldPara=this.pages[this.curPage]?.startPara||0;
-      this.paginate(); // 重新分頁
-      this.goToPage(this.paraToPage(oldPara),false); // 維持閱讀位置
+      const oldPi=this.pages[this.curPage]?.startPara||0;
+      this.paginate();
+      this.goToPage(this.paraToPage(oldPi),false);
     }
-    toast(`字體大小 ${sz}px`);
+    toast(`字體 ${sz}px`);
   },
 
-  /* ── 進度條點擊 ── */
   onProgClick(e){
     const r=e.currentTarget.getBoundingClientRect();
     const ratio=(e.clientX-r.left)/r.width;
-    const pg=Math.round(ratio*(this.totalPages-1));
-    this.goToPage(Math.max(0,Math.min(pg,this.totalPages-1)));
+    this.goToPage(Math.round(ratio*(this.totalPages-1)));
   },
 
-  /* ── TTS 高亮段落 ── */
-  highlightPara(paraIdx){
+  hlPara(pi){
     document.querySelectorAll('.para.tts-hi').forEach(el=>el.classList.remove('tts-hi'));
-    const el=document.querySelector(`.para[data-para-idx="${paraIdx}"]`);
+    const el=document.querySelector(`.para[data-para-idx="${pi}"]`);
     if(el)el.classList.add('tts-hi');
-    // 若段落不在當前頁，翻到該頁
-    const pg=this.paraToPage(paraIdx);
+    const pg=this.paraToPage(pi);
     if(pg!==this.curPage)this.goToPage(pg,true);
   }
 };
 
-/* ════════════════════════════════════════════
-   TTS 朗讀
-════════════════════════════════════════════ */
+/* ══════════════════════════════
+   TTS 聽書
+══════════════════════════════ */
 const TTS={
   idx:0,segs:[],on:false,paused:false,
 
   build(){
-    const pr=DB.loadPrefs();const conv=pr.conv!==false;
+    const pr=Meta.loadP();const conv=pr.conv!==false;
     this.segs=Reader.paras.map((p,i)=>({text:conv?s2t(p):p,pi:i}));
   },
 
@@ -1164,8 +1098,7 @@ const TTS={
     this.build();
     const pg=Reader.pages[Reader.curPage];
     this.idx=from!=null?from:(pg?pg.startPara:0);
-    this.on=true;this.paused=false;
-    this.speak();this.updUI();
+    this.on=true;this.paused=false;this.speak();this.updUI();
   },
 
   speak(){
@@ -1174,16 +1107,11 @@ const TTS={
     const seg=this.segs[this.idx];
     if(!seg.text.trim()){this.idx++;setTimeout(()=>this.speak(),10);return}
     const u=new SpeechSynthesisUtterance(seg.text);
-    const pr=DB.loadPrefs();
-    u.rate=pr.speed||1;u.lang='zh-TW';
+    const pr=Meta.loadP();u.rate=pr.speed||1;u.lang='zh-TW';
     const vs=window.speechSynthesis.getVoices();
     if(pr.voiceIdx!=null&&vs[pr.voiceIdx])u.voice=vs[pr.voiceIdx];
     else u.voice=vs.find(v=>/zh.*(TW|HK)/i.test(v.lang))||vs.find(v=>/zh/i.test(v.lang))||null;
-    u.onstart=()=>{
-      Reader.highlightPara(seg.pi);
-      document.getElementById('btnPlay').textContent='⏸';
-      document.getElementById('btnPlay').classList.add('on');
-    };
+    u.onstart=()=>{Reader.hlPara(seg.pi)};
     u.onend=()=>{if(this.on){this.idx++;this.speak()}};
     u.onerror=e=>{if(e.error!=='interrupted'&&this.on){this.idx++;setTimeout(()=>this.speak(),80)}};
     window.speechSynthesis.speak(u);
@@ -1196,23 +1124,13 @@ const TTS={
   },
 
   stop(){
-    this.on=false;this.paused=false;
-    window.speechSynthesis.cancel();
+    this.on=false;this.paused=false;window.speechSynthesis.cancel();
     document.querySelectorAll('.tts-hi').forEach(el=>el.classList.remove('tts-hi'));
     this.updUI();
   },
 
-  prev(){
-    if(!this.on)return;
-    this.idx=Math.max(0,this.idx-2);
-    window.speechSynthesis.cancel();setTimeout(()=>this.speak(),50);
-  },
-  next(){
-    if(!this.on)return;
-    window.speechSynthesis.cancel();
-    this.idx=Math.min(this.segs.length-1,this.idx+1);
-    setTimeout(()=>this.speak(),50);
-  },
+  prev(){if(!this.on)return;this.idx=Math.max(0,this.idx-2);window.speechSynthesis.cancel();setTimeout(()=>this.speak(),50)},
+  next(){if(!this.on)return;window.speechSynthesis.cancel();this.idx=Math.min(this.segs.length-1,this.idx+1);setTimeout(()=>this.speak(),50)},
 
   updUI(){
     const pb=document.getElementById('btnPlay');
@@ -1225,132 +1143,112 @@ const TTS={
     const vs=window.speechSynthesis.getVoices();
     sel.innerHTML='<option value="">自動選擇</option>'+
       vs.map((v,i)=>`<option value="${i}">${v.name} (${v.lang})</option>`).join('');
-    const pr=DB.loadPrefs();
-    if(pr.voiceIdx!=null)sel.value=pr.voiceIdx;
+    const pr=Meta.loadP();if(pr.voiceIdx!=null)sel.value=pr.voiceIdx;
   }
 };
 
-/* ════════════════════════════════════════════
-   事件綁定
-════════════════════════════════════════════ */
-document.addEventListener('DOMContentLoaded',()=>{
-  // IndexedDB 預初始化
-  DB.openIDB().catch(e=>console.warn('IDB:',e));
+/* ══════════════════════════════
+   初始化 & 事件
+══════════════════════════════ */
+document.addEventListener('DOMContentLoaded',async()=>{
+  // 先初始化儲存層
+  await Store.init();
 
-  Lib.render();
+  // 套用已儲存主題（避免閃白）
+  const prefs=Meta.loadP();
+  applyTheme(!!prefs.night);
   Reader.applyPrefs();
 
-  /* ── 書庫 ── */
+  Lib.render();
+
+  /* 書庫 */
   const fi=document.getElementById('fi');
   fi.onchange=e=>{if(e.target.files[0])Lib.addFile(e.target.files[0]);e.target.value=''};
   document.getElementById('btnUp').onclick=()=>fi.click();
   document.getElementById('fab').onclick=()=>fi.click();
-  // 拖曳
   document.getElementById('vLib').addEventListener('dragover',e=>e.preventDefault());
   document.getElementById('vLib').addEventListener('drop',e=>{e.preventDefault();Lib.addFile(e.dataTransfer.files[0])});
-  // 書庫主題（快速切換）
+
+  /* 書庫主題按鈕 */
   document.getElementById('btnTheme').onclick=()=>{
-    const p=DB.loadPrefs();p.night=!p.night;DB.savePrefs(p);Reader.applyPrefs();
+    const p=Meta.loadP();p.night=!p.night;Meta.saveP(p);applyTheme(p.night);
     toast(p.night?'🌙 夜間模式':'☀ 日間模式');
   };
 
-  /* ── 閱讀器頂部 ── */
+  /* 閱讀器 */
   document.getElementById('btnBack').onclick=()=>Reader.close();
-
-  // 目錄按鈕
-  document.getElementById('btnToc').onclick=()=>{
-    Reader.renderTOC();
-    document.getElementById('tocBack').classList.add('on');
-  };
-  document.getElementById('tocOverlay').onclick=()=>document.getElementById('tocBack').classList.remove('on');
-  document.getElementById('tocClose').onclick=()=>document.getElementById('tocBack').classList.remove('on');
-
-  // 設定按鈕
-  document.getElementById('btnSet').onclick=()=>{
-    TTS.fillVoices();
-    document.getElementById('setBack').classList.add('on');
-  };
-  document.getElementById('setOverlay').onclick=()=>document.getElementById('setBack').classList.remove('on');
-  document.getElementById('setClose').onclick=()=>document.getElementById('setBack').classList.remove('on');
-
-  /* ── 翻頁點擊區域 ── */
   document.getElementById('zoneL').onclick=()=>Reader.turnPrev();
   document.getElementById('zoneR').onclick=()=>Reader.turnNext();
-
-  // 鍵盤支援
   document.addEventListener('keydown',e=>{
     if(!document.getElementById('vRdr').classList.contains('on'))return;
     if(e.key==='ArrowRight'||e.key==='ArrowDown')Reader.turnNext();
     if(e.key==='ArrowLeft'||e.key==='ArrowUp')Reader.turnPrev();
   });
-
-  /* ── 底部工具 ── */
   document.getElementById('rfprog').onclick=e=>Reader.onProgClick(e);
-  document.getElementById('btnPlay').onclick=()=>TTS.toggle();
-  document.getElementById('btnStop').onclick=()=>TTS.stop();
-  document.getElementById('btnPrev').onclick=()=>TTS.prev();
-  document.getElementById('btnNext').onclick=()=>TTS.next();
 
-  /* ── 設定面板 ── */
-  // 字體大小（直接更新 Reader.setFont）
+  /* 目錄 */
+  document.getElementById('btnToc').onclick=()=>{Reader.renderTOC();document.getElementById('tocBack').classList.add('on')};
+  document.getElementById('tocOv').onclick=()=>document.getElementById('tocBack').classList.remove('on');
+  document.getElementById('tocCls').onclick=()=>document.getElementById('tocBack').classList.remove('on');
+
+  /* 設定 */
+  document.getElementById('btnSet').onclick=()=>{TTS.fillVoices();document.getElementById('setBack').classList.add('on')};
+  document.getElementById('setOv').onclick=()=>document.getElementById('setBack').classList.remove('on');
+  document.getElementById('setCls').onclick=()=>document.getElementById('setBack').classList.remove('on');
+
+  /* 字體大小 */
   document.querySelectorAll('.fsz-btn').forEach(btn=>{
     btn.onclick=()=>Reader.setFont(parseInt(btn.dataset.sz));
   });
 
-  // 夜間模式
+  /* 夜間模式（設定面板）*/
   document.getElementById('togNight').onchange=e=>{
-    const p=DB.loadPrefs();p.night=e.target.checked;DB.savePrefs(p);
-    Reader.applyPrefs();toast(p.night?'🌙 夜間模式':'☀ 日間模式');
+    const p=Meta.loadP();p.night=e.target.checked;Meta.saveP(p);applyTheme(p.night);
+    toast(p.night?'🌙 夜間模式':'☀ 日間模式');
   };
 
-  // 簡繁轉換
+  /* 簡繁轉換 */
   document.getElementById('togConv').onchange=e=>{
-    const p=DB.loadPrefs();p.conv=e.target.checked;DB.savePrefs(p);
+    const p=Meta.loadP();p.conv=e.target.checked;Meta.saveP(p);
     if(Reader.id){
-      // 重新處理文字並重新分頁
-      toast('重新處理文字…');
-      DB.getParas(Reader.id).then(rawParas=>{
-        Reader.paras=rawParas.map(t=>p.conv?s2t(t):t);
-        const oldPara=Reader.pages[Reader.curPage]?.startPara||0;
-        Reader.paginate();
-        Reader.goToPage(Reader.paraToPage(oldPara),false);
-        TTS.build();
+      showLoad('重新處理…');
+      Store.getParas(Reader.id).then(raw=>{
+        Reader.paras=raw.map(t=>p.conv?s2t(t):t);
+        const old=Reader.pages[Reader.curPage]?.startPara||0;
+        Reader.paginate();Reader.goToPage(Reader.paraToPage(old),false);
+        TTS.build();hideLoad();
         toast(p.conv?'已切換為繁體':'已切換為原文');
       });
     }
   };
 
-  // 語速
+  /* 語速 */
   document.getElementById('spdSlider').oninput=e=>{
     const v=parseFloat(e.target.value);
     document.getElementById('spdVal').textContent=v.toFixed(1)+'×';
-    const p=DB.loadPrefs();p.speed=v;DB.savePrefs(p);
+    const p=Meta.loadP();p.speed=v;Meta.saveP(p);
   };
 
-  // 語音
+  /* 語音 */
   document.getElementById('voiceSel').onchange=e=>{
-    const p=DB.loadPrefs();
-    p.voiceIdx=e.target.value?parseInt(e.target.value):null;
-    DB.savePrefs(p);
+    const p=Meta.loadP();p.voiceIdx=e.target.value?parseInt(e.target.value):null;Meta.saveP(p);
   };
 
-  // 語音列表
-  if('speechSynthesis' in window){
-    speechSynthesis.onvoiceschanged=()=>TTS.fillVoices();
-    TTS.fillVoices();
-  }
+  /* TTS */
+  document.getElementById('btnPlay').onclick=()=>TTS.toggle();
+  document.getElementById('btnStop').onclick=()=>TTS.stop();
+  document.getElementById('btnPrev').onclick=()=>TTS.prev();
+  document.getElementById('btnNext').onclick=()=>TTS.next();
 
-  // 視窗大小改變時重新分頁
-  let resizeT;
+  /* 語音列表 */
+  if('speechSynthesis' in window){speechSynthesis.onvoiceschanged=()=>TTS.fillVoices();TTS.fillVoices()}
+
+  /* 視窗大小改變重新分頁 */
+  let rt;
   window.addEventListener('resize',()=>{
-    clearTimeout(resizeT);
-    resizeT=setTimeout(()=>{
-      if(Reader.id){
-        const old=Reader.pages[Reader.curPage]?.startPara||0;
-        Reader.paginate();
-        Reader.goToPage(Reader.paraToPage(old),false);
-      }
-    },300);
+    clearTimeout(rt);rt=setTimeout(()=>{
+      if(Reader.id){const old=Reader.pages[Reader.curPage]?.startPara||0;Reader.paginate();Reader.goToPage(Reader.paraToPage(old),false)}
+    },350);
   });
 });
 </script>
