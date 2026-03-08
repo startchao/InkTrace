@@ -1,194 +1,438 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
+
 <head>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>小說閱讀器 v3.1</title>
+
+<title>小說閱讀器 v3.0</title>
+
 <style>
-body{margin:0;font-family:system-ui,sans-serif;background:#f4f4f4;color:#222}
-header{background:#222;color:#fff;padding:10px 16px;display:flex;justify-content:space-between;align-items:center}
-.container{padding:16px}
-button{border:none;padding:8px 14px;border-radius:6px;margin:4px;cursor:pointer;background:#444;color:#fff}
-button:hover{background:#666}
-input{padding:8px;margin:4px;border-radius:4px;border:1px solid #ccc}
-.book{background:#fff;border-radius:8px;padding:12px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 1px 3px rgba(0,0,0,0.1)}
-#reader{display:none}
-#content{white-space:pre-wrap;line-height:1.9;font-size:18px;background:#fff;padding:24px;border-radius:8px;min-height:60vh;max-height:75vh;overflow:auto;box-shadow:0 2px 6px rgba(0,0,0,0.1)}
-#toc{background:#fff;border-radius:8px;padding:12px;margin:12px 0;max-height:160px;overflow:auto;box-shadow:0 1px 4px rgba(0,0,0,0.08)}
-.dark{background:#111;color:#ddd}
-.dark #content,.dark .book,.dark #toc{background:#1e1e1e}
+
+body{
+margin:0;
+font-family:Arial,Helvetica,sans-serif;
+background:#f5f5f5;
+color:#222;
+}
+
+header{
+background:#222;
+color:white;
+padding:12px;
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+
+.container{
+padding:20px;
+}
+
+button{
+border:none;
+padding:6px 12px;
+margin:3px;
+border-radius:6px;
+cursor:pointer;
+}
+
+input{
+padding:6px;
+margin:4px;
+}
+
+.book{
+background:white;
+padding:10px;
+margin-bottom:8px;
+border-radius:6px;
+display:flex;
+justify-content:space-between;
+}
+
+#reader{
+display:none;
+}
+
+#content{
+
+white-space:pre-wrap;
+line-height:1.8;
+font-size:18px;
+background:white;
+padding:20px;
+border-radius:8px;
+height:65vh;
+overflow:auto;
+
+}
+
+#toc{
+
+background:white;
+border-radius:8px;
+padding:10px;
+margin-bottom:10px;
+max-height:200px;
+overflow:auto;
+
+}
+
+.dark{
+background:#111;
+color:#ddd;
+}
+
+.dark #content{
+background:#1e1e1e;
+}
+
 </style>
+
 </head>
+
 <body>
 
 <header>
-  <span>📚 小說閱讀器 v3.1</span>
-  <div>
-    <button onclick="toggleDark()">🌙 深色</button>
-  </div>
-</header>
 
-<div class="container">
-  <div id="library">
-    <input type="file" id="fileInput" accept=".txt">
-    <button onclick="uploadBook()">上傳</button>
-    <input id="search" placeholder="搜尋書名" oninput="searchBooks()">
-    <div id="bookList"></div>
-  </div>
+<div>📚 小說閱讀器 v3.0</div>
 
-  <div id="reader">
-    <div style="margin-bottom:12px">
-      <button onclick="back()">← 返回</button>
-      <button onclick="convert()">簡→繁</button>
-      <button onclick="speak()">▶ 朗讀</button>
-      <button onclick="pauseSpeak()">⏸</button>
-      <button onclick="resumeSpeak()">▶</button>
-      <button onclick="fontPlus()">A+</button>
-      <button onclick="fontMinus()">A-</button>
-    </div>
+<div>
 
-    <h2 id="title"></h2>
-    <div id="toc"></div>
-    <div id="content"></div>
-  </div>
+<button onclick="toggleDark()">🌙</button>
+
 </div>
 
-<!-- 使用 opencc-js CDN (簡→繁) -->
-<script src="https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/cn2t.js"></script>
+</header>
+
+
+<div class="container">
+
+
+<!-- 書庫 -->
+
+<div id="library">
+
+<input type="file" id="fileInput" accept=".txt">
+
+<button onclick="uploadBook()">上傳小說</button>
+
+<input id="search" placeholder="搜尋小說" oninput="searchBooks()">
+
+<div id="bookList"></div>
+
+</div>
+
+
+<!-- 閱讀器 -->
+
+<div id="reader">
+
+<button onclick="back()">返回書庫</button>
+
+<button onclick="convert()">簡轉繁</button>
+
+<button onclick="speak()">🔊播放</button>
+
+<button onclick="pauseSpeak()">⏸</button>
+
+<button onclick="resumeSpeak()">▶</button>
+
+<button onclick="fontPlus()">A+</button>
+
+<button onclick="fontMinus()">A-</button>
+
+<h2 id="title"></h2>
+
+<div id="toc"></div>
+
+<div id="content"></div>
+
+</div>
+
+</div>
 
 <script>
-let library = []
-let currentBook = null
-let fontSize = 18
-let converter = OpenCC.Converter({ from: 'cn', to: 'tw' }) // 簡→繁 (台灣標準)
 
-function loadLibrary() {
-  library = JSON.parse(localStorage.getItem("library") || "[]")
-  renderLibrary()
+let library=[]
+let currentBook=null
+let fontSize=18
+let speechObj=null
+
+function loadLibrary(){
+
+library=JSON.parse(localStorage.getItem("library")||"[]")
+
+renderLibrary()
+
 }
 
-function saveLibrary() {
-  localStorage.setItem("library", JSON.stringify(library))
+function saveLibrary(){
+
+localStorage.setItem("library",JSON.stringify(library))
+
 }
 
-function renderLibrary(list = library) {
-  const box = document.getElementById("bookList")
-  box.innerHTML = ""
-  list.forEach(b => {
-    const div = document.createElement("div")
-    div.className = "book"
-    div.innerHTML = `<div>${b.title}</div>
-      <div>
-        <button onclick="openBook('${b.id}')">閱讀</button>
-        <button onclick="deleteBook('${b.id}')">刪除</button>
-      </div>`
-    box.appendChild(div)
-  })
+function renderLibrary(list=library){
+
+const box=document.getElementById("bookList")
+
+box.innerHTML=""
+
+list.forEach(b=>{
+
+const div=document.createElement("div")
+
+div.className="book"
+
+div.innerHTML=`
+<div>${b.title}</div>
+
+<div>
+
+<button onclick="openBook('${b.id}')">閱讀</button>
+
+<button onclick="deleteBook('${b.id}')">刪除</button>
+
+</div>
+
+`
+
+box.appendChild(div)
+
+})
+
+}
+function searchBooks(){
+
+const q=document.getElementById("search").value.toLowerCase()
+
+const filtered=library.filter(b=>b.title.toLowerCase().includes(q))
+
+renderLibrary(filtered)
+
 }
 
-function searchBooks() {
-  const q = document.getElementById("search").value.toLowerCase()
-  renderLibrary(library.filter(b => b.title.toLowerCase().includes(q)))
+function uploadBook(){
+
+const file=document.getElementById("fileInput").files[0]
+
+if(!file)return
+
+const reader=new FileReader()
+
+reader.onload=function(){
+
+const book={
+
+id:Date.now().toString(),
+
+title:file.name,
+
+content:reader.result
+
 }
 
-function uploadBook() {
-  const f = document.getElementById("fileInput").files[0]
-  if (!f) return
-  const r = new FileReader()
-  r.onload = () => {
-    library.push({ id: Date.now().toString(), title: f.name, content: r.result })
-    saveLibrary()
-    renderLibrary()
-  }
-  r.readAsText(f, "utf-8")
+library.push(book)
+
+saveLibrary()
+
+renderLibrary()
+
 }
 
-function deleteBook(id) {
-  library = library.filter(b => b.id !== id)
-  localStorage.removeItem("pos_" + id)
-  saveLibrary()
-  renderLibrary()
+reader.readAsText(file,"utf-8")
+
 }
 
-function openBook(id) {
-  currentBook = library.find(b => b.id === id)
-  if (!currentBook) return
-  document.getElementById("title").textContent = currentBook.title
-  document.getElementById("content").textContent = currentBook.content
-  generateTOC()
-  document.getElementById("library").style.display = "none"
-  document.getElementById("reader").style.display = "block"
-  restoreScroll()
+function deleteBook(id){
+
+library=library.filter(b=>b.id!==id)
+
+saveLibrary()
+
+renderLibrary()
+
 }
 
-function back() {
-  saveScroll()
-  speechSynthesis.cancel()
-  document.getElementById("library").style.display = "block"
-  document.getElementById("reader").style.display = "none"
+function openBook(id){
+
+currentBook=library.find(b=>b.id==id)
+
+document.getElementById("title").innerText=currentBook.title
+
+document.getElementById("content").innerText=currentBook.content
+
+generateTOC()
+
+document.getElementById("library").style.display="none"
+
+document.getElementById("reader").style.display="block"
+
+restoreScroll()
+
 }
 
-function generateTOC() {
-  const lines = currentBook.content.split(/\n/)
-  let html = ""
-  lines.forEach((line, i) => {
-    if (/第.{0,10}[章回]/u.test(line.trim())) {
-      html += `<div style="cursor:pointer;padding:4px 0" onclick="scrollToLine(${i})">${line.trim()}</div>`
-    }
-  })
-  document.getElementById("toc").innerHTML = html || "<div>無章節目錄</div>"
+function back(){
+
+document.getElementById("library").style.display="block"
+
+document.getElementById("reader").style.display="none"
+
+saveScroll()
+
+speechSynthesis.cancel()
+
 }
 
-function scrollToLine(n) {
-  const lines = currentBook.content.split(/\n/)
-  let pos = 0
-  for (let i = 0; i < n; i++) pos += lines[i].length + 1
-  document.getElementById("content").scrollTop = pos
+function generateTOC(){
+
+const lines=currentBook.content.split("\n")
+
+let html=""
+
+lines.forEach((l,i)=>{
+
+if(/第.{1,9}章/.test(l)){
+
+html+=`<div onclick="scrollToLine(${i})">${l}</div>`
+
 }
 
-function speak() {
-  const text = document.getElementById("content").textContent
-  const u = new SpeechSynthesisUtterance(text)
-  u.lang = "zh-TW"
-  speechSynthesis.speak(u)
+})
+
+document.getElementById("toc").innerHTML=html
+
 }
 
-function pauseSpeak() { speechSynthesis.pause() }
-function resumeSpeak() { speechSynthesis.resume() }
+function scrollToLine(n){
 
-function fontPlus() {
-  fontSize += 2
-  document.getElementById("content").style.fontSize = fontSize + "px"
+const lines=currentBook.content.split("\n")
+
+let pos=0
+
+for(let i=0;i<n;i++){
+
+pos+=lines[i].length+1
+
 }
 
-function fontMinus() {
-  fontSize = Math.max(12, fontSize - 2)
-  document.getElementById("content").style.fontSize = fontSize + "px"
+document.getElementById("content").scrollTop=pos
+
+}
+function speak(){
+
+const text=document.getElementById("content").innerText
+
+speechObj=new SpeechSynthesisUtterance(text)
+
+speechObj.lang="zh-TW"
+
+speechSynthesis.speak(speechObj)
+
 }
 
-function toggleDark() {
-  document.body.classList.toggle("dark")
+function pauseSpeak(){
+
+speechSynthesis.pause()
+
 }
 
-function saveScroll() {
-  if (!currentBook) return
-  localStorage.setItem("pos_" + currentBook.id, document.getElementById("content").scrollTop)
+function resumeSpeak(){
+
+speechSynthesis.resume()
+
 }
 
-function restoreScroll() {
-  if (!currentBook) return
-  const pos = localStorage.getItem("pos_" + currentBook.id) || 0
-  setTimeout(() => {
-    document.getElementById("content").scrollTop = +pos
-  }, 80)
+function fontPlus(){
+
+fontSize+=2
+
+document.getElementById("content").style.fontSize=fontSize+"px"
+
 }
 
-function convert() {
-  const el = document.getElementById("content")
-  el.textContent = converter(el.textContent)
+function fontMinus(){
+
+fontSize-=2
+
+document.getElementById("content").style.fontSize=fontSize+"px"
+
+}
+
+function toggleDark(){
+
+document.body.classList.toggle("dark")
+
+}
+
+function saveScroll(){
+
+if(!currentBook)return
+
+const pos=document.getElementById("content").scrollTop
+
+localStorage.setItem("pos_"+currentBook.id,pos)
+
+}
+
+function restoreScroll(){
+
+if(!currentBook)return
+
+const pos=localStorage.getItem("pos_"+currentBook.id)||0
+
+setTimeout(()=>{
+
+document.getElementById("content").scrollTop=pos
+
+},100)
+
+}
+
+
+const SIMPLE_TO_TRAD={
+
+"汉":"漢",
+"龙":"龍",
+"风":"風",
+"国":"國",
+"门":"門",
+"书":"書",
+"马":"馬",
+"云":"雲",
+"东":"東",
+"发":"發",
+"复":"復",
+"万":"萬",
+"为":"為",
+"与":"與",
+"车":"車",
+"后":"後"
+
+}
+
+function convert(){
+
+let text=document.getElementById("content").innerText
+
+for(const k in SIMPLE_TO_TRAD){
+
+text=text.replaceAll(k,SIMPLE_TO_TRAD[k])
+
+}
+
+document.getElementById("content").innerText=text
+
 }
 
 loadLibrary()
+
 </script>
+
 </body>
+
 </html>
+
