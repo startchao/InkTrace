@@ -147,13 +147,14 @@ background:rgba(0,0,0,.52);backdrop-filter:blur(3px);
 .lib-empty-text{font-size:14px;color:var(–text-muted);line-height:1.75}
 .lib-empty-btn{
 display:inline-flex;align-items:center;gap:7px;
-margin-top:18px;padding:10px 22px;
-background:var(–gold);color:#fff;
-border-radius:22px;font-size:14px;letter-spacing:.05em;
+margin-top:18px;padding:12px 26px;
+background:var(–gold);color:#fff!important;
+border-radius:22px;font-size:15px;font-weight:500;letter-spacing:.05em;
 transition:background .18s,transform .14s,box-shadow .18s;
-box-shadow:0 4px 14px rgba(184,137,42,.32);
+box-shadow:0 4px 14px rgba(184,137,42,.38);
+-webkit-appearance:none;appearance:none;
 }
-.lib-empty-btn:hover{background:var(–gold-lt);transform:translateY(-2px);box-shadow:0 8px 22px rgba(184,137,42,.42)}
+.lib-empty-btn:hover{background:var(–gold-lt);transform:translateY(-2px);box-shadow:0 8px 22px rgba(184,137,42,.45)}
 
 /* FAB */
 .fab{
@@ -537,22 +538,101 @@ function toTrad(text) {
   return r;
 }
 
-/* ── LocalStorage DB ── */
+/* ══════════════════════════════════════════════════════════
+   DB 層：
+   - localStorage  → 書籍 metadata（標題、章節、進度）輕量資料
+   - IndexedDB     → 段落文字陣列（大型資料，無 5MB 上限）
+   ══════════════════════════════════════════════════════════ */
 const DB = {
-  K:  'shuge_books_v1',
   KP: 'shuge_prefs_v1',
-  load()    { try { return JSON.parse(localStorage.getItem(this.K)  || '{}'); } catch { return {}; } },
-  save(d)   { localStorage.setItem(this.K,  JSON.stringify(d)); },
-  loadP()   { try { return JSON.parse(localStorage.getItem(this.KP) || '{}'); } catch { return {}; } },
-  saveP(p)  { localStorage.setItem(this.KP, JSON.stringify(p)); },
-  books()   { return Object.values(this.load()).sort((a,b) => (b.addedAt||0)-(a.addedAt||0)); },
-  saveBook(b){ const d=this.load(); d[b.id]=b; this.save(d); },
-  delBook(id){ const d=this.load(); delete d[id]; this.save(d); },
+  KM: 'shuge_meta_v1',   // metadata key in localStorage
+  IDB_NAME: 'ShugeDB',
+  IDB_VER:  1,
+  IDB_STORE: 'paragraphs',
+  _idb: null,
+
+  /* ── IndexedDB 初始化（回傳 Promise<IDBDatabase>） ── */
+  openIDB() {
+    if (this._idb) return Promise.resolve(this._idb);
+    return new Promise((ok, err) => {
+      const req = indexedDB.open(this.IDB_NAME, this.IDB_VER);
+      req.onupgradeneeded = e => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains(this.IDB_STORE))
+          db.createObjectStore(this.IDB_STORE, { keyPath: 'id' });
+      };
+      req.onsuccess = e => { this._idb = e.target.result; ok(this._idb); };
+      req.onerror   = e => err(e.target.error);
+    });
+  },
+
+  /* ── IDB：儲存段落 ── */
+  async saveParas(id, paras) {
+    const db = await this.openIDB();
+    return new Promise((ok, err) => {
+      const tx = db.transaction(this.IDB_STORE, 'readwrite');
+      tx.objectStore(this.IDB_STORE).put({ id, paras });
+      tx.oncomplete = ok;
+      tx.onerror    = e => err(e.target.error);
+    });
+  },
+
+  /* ── IDB：讀取段落 ── */
+  async loadParas(id) {
+    const db = await this.openIDB();
+    return new Promise((ok, err) => {
+      const req = db.transaction(this.IDB_STORE, 'readonly')
+                    .objectStore(this.IDB_STORE).get(id);
+      req.onsuccess = e => ok(e.target.result?.paras || []);
+      req.onerror   = e => err(e.target.error);
+    });
+  },
+
+  /* ── IDB：刪除段落 ── */
+  async deleteParas(id) {
+    const db = await this.openIDB();
+    return new Promise((ok, err) => {
+      const tx = db.transaction(this.IDB_STORE, 'readwrite');
+      tx.objectStore(this.IDB_STORE).delete(id);
+      tx.oncomplete = ok;
+      tx.onerror    = e => err(e.target.error);
+    });
+  },
+
+  /* ── localStorage：metadata（不含段落文字） ── */
+  loadMeta()   { try { return JSON.parse(localStorage.getItem(this.KM) || '{}'); } catch { return {}; } },
+  saveMeta(d)  { localStorage.setItem(this.KM, JSON.stringify(d)); },
+  loadP()      { try { return JSON.parse(localStorage.getItem(this.KP) || '{}'); } catch { return {}; } },
+  saveP(p)     { localStorage.setItem(this.KP, JSON.stringify(p)); },
+
+  /* ── 書單（不含段落） ── */
+  books() {
+    return Object.values(this.loadMeta()).sort((a,b) => (b.addedAt||0)-(a.addedAt||0));
+  },
+
+  /* ── 儲存書籍（metadata 存 localStorage，段落存 IDB） ── */
+  async saveBook(book) {
+    const { paras, ...meta } = book;   // 分離段落與 metadata
+    const d = this.loadMeta();
+    d[meta.id] = meta;
+    this.saveMeta(d);
+    await this.saveParas(book.id, paras);
+  },
+
+  /* ── 刪除書籍 ── */
+  async delBook(id) {
+    const d = this.loadMeta();
+    delete d[id];
+    this.saveMeta(d);
+    await this.deleteParas(id);
+  },
+
+  /* ── 更新閱讀進度（只改 metadata） ── */
   setPos(id, pos) {
-    const d=this.load();
-    if (d[id]) { d[id].pos=pos; d[id].lastRead=Date.now(); }
-    this.save(d);
-  }
+    const d = this.loadMeta();
+    if (d[id]) { d[id].pos = pos; d[id].lastRead = Date.now(); }
+    this.saveMeta(d);
+  },
 };
 
 /* ── 章節解析 ── */
@@ -623,7 +703,7 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>'
 const Library = {
   render() {
     const grid = document.getElementById('book-grid');
-    const books = DB.books();
+    const books = DB.books(); // uses loadMeta() internally
     document.getElementById('lib-count').textContent = books.length + ' 本';
     if (!books.length) {
       grid.innerHTML = `<div class="lib-empty">
@@ -653,27 +733,33 @@ const Library = {
 
   async del(id, title) {
     if (!await confirm_('刪除書籍', `確定要從書庫移除《${title}》嗎？`)) return;
-    DB.delBook(id);
+    await DB.delBook(id);
     this.render();
     toast(`已刪除《${title}》`);
   },
 
   async addFile(file) {
-    if (!file?.name.endsWith('.txt')) { toast('請選擇 .txt 格式文件'); return; }
-    if (file.size > 20 * 1024 * 1024) { toast('文件過大（上限 20MB）'); return; }
-    toast('正在讀取…');
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith('.txt')) { toast('請選擇 .txt 格式文件'); return; }
+    if (file.size > 30 * 1024 * 1024) { toast('文件過大（上限 30MB）'); return; }
+    toast('正在讀取文件…');
     try {
       let raw = await readFile(file);
-      const p = DB.loadP();
-      if (p.convert !== false) raw = toTrad(raw);
-      const paras = raw.split(/\r?\n/).map(l => l.trim()).filter(l => l);
+      const prefs = DB.loadP();
+      if (prefs.convert !== false) raw = toTrad(raw);
+      const paras = raw.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+      raw = null;
       const chapters = parseChapters(paras);
       const id = 'b' + Date.now();
       const title = file.name.replace(/\.txt$/i, '');
-      DB.saveBook({ id, title, paras, chapters, total: paras.length, pos: 0, addedAt: Date.now() });
+      toast('正在儲存，請稍候…');
+      await DB.saveBook({ id, title, chapters, total: paras.length, pos: 0, addedAt: Date.now(), paras });
       this.render();
       toast(`✓ 已加入《${title}》（${paras.length} 段 · ${chapters.length} 章）`);
-    } catch(e) { toast('讀取失敗：' + e.message); }
+    } catch(e) {
+      console.error(e);
+      toast('讀取失敗：' + (e.message || '未知錯誤'));
+    }
   }
 };
 
@@ -683,11 +769,19 @@ const Library = {
 const Reader = {
   id: null, paras: [], chapters: [], els: [], curIdx: 0,
 
-  open(id) {
-    const d = DB.load();
-    const b = d[id];
+  async open(id) {
+    const meta = DB.loadMeta();
+    const b = meta[id];
     if (!b) { toast('找不到書籍'); return; }
-    this.id = id; this.paras = b.paras || []; this.chapters = b.chapters || [];
+
+    // 從 IndexedDB 非同步載入段落
+    toast('載入中…');
+    const paras = await DB.loadParas(id);
+
+    this.id = id;
+    this.paras = paras;
+    this.chapters = b.chapters || [];
+
     document.getElementById('view-library').classList.remove('active');
     document.getElementById('view-reader').classList.add('active');
     document.getElementById('rdr-title').textContent = b.title;
@@ -981,6 +1075,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /* 初始主題 */
   Reader.applyPrefs();
+
+  /* IndexedDB 預先初始化（避免首次讀取延遲） */
+  DB.openIDB().catch(e => console.warn('IDB init:', e));
 });
 </script>
 
