@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#a07018"/>
+  <rect x="32" y="32" width="448" height="448" rx="72" fill="#b88020"/>
+  <text x="256" y="210" text-anchor="middle" font-family="serif" font-size="180" fill="white" font-weight="bold" opacity="0.95">書</text>
+  <text x="256" y="370" text-anchor="middle" font-family="serif" font-size="110" fill="white" font-weight="bold" opacity="0.85">閣</text>
+</svg>
