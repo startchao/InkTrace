@@ -518,7 +518,7 @@ const Reader={
           // 遇到下一個章節標題（且不是本頁第一段）就切頁
           if(endPara>startPara&&chMap.has(endPara))break;
           p.textContent=this.paras[endPara];
-          const lh=p.offsetHeight;
+          const lh=p.offsetHeight+Math.ceil(fs*0.75);
           if(accH+lh>availH&&endPara>startPara)break;
           accH+=lh;endPara++;
         }
@@ -547,7 +547,7 @@ const Reader={
         while(endPara<this.paras.length){
           if(endPara>startPara&&chMap.has(endPara))break;
           p.textContent=this.paras[endPara];
-          const lh=p.offsetHeight;
+          const lh=p.offsetHeight+Math.ceil(fs*0.75);
           if(accH+lh>availH&&endPara>startPara)break;
           accH+=lh;endPara++;
         }
@@ -575,7 +575,7 @@ const Reader={
         while(endPara<self.paras.length){
           if(endPara>startPara&&chMap.has(endPara))break;
           p.textContent=self.paras[endPara];
-          const lh=p.offsetHeight;
+          const lh=p.offsetHeight+Math.ceil(fs*0.75);
           if(accH+lh>availH&&endPara>startPara)break;
           accH+=lh;endPara++;
         }
@@ -751,8 +751,8 @@ const Reader={
 /* ══ TTS ══ */
 const TTS={
   idx:0,segs:[],on:false,paused:false,
-  build(){this.segs=Reader.paras.map((p,i)=>({text:p,pi:i}))},
-  start(from){if(!Reader.paras.length){toast('請先開啟書籍');return}this.build();const pg=Reader.pages[Reader.curPage];this.idx=from!=null?from:(pg?pg.startPara:0);this.on=true;this.paused=false;this.speak();this.updUI()},
+  build(){this.segs=[];Reader.paras.forEach((p,i)=>{const parts=p.match(/[^。！？…]+[。！？…]*/g)||[p];if(parts.length<=1){this.segs.push({text:p,pi:i});return}parts.forEach(s=>{if(s.trim())this.segs.push({text:s,pi:i})})})},
+  start(from){if(!Reader.paras.length){toast('請先開啟書籍');return}this.build();const pg=Reader.pages[Reader.curPage];const startPi=from!=null?from:(pg?pg.startPara:0);const si=this.segs.findIndex(s=>s.pi>=startPi);this.idx=si>=0?si:0;this.on=true;this.paused=false;this.speak();this.updUI()},
   speak(){
     if(!this.on||this.idx>=this.segs.length){this.stop();return}
     window.speechSynthesis.cancel();
