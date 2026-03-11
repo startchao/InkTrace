@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<!-- 書閣 Novel Reader v1.8.0 -->
+<!-- 書閣 Novel Reader v1.8.1 -->
 
 <html lang="zh-TW">
 <head>
@@ -219,17 +219,31 @@ display:flex;align-items:center;justify-content:space-between;
 .rfexpand.open{background:var(–acp);transform:rotate(180deg)}
 
 /* ═══ 面板 ═══ */
-.pback{display:none;position:fixed;inset:0;z-index:400}
-.pback.on{display:flex;flex-direction:column;justify-content:flex-end}
-.pov{position:absolute;inset:0;background:rgba(0,0,0,.48)}
-.pbox{position:relative;z-index:1;height:85vh;background:var(–bg2);border-radius:20px 20px 0 0;display:flex;flex-direction:column;box-shadow:0 -4px 32px var(–sh2);animation:pup .28s var(–ease);overflow:hidden}
+.pback{display:none;position:fixed;inset:0;z-index:500;flex-direction:column;justify-content:flex-end}
+.pback.on{display:flex}
+.pov{position:absolute;inset:0;background:rgba(0,0,0,.65)}
+.pbox{
+position:relative;z-index:1;height:85vh;
+border-radius:20px 20px 0 0;
+display:flex;flex-direction:column;
+box-shadow:0 -4px 32px var(–sh2);
+animation:pup .28s var(–ease);
+overflow:hidden;
+isolation:isolate;
+/* ★ 強制純色實心背景，防止下層穿透 */
+background:#fffcf5;
+}
+body.night .pbox{background:#100d0a}
 @keyframes pup{from{transform:translateY(100%)}to{transform:none}}
-.phd{padding:16px 18px 12px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;background:var(–bg2);border-bottom:2px solid var(–bd2)}
+.phd{padding:16px 18px 12px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;background:#fffcf5;border-bottom:2px solid var(–bd2)}
+body.night .phd{background:#100d0a}
 .phd-t{font-size:14px;font-weight:700;color:var(–ac);letter-spacing:.08em}
 .pcls{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;background:var(–ac);border:none}
 .pcls:active{background:var(–ac2)}
-.pbody{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(–bg2)}
-.toc-item{display:flex;align-items:center;gap:12px;padding:14px 18px;cursor:pointer;border-bottom:1px solid var(–bd);background:var(–bg2)}
+.pbody{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;background:#fffcf5}
+body.night .pbody{background:#100d0a}
+.toc-item{display:flex;align-items:center;gap:12px;padding:14px 18px;cursor:pointer;border-bottom:1px solid var(–bd);background:#fffcf5}
+body.night .toc-item{background:#100d0a}
 .toc-item:last-child{border-bottom:none}
 .toc-item:active,.toc-item.cur{background:var(–acp)}
 .toc-item.cur .toc-t{color:var(–ac);font-weight:700}
@@ -237,7 +251,8 @@ display:flex;align-items:center;justify-content:space-between;
 .toc-t{font-size:15px;color:var(–tx2);flex:1;line-height:1.4}
 .toc-arr{font-size:12px;color:var(–tx3)}
 .toc-empty{padding:32px 18px;font-size:14px;color:var(–tx3);text-align:center}
-.sg{padding:16px 18px;border-bottom:1.5px solid var(–bd);background:var(–bg2)}
+.sg{padding:16px 18px;border-bottom:1.5px solid var(–bd);background:#fffcf5}
+body.night .sg{background:#100d0a}
 .sg:last-child{border-bottom:none;padding-bottom:28px}
 .sg-lbl{font-size:11px;color:var(–tx3);letter-spacing:.1em;margin-bottom:12px;font-weight:600}
 .tog-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(–bd)}
@@ -294,7 +309,7 @@ body.night .toast{background:#c09030;color:#0a0806}
 <div id="vLib" class="view lib-view">
   <header class="lhd">
     <div class="lhd-logo">書閣 <small>Novel Reader</small></div>
-    <span class="lhd-ver">v1.8</span>
+    <span class="lhd-ver">v1.8.1</span>
     <button class="ibt" id="btnTheme">🌙</button>
     <button class="ibt" id="btnUp">＋</button>
   </header>
@@ -634,20 +649,24 @@ const Reader = {
   _paging:false,   // 是否正在背景分頁
   STEPS:[15,18,21,26],
 
-  /* ★ 用 window.innerWidth/Height，不依賴任何 DOM */
+  /* ★ 用 rbook.clientHeight/Width 量測真實可用尺寸
+     Safari 的 window.innerHeight 含網址列，不準確
+     rbook 是 position:absolute inset:0，其 clientHeight 才是真實可用高度 */
   _cpp(){
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
+    const rbook = document.getElementById('rbook');
+    // clientHeight/Width 需要元素可見才準確
+    const vw = rbook.clientWidth  || window.innerWidth;
+    const vh = rbook.clientHeight || (window.innerHeight - 80); // 80px 保守扣除網址列
     const fs = this.fontSize;
     const topH = this.toolbarOn ? 50 : 0;
     const botH = this.toolbarOn ? (this.quickOn ? 107 : 52) : 0;
-    const padV = 22 + 13;   // rpage padding-top(14) + extra(8) + bottom(8) + chap(5)
-    const footH = 22;
-    const chapH = 26;
+    const padV = 14 + 8 + 8;  // paddingTop(14) + paddingBottom(8) + 富裕(8)
+    const footH = 24;          // rp-foot
+    const chapH = 28;          // rp-chap
     const availH = vh - topH - botH - padV - footH - chapH;
-    const availW = vw - 40;
-    const cpl = Math.floor(availW / fs);      // chars per line
-    const lpp = Math.floor(availH / (fs*2));  // lines per page (line-height=2)
+    const availW = vw - 40;    // paddingLeft(20) + paddingRight(20)
+    const cpl = Math.floor(availW / fs);
+    const lpp = Math.floor(availH / (fs * 2)); // line-height: 2
     return Math.max(60, cpl * lpp);
   },
 
@@ -727,10 +746,7 @@ const Reader = {
       this.chapters = meta.chapters || [];
       this.toolbarOn = false; this.quickOn = false; this._paging = false;
 
-      // 更新 UI 標題
       document.getElementById('rdTitle').textContent = meta.title;
-
-      // 隱藏工具列
       document.getElementById('rhd').classList.remove('show');
       document.getElementById('rfootWrap').classList.remove('show');
       document.getElementById('rfootQuick').classList.remove('open');
@@ -739,8 +755,12 @@ const Reader = {
       this.applyPrefs();
       showRdr();
 
-      // ★ 漸進式分頁，先顯示目標頁，背景繼續
-      this._startPaging(meta.pos || 0);
+      // ★ 雙重 rAF：等 showRdr() 讓 rbook 真正進入 layout，
+      //   clientHeight 才會回傳正確值，然後再開始分頁
+      const goTo = meta.pos || 0;
+      requestAnimationFrame(()=>requestAnimationFrame(()=>{
+        this._startPaging(goTo);
+      }));
 
     } catch(e){ hideLoad(); console.error(e); toast('開啟失敗：'+e.message) }
   },
@@ -868,10 +888,12 @@ const Reader = {
 
   _rerender(){
     if (!this.id) return;
-    // 重算 cpp，重新分頁
     const old = this.pages[this.curPage]?.startPara || 0;
     this._paging = false;
-    this._startPaging(old);
+    // 等工具列 CSS transition 完成（280ms）後再量測 rbook.clientHeight
+    setTimeout(()=>requestAnimationFrame(()=>{
+      this._startPaging(old);
+    }), 320);
   },
 
   renderTOC(){
