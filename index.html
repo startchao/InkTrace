@@ -1,27 +1,31 @@
 <!DOCTYPE html>
 
-<!-- 書閣 Novel Reader v2.0.0 -->
+<!-- 書閣 Novel Reader v2.1.0 -->
 
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>書閣 v2.0</title>
+<title>書閣 v2.1</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js"></script>
 <style>
 :root{
   --bg:#f5f0e8;--bg2:#fffcf5;--bg3:#fff8ee;
+  --panelbg:#efefef;          /* ★ 面板背景：日間淡灰 */
+  --panelbg2:#e5e5e5;
   --tx:#1a1208;--tx2:#3d2e18;--tx3:#8a7456;
   --ac:#a07018;--ac2:#c09030;
   --acp:rgba(160,112,24,.14);--bd:rgba(160,112,24,.22);--bd2:rgba(160,112,24,.44);
   --sh:rgba(20,12,4,.15);--sh2:rgba(20,12,4,.32);
   --serif:'Noto Serif TC','Georgia',serif;
   --ease:cubic-bezier(.22,1,.36,1);
-  --topH:50px; --botH:56px;
+  --topH:50px;--botH:56px;
 }
 body.night{
   --bg:#0a0806;--bg2:#100d0a;--bg3:#161210;
+  --panelbg:#252320;          /* ★ 面板背景：夜間深灰 */
+  --panelbg2:#1e1c19;
   --tx:#d5c9a8;--tx2:#b5a57e;--tx3:#6e6248;
   --ac:#c09030;--ac2:#d4a840;
   --acp:rgba(192,144,48,.15);--bd:rgba(192,144,48,.22);--bd2:rgba(192,144,48,.46);
@@ -35,72 +39,68 @@ input,select{font-family:inherit}
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:2px}
 
-/* ★ 視圖：永遠在 DOM，用 visibility 切換（比 opacity 更安全，完全不渲染互動） */
-.view{position:fixed;top:0;left:0;width:100%;height:100%;background:var(–bg)}
-#vLib{z-index:10;overflow-y:auto;overflow-x:hidden;transition:visibility 0s,opacity .18s}
-#vRdr{z-index:9;overflow:hidden;transition:visibility 0s,opacity .18s}
-#vLib.hidden{visibility:hidden;opacity:0;pointer-events:none}
-#vRdr.active{z-index:11}
+/* ★ 視圖切換：用 display 完全隔開，避免層疊問題 */
+.view{position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg)}
+#vLib{z-index:10;overflow-y:auto;overflow-x:hidden}
+#vRdr{z-index:9;overflow:hidden;display:none}
+#vRdr.active{display:block;z-index:10}
 
 /* ═══ 書庫 ═══ */
-.lhd{position:sticky;top:0;z-index:50;height:56px;padding:0 18px;display:flex;align-items:center;gap:10px;background:var(–bg);border-bottom:1px solid var(–bd)}
-.lhd-logo{font-size:20px;font-weight:700;color:var(–ac);letter-spacing:.1em;flex:1}
-.lhd-logo small{font-size:11px;color:var(–tx3);margin-left:6px;font-weight:400}
-.lhd-ver{font-size:10px;color:var(–tx3)}
-.ibt{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(–tx2);border:1.5px solid var(–bd2);background:var(–bg3);transition:background .15s,transform .12s}
-.ibt:active{background:var(–acp);transform:scale(.9)}
-.lbody{padding:20px 14px 90px}
-.lbar{display:flex;align-items:center;gap:10px;margin-bottom:14px}
-.lbar-t{font-size:11px;letter-spacing:.18em;color:var(–ac);font-weight:600}
-.lbar-l{flex:1;height:1px;background:linear-gradient(90deg,var(–bd2),transparent)}
-.lbar-c{font-size:11px;color:var(–tx3)}
-.bgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
-.bcard{position:relative;cursor:pointer;border-radius:3px 10px 10px 3px;overflow:hidden;box-shadow:-4px 4px 16px var(–sh),-1px 0 0 rgba(0,0,0,.1);transition:transform .25s var(–ease);animation:cin .4s var(–ease) both}
-@keyframes cin{from{opacity:0;transform:translateY(12px) scale(.95)}to{opacity:1;transform:none}}
-.bcard:active{transform:scale(.97)}
-.bcov{aspect-ratio:3/4;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px 8px;position:relative;overflow:hidden}
-.bcov-spine{position:absolute;left:0;top:0;bottom:0;width:10px;background:linear-gradient(90deg,rgba(0,0,0,.28),rgba(0,0,0,.05),transparent);pointer-events:none}
-.bcov-lines{position:absolute;inset:0;background-image:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(255,255,255,.022) 3px,rgba(255,255,255,.022) 4px);pointer-events:none}
-.bcov-t{position:relative;z-index:1;font-weight:700;font-size:13px;color:#fff;text-align:center;line-height:1.5;word-break:break-all;text-shadow:0 2px 8px rgba(0,0,0,.55);display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
-.bcov-rule{position:relative;z-index:1;margin-top:9px;width:22px;height:1px;background:rgba(255,255,255,.38)}
-.binfo{padding:7px 9px;background:var(–bg2);border-top:1px solid var(–bd)}
-.bname{font-size:11px;font-weight:500;color:var(–tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.bmeta{font-size:9px;color:var(–tx3);margin-top:2px;display:flex;justify-content:space-between}
-.bprog{height:2px;background:var(–bd);border-radius:1px;margin-top:5px;overflow:hidden}
-.bprog-f{height:100%;background:linear-gradient(90deg,var(–ac),var(–ac2));border-radius:1px}
-.bdel{position:absolute;top:5px;right:5px;z-index:5;opacity:0;transition:opacity .15s;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;background:rgba(0,0,0,.6)}
-.bcard:active .bdel{opacity:1}
-.bdel:active{background:rgba(180,30,30,.85)!important}
-.bempty{grid-column:1/-1;padding:44px 16px;text-align:center}
-.bempty-ico{font-size:48px;margin-bottom:12px;opacity:.45}
-.bempty-txt{font-size:14px;color:var(–tx3);line-height:1.8}
-.bempty-btn{display:inline-flex;align-items:center;gap:6px;margin-top:18px;padding:13px 28px;background:var(–ac);color:#fff;border-radius:26px;font-size:15px;font-weight:700;border:none}
-.bempty-btn:active{background:var(–ac2);transform:scale(.96)}
-.fab{position:fixed;right:18px;bottom:20px;width:50px;height:50px;border-radius:50%;background:var(–ac);color:#fff;font-size:24px;display:flex;align-items:center;justify-content:center;box-shadow:0 5px 20px rgba(160,112,24,.45);z-index:200}
+.lhd{position:sticky;top:0;z-index:50;height:52px;padding:0 16px;display:flex;align-items:center;gap:10px;background:var(--bg);border-bottom:1px solid var(--bd)}
+.lhd-logo{font-size:19px;font-weight:700;color:var(--ac);letter-spacing:.08em;flex:1}
+.lhd-logo small{font-size:10px;color:var(--tx3);margin-left:5px;font-weight:400}
+.ibt{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--tx2);border:1.5px solid var(--bd2);background:var(--bg3);transition:background .15s,transform .12s;flex-shrink:0}
+.ibt:active{background:var(--acp);transform:scale(.9)}
+.lbody{padding:10px 0 80px}
+
+/* ★ 列表式書庫 */
+.lbar{display:flex;align-items:center;gap:10px;padding:10px 16px 6px}
+.lbar-t{font-size:10px;letter-spacing:.2em;color:var(--ac);font-weight:600}
+.lbar-l{flex:1;height:1px;background:linear-gradient(90deg,var(--bd2),transparent)}
+.lbar-c{font-size:10px;color:var(--tx3)}
+
+.blist{display:flex;flex-direction:column}
+.brow{display:flex;align-items:center;padding:11px 16px;border-bottom:1px solid var(--bd);cursor:pointer;gap:12px;background:var(--bg);transition:background .12s}
+.brow:active{background:var(--acp)}
+/* 小色塊封面 */
+.brow-cov{width:38px;height:52px;border-radius:2px 6px 6px 2px;flex-shrink:0;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:-2px 2px 8px var(--sh)}
+.brow-cov-spine{position:absolute;left:0;top:0;bottom:0;width:5px;background:linear-gradient(90deg,rgba(0,0,0,.3),transparent);pointer-events:none}
+.brow-cov-inner{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+.brow-cov-t{font-size:8px;color:#fff;text-align:center;line-height:1.3;padding:2px;word-break:break-all;text-shadow:0 1px 4px rgba(0,0,0,.6);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;position:relative;z-index:1}
+/* 書目資訊 */
+.brow-info{flex:1;min-width:0}
+.brow-title{font-size:15px;font-weight:500;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px}
+.brow-meta{font-size:11px;color:var(--tx3);display:flex;gap:10px;margin-bottom:5px}
+.brow-prog-wrap{display:flex;align-items:center;gap:8px}
+.brow-prog{flex:1;height:3px;background:var(--bd);border-radius:2px;overflow:hidden}
+.brow-prog-f{height:100%;background:linear-gradient(90deg,var(--ac),var(--ac2));border-radius:2px}
+.brow-pct{font-size:10px;color:var(--tx3);min-width:28px;text-align:right}
+.brow-del{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--tx3);border:1.5px solid var(--bd);background:transparent;flex-shrink:0;transition:all .12s}
+.brow-del:active{background:#b83226;color:#fff;border-color:#b83226}
+
+.bempty{padding:52px 24px;text-align:center}
+.bempty-ico{font-size:48px;margin-bottom:14px;opacity:.45}
+.bempty-txt{font-size:14px;color:var(--tx3);line-height:1.8}
+.bempty-btn{display:inline-flex;align-items:center;gap:6px;margin-top:18px;padding:13px 28px;background:var(--ac);color:#fff;border-radius:26px;font-size:15px;font-weight:700;border:none}
+.bempty-btn:active{background:var(--ac2);transform:scale(.96)}
+.fab{position:fixed;right:16px;bottom:18px;width:48px;height:48px;border-radius:50%;background:var(--ac);color:#fff;font-size:24px;display:flex;align-items:center;justify-content:center;box-shadow:0 5px 20px rgba(160,112,24,.45);z-index:200}
 .fab:active{transform:scale(.9)}
 #fi{display:none}
 
 /* ═══ 閱讀器 ═══ */
-#rdrInner{position:absolute;inset:0;background:var(–bg);overflow:hidden}
+#rdrInner{position:absolute;inset:0;background:var(--bg);overflow:hidden}
 
-/* ★ 頂部工具列：純浮層，position:fixed，不影響書頁佈局 */
-.rhd{
-position:fixed;top:0;left:0;right:0;z-index:60;
-height:var(–topH);padding:0 10px;
-display:flex;align-items:center;gap:6px;
-background:var(–bg2);border-bottom:1.5px solid var(–bd2);
-box-shadow:0 2px 12px var(–sh);
-transform:translateY(-100%);transition:transform .28s var(–ease);
-}
+/* ★ 頂部工具列：固定浮層 */
+.rhd{position:fixed;top:0;left:0;right:0;z-index:60;height:var(--topH);padding:0 10px;display:flex;align-items:center;gap:6px;background:var(--bg2);border-bottom:1.5px solid var(--bd2);box-shadow:0 2px 10px var(--sh);transform:translateY(-100%);transition:transform .28s var(--ease)}
 .rhd.show{transform:translateY(0)}
-.rbk{display:flex;align-items:center;gap:4px;padding:6px 10px 6px 4px;border-radius:14px;font-size:14px;font-weight:600;color:var(–ac);white-space:nowrap}
-.rbk:active{background:var(–acp)}
-.rtitle{flex:1;font-size:13px;font-weight:500;color:var(–tx2);text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rbk{display:flex;align-items:center;gap:4px;padding:6px 10px 6px 4px;border-radius:14px;font-size:14px;font-weight:600;color:var(--ac);white-space:nowrap}
+.rbk:active{background:var(--acp)}
+.rtitle{flex:1;font-size:12px;font-weight:500;color:var(--tx2);text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 4px}
 .rtool{display:flex;gap:3px}
-.ribt{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;color:var(–tx2);border:1.5px solid var(–bd2);background:var(–bg3)}
-.ribt:active{background:var(–acp);transform:scale(.9)}
+.ribt{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;color:var(--tx2);border:1.5px solid var(--bd2);background:var(--bg3)}
+.ribt:active{background:var(--acp);transform:scale(.9)}
 
-/* 書頁主體：填滿全螢幕（工具列浮在上面，不佔位） */
+/* 書頁 */
 .rbook{position:absolute;inset:0;overflow:hidden}
 .rzone{position:absolute;top:0;bottom:0;z-index:20}
 .rzone-L{left:0;width:25%}
@@ -108,140 +108,102 @@ transform:translateY(-100%);transition:transform .28s var(–ease);
 .rzone-R{right:0;width:25%}
 .rpwrap{position:absolute;top:0;left:0;height:100%;display:flex;will-change:transform}
 
-/* ★ 每頁：100vw 寬，100% 高，padding 永遠預留頂/底工具列空間
-工具列是浮層不佔位，所以 padding 固定不變，不需要重分頁 */
-.rpage{
-flex-shrink:0;overflow:hidden;
-display:flex;flex-direction:column;
-/* 永遠預留頂部 topH + 底部 botH 的 padding，讓文字不被工具列遮住 */
-padding-top:calc(var(–topH) + 14px);
-padding-bottom:calc(var(–botH) + 8px);
-padding-left:20px;padding-right:20px;
-}
+/* 每頁：永遠預留頂/底工具列 padding，浮層不佔位所以不需重算 */
+.rpage{flex-shrink:0;overflow:hidden;display:flex;flex-direction:column;padding-top:calc(var(--topH) + 14px);padding-bottom:calc(var(--botH) + 8px);padding-left:20px;padding-right:20px}
 
-/* ★ 章節標題頁頭（每章第一頁顯示） */
-.rp-ch-title{
-flex-shrink:0;
-font-size:1.1em;font-weight:700;
-text-align:center;letter-spacing:.08em;
-color:var(–ac);
-padding:8px 0 12px;
-border-bottom:1px solid var(–bd);
-margin-bottom:10px;
-line-height:1.5;
-word-break:break-all;
-}
-.rp-ch-title::after{content:‘✦’;display:block;font-size:.55em;color:var(–ac2);margin-top:5px;opacity:.6}
+/* ★ 章節標題區塊（只在該章節第一頁頂端顯示，段落可跨頁流動） */
+.rp-ch-title{flex-shrink:0;font-size:1.08em;font-weight:700;text-align:center;letter-spacing:.1em;color:var(--ac);padding:6px 0 10px;border-bottom:1px solid var(--bd);margin-bottom:10px;line-height:1.5;word-break:break-all}
+.rp-ch-title::after{content:'✦';display:block;font-size:.55em;color:var(--ac2);margin-top:4px;opacity:.55}
 
-.rp-chap{font-size:10px;color:var(–tx3);opacity:.45;text-align:center;margin-bottom:6px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rp-chap{font-size:10px;color:var(--tx3);opacity:.4;text-align:center;margin-bottom:6px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rp-body{flex:1;overflow:hidden}
 .para{margin-bottom:.75em;line-height:2;text-align:justify;text-indent:2em;word-break:break-all}
-.para.tts-hi{background:rgba(160,112,24,.14);border-left:2px solid var(–ac);padding-left:8px;text-indent:0}
-.rp-foot{flex-shrink:0;padding-top:5px;margin-top:2px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(–bd);opacity:.4}
-.rp-num{font-size:10px;color:var(–tx3)}
-.rp-pct{font-size:10px;color:var(–tx3)}
+.para.tts-hi{background:rgba(160,112,24,.14);border-left:2px solid var(--ac);padding-left:8px;text-indent:0}
+.rp-foot{flex-shrink:0;padding-top:4px;margin-top:2px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--bd);opacity:.38}
+.rp-num{font-size:10px;color:var(--tx3)}
+.rp-pct{font-size:10px;color:var(--tx3)}
 
-/* ★ 底部工具列：純浮層，position:fixed */
-.rfoot{
-position:fixed;bottom:0;left:0;right:0;z-index:60;
-height:var(–botH);
-display:flex;align-items:center;
-padding:0 10px;gap:5px;
-background:var(–bg2);border-top:1.5px solid var(–bd2);
-box-shadow:0 -2px 12px var(–sh);
-transform:translateY(100%);transition:transform .28s var(–ease);
-}
+/* ★ 底部工具列：固定浮層 */
+.rfoot{position:fixed;bottom:0;left:0;right:0;z-index:60;height:var(--botH);display:flex;align-items:center;padding:0 10px;gap:5px;background:var(--bg2);border-top:1.5px solid var(--bd2);box-shadow:0 -2px 10px var(--sh);transform:translateY(100%);transition:transform .28s var(--ease)}
 .rfoot.show{transform:translateY(0)}
 
-.rfbt{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(–tx2);border:1.5px solid var(–bd2);background:var(–bg3);transition:all .12s;flex-shrink:0}
-.rfbt:active,.rfbt.on{background:var(–ac);color:#fff;border-color:var(–ac)}
-.rf-div{width:1px;height:26px;background:var(–bd2);flex-shrink:0;margin:0 1px}
-.rffont{height:38px;padding:0 9px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:var(–serif);font-weight:700;color:var(–tx2);border:1.5px solid var(–bd2);background:var(–bg3);transition:all .12s;flex-shrink:0}
-.rffont:active{background:var(–ac);color:#fff;border-color:var(–ac);transform:scale(.92)}
+.rfbt{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--tx2);border:1.5px solid var(--bd2);background:var(--bg3);transition:all .12s;flex-shrink:0}
+.rfbt:active,.rfbt.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+.rf-div{width:1px;height:26px;background:var(--bd2);flex-shrink:0;margin:0 1px}
+.rffont{height:38px;padding:0 9px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-weight:700;color:var(--tx2);border:1.5px solid var(--bd2);background:var(--bg3);transition:all .12s;flex-shrink:0}
+.rffont:active{background:var(--ac);color:#fff;border-color:var(--ac);transform:scale(.92)}
 .rffont.off{opacity:.25;pointer-events:none}
 #rfFontM{font-size:13px}
 #rfFontP{font-size:18px}
 
-/* ★ 繁/简 按鈕：明確顯示當前狀態 */
-.rfconv{
-height:38px;padding:0 10px;border-radius:10px;
-display:flex;align-items:center;gap:3px;
-font-size:13px;font-weight:700;
-border:1.5px solid var(–bd2);background:var(–bg3);
-transition:all .12s;flex-shrink:0;white-space:nowrap;
-}
-/* 繁體模式（開啟）：金色實心，白字 */
-.rfconv.tw{background:var(–ac);color:#fff;border-color:var(–ac)}
-/* 簡體模式（關閉）：淡色邊框，深色字 */
-.rfconv.cn{background:var(–bg3);color:var(–tx3);border-color:var(–bd)}
-.rfconv:active{transform:scale(.92);opacity:.8}
+/* ★ 繁/简 按鈕：高對比設計 */
+.rfconv{height:38px;padding:0 11px;border-radius:10px;display:flex;align-items:center;font-size:13px;font-weight:700;border:2px solid;transition:all .12s;flex-shrink:0;white-space:nowrap;letter-spacing:.04em}
+.rfconv.tw{background:var(--ac);color:#fff;border-color:var(--ac)}        /* 繁體：金底白字 */
+.rfconv.cn{background:transparent;color:var(--tx3);border-color:var(--bd2)} /* 簡體：透明底灰字 */
+body.night .rfconv.tw{background:#c09030;color:#fff;border-color:#c09030}
+body.night .rfconv.cn{color:#6e6248;border-color:rgba(192,144,48,.35)}
+.rfconv:active{transform:scale(.92)}
 
-.rftog{height:38px;padding:0 9px;border-radius:10px;display:flex;align-items:center;font-size:15px;color:var(–tx2);border:1.5px solid var(–bd2);background:var(–bg3);transition:all .12s;flex-shrink:0}
-.rftog:active{background:var(–acp)}
-.rftog.on{background:var(–ac);color:#fff;border-color:var(–ac)}
+.rftog{height:38px;padding:0 9px;border-radius:10px;display:flex;align-items:center;font-size:15px;color:var(--tx2);border:1.5px solid var(--bd2);background:var(--bg3);transition:all .12s;flex-shrink:0}
+.rftog:active{background:var(--acp)}
+.rftog.on{background:var(--ac);color:#fff;border-color:var(--ac)}
 
-/* 進度條 */
 .rf-prog-wrap{flex:1;min-width:0;display:flex;align-items:center;gap:5px}
-.rf-prog{flex:1;height:4px;background:var(–bd);border-radius:2px;cursor:pointer;overflow:hidden;min-width:20px}
-.rf-prog-f{height:100%;background:linear-gradient(90deg,var(–ac),var(–ac2));border-radius:2px;transition:width .3s}
-.rf-pct{font-size:10px;color:var(–tx3);flex-shrink:0;min-width:26px;text-align:right}
+.rf-prog{flex:1;height:4px;background:var(--bd);border-radius:2px;cursor:pointer;overflow:hidden;min-width:20px}
+.rf-prog-f{height:100%;background:linear-gradient(90deg,var(--ac),var(--ac2));border-radius:2px;transition:width .3s}
+.rf-pct{font-size:10px;color:var(--tx3);flex-shrink:0;min-width:26px;text-align:right}
 
-/* ═══ 面板（z-index 高於所有視圖和工具列） ═══ */
+/* ★ 面板：完全不透明，日間淡灰／夜間深灰 */
 .pback{display:none;position:fixed;inset:0;z-index:500;flex-direction:column;justify-content:flex-end}
 .pback.on{display:flex}
-.pov{position:absolute;inset:0;background:rgba(0,0,0,.65)}
-.pbox{position:relative;z-index:1;height:85vh;border-radius:20px 20px 0 0;display:flex;flex-direction:column;box-shadow:0 -4px 32px var(–sh2);animation:pup .28s var(–ease);overflow:hidden;isolation:isolate;background:var(–bg2)}
+.pov{position:absolute;inset:0;background:rgba(0,0,0,.6)}
+.pbox{position:relative;z-index:1;height:85vh;border-radius:20px 20px 0 0;display:flex;flex-direction:column;box-shadow:0 -6px 32px var(--sh2);animation:pup .28s var(--ease);overflow:hidden;background:var(--panelbg)}   /* ★ 純色面板背景 */
 @keyframes pup{from{transform:translateY(100%)}to{transform:none}}
-.phd{padding:16px 18px 12px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;background:var(–bg2);border-bottom:2px solid var(–bd2)}
-.phd-t{font-size:14px;font-weight:700;color:var(–ac);letter-spacing:.08em}
-.pcls{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;background:var(–ac);border:none;flex-shrink:0}
-.pcls:active{background:var(–ac2)}
-.pbody{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(–bg2)}
-.toc-item{display:flex;align-items:center;gap:12px;padding:13px 18px;cursor:pointer;border-bottom:1px solid var(–bd);background:var(–bg2)}
-.toc-item:active,.toc-item.cur{background:var(–acp)}
-.toc-item.cur .toc-t{color:var(–ac);font-weight:700}
-.toc-n{font-size:11px;color:var(–tx3);min-width:28px;text-align:right;flex-shrink:0}
-.toc-t{font-size:14px;color:var(–tx2);flex:1;line-height:1.4;word-break:break-all}
-.toc-arr{font-size:12px;color:var(–tx3);flex-shrink:0}
-.toc-empty{padding:32px 18px;font-size:14px;color:var(–tx3);text-align:center}
-.sg{padding:16px 18px;border-bottom:1.5px solid var(–bd);background:var(–bg2)}
+.phd{padding:15px 18px 12px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;background:var(--panelbg);border-bottom:2px solid var(--bd2)}
+.phd-t{font-size:14px;font-weight:700;color:var(--ac);letter-spacing:.06em}
+.pcls{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff;background:var(--ac);border:none;flex-shrink:0}
+.pcls:active{background:var(--ac2);transform:scale(.9)}
+.pbody{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--panelbg)}
+
+/* 目錄條目 */
+.toc-item{display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;border-bottom:1px solid var(--bd);background:var(--panelbg);transition:background .12s}
+.toc-item:active,.toc-item.cur{background:var(--acp)}
+.toc-item.cur .toc-t{color:var(--ac);font-weight:700}
+.toc-n{font-size:11px;color:var(--tx3);min-width:26px;text-align:right;flex-shrink:0}
+.toc-t{font-size:14px;color:var(--tx2);flex:1;line-height:1.4;word-break:break-all}
+.toc-arr{font-size:12px;color:var(--tx3);flex-shrink:0}
+.toc-empty{padding:32px 18px;font-size:14px;color:var(--tx3);text-align:center}
+
+/* 設定條目 */
+.sg{padding:14px 18px;border-bottom:1.5px solid var(--bd);background:var(--panelbg)}
 .sg:last-child{border-bottom:none;padding-bottom:28px}
-.sg-lbl{font-size:11px;color:var(–tx3);letter-spacing:.1em;margin-bottom:12px;font-weight:600}
-.tog-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(–bd)}
-.tog-row:last-child{border-bottom:none}
-.tog-row-l{font-size:15px;color:var(–tx)}
-.tog{position:relative;width:48px;height:28px;flex-shrink:0}
-.tog input{opacity:0;width:0;height:0}
-.tog-sl{position:absolute;inset:0;background:var(–bd2);border-radius:14px;cursor:pointer;transition:background .22s}
-.tog-sl::before{content:’’;position:absolute;width:22px;height:22px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .22s var(–ease);box-shadow:0 1px 5px rgba(0,0,0,.25)}
-.tog input:checked+.tog-sl{background:var(–ac)}
-.tog input:checked+.tog-sl::before{transform:translateX(20px)}
+.sg-lbl{font-size:11px;color:var(--tx3);letter-spacing:.1em;margin-bottom:10px;font-weight:600}
 .spd-wrap{display:flex;align-items:center;gap:12px;padding:4px 0}
-.spd-slider{-webkit-appearance:none;appearance:none;flex:1;height:6px;border-radius:3px;background:var(–bd2);outline:none}
-.spd-slider::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:var(–ac);cursor:pointer}
-.spd-val{font-size:16px;font-weight:700;color:var(–ac);min-width:44px;text-align:right}
-.v-sel{width:100%;padding:11px 14px;border-radius:10px;border:2px solid var(–bd2);background:var(–bg3);color:var(–tx);font-size:14px;font-family:var(–serif);outline:none;-webkit-appearance:none;background-image:url(“data:image/svg+xml,%3Csvg xmlns=‘http://www.w3.org/2000/svg’ width=‘12’ height=‘8’%3E%3Cpath d=‘M1 1l5 5 5-5’ stroke=’%23a07018’ stroke-width=‘1.6’ fill=‘none’/%3E%3C/svg%3E”);background-repeat:no-repeat;background-position:right 14px center;padding-right:36px}
+.spd-slider{-webkit-appearance:none;appearance:none;flex:1;height:6px;border-radius:3px;background:var(--bd2);outline:none}
+.spd-slider::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:var(--ac);cursor:pointer}
+.spd-val{font-size:16px;font-weight:700;color:var(--ac);min-width:44px;text-align:right}
+.v-sel{width:100%;padding:10px 14px;border-radius:10px;border:2px solid var(--bd2);background:var(--panelbg2);color:var(--tx);font-size:14px;font-family:var(--serif);outline:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23a07018' stroke-width='1.6' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px}
 
 /* Toast / Dialog / Mask */
 #toasts{position:fixed;top:66px;left:50%;transform:translateX(-50%);z-index:999;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none}
-.toast{background:#1a1208;color:#f5f0e8;padding:9px 22px;border-radius:20px;font-size:14px;font-weight:500;box-shadow:0 4px 18px rgba(0,0,0,.3);animation:tin .25s var(–ease);white-space:nowrap;max-width:80vw;overflow:hidden;text-overflow:ellipsis}
+.toast{background:#1a1208;color:#f5f0e8;padding:9px 22px;border-radius:20px;font-size:14px;font-weight:500;box-shadow:0 4px 18px rgba(0,0,0,.3);animation:tin .25s var(--ease);white-space:nowrap;max-width:80vw;overflow:hidden;text-overflow:ellipsis}
 body.night .toast{background:#c09030;color:#0a0806}
 .toast.out{animation:tout .2s ease-in forwards}
 @keyframes tin{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
 @keyframes tout{to{opacity:0;transform:translateY(-6px)}}
 .dlg-back{display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.55);align-items:center;justify-content:center}
 .dlg-back.on{display:flex}
-.dlg-box{background:var(–bg2);border-radius:16px;padding:26px 22px;width:min(300px,86vw);box-shadow:0 12px 40px var(–sh2);animation:scin .22s var(–ease)}
+.dlg-box{background:var(--panelbg);border-radius:16px;padding:26px 22px;width:min(300px,86vw);box-shadow:0 12px 40px var(--sh2);animation:scin .22s var(--ease)}
 @keyframes scin{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:none}}
-.dlg-t{font-size:17px;font-weight:700;color:var(–tx);margin-bottom:8px}
-.dlg-m{font-size:14px;color:var(–tx3);line-height:1.65;margin-bottom:20px}
+.dlg-t{font-size:17px;font-weight:700;color:var(--tx);margin-bottom:8px}
+.dlg-m{font-size:14px;color:var(--tx3);line-height:1.65;margin-bottom:20px}
 .dlg-bts{display:flex;gap:10px;justify-content:flex-end}
-.dlg-no{padding:10px 20px;border-radius:9px;font-size:14px;color:var(–tx2);border:2px solid var(–bd2);background:var(–bg3)}
+.dlg-no{padding:10px 20px;border-radius:9px;font-size:14px;color:var(--tx2);border:2px solid var(--bd2);background:var(--panelbg2)}
 .dlg-yes{padding:10px 20px;border-radius:9px;font-size:14px;font-weight:700;background:#b83226;color:#fff;border:none}
 .dlg-yes:active{background:#d9392b}
 .lmask{display:none;position:fixed;inset:0;z-index:800;background:rgba(0,0,0,.52);align-items:center;justify-content:center;flex-direction:column;gap:16px}
 .lmask.on{display:flex}
-.lspin{width:44px;height:44px;border-radius:50%;border:4px solid rgba(160,112,24,.3);border-top-color:var(–ac);animation:spin .8s linear infinite}
+.lspin{width:44px;height:44px;border-radius:50%;border:4px solid rgba(160,112,24,.3);border-top-color:var(--ac);animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .ltxt{font-size:14px;color:#fff}
 #errbox{display:none;position:fixed;bottom:70px;left:10px;right:10px;z-index:900;background:rgba(160,0,0,.92);color:#fff;padding:10px 14px;border-radius:10px;font-size:12px;line-height:1.5;word-break:break-all}
@@ -254,18 +216,17 @@ body.night .toast{background:#c09030;color:#0a0806}
 
 <div id="vLib" class="view">
   <header class="lhd">
-    <div class="lhd-logo">書閣 <small>Novel Reader</small></div>
-    <span class="lhd-ver">v2.0</span>
+    <div class="lhd-logo">書閣 <small>v2.1</small></div>
     <button class="ibt" id="btnTheme">🌙</button>
     <button class="ibt" id="btnUp">＋</button>
   </header>
   <div class="lbody">
     <div class="lbar">
-      <span class="lbar-t">我的書庫</span>
+      <span class="lbar-t">書庫</span>
       <div class="lbar-l"></div>
       <span class="lbar-c" id="libCnt">0 本</span>
     </div>
-    <div class="bgrid" id="bgrid"></div>
+    <div class="blist" id="blist"></div>
   </div>
   <button class="fab" id="fab">＋</button>
   <input type="file" id="fi" accept=".txt">
@@ -275,7 +236,6 @@ body.night .toast{background:#c09030;color:#0a0806}
 
 <div id="vRdr" class="view">
   <div id="rdrInner">
-    <!-- ★ 頂部工具列（純浮層） -->
     <header class="rhd" id="rhd">
       <button class="rbk" id="btnBack">◀ 書庫</button>
       <div class="rtitle" id="rdTitle">—</div>
@@ -284,35 +244,27 @@ body.night .toast{background:#c09030;color:#0a0806}
         <button class="ribt" id="btnSet">⚙</button>
       </div>
     </header>
-
-```
-<!-- 書頁 -->
-<div class="rbook" id="rbook">
-  <div class="rzone rzone-L" id="zoneL"></div>
-  <div class="rzone rzone-M" id="zoneM"></div>
-  <div class="rzone rzone-R" id="zoneR"></div>
-  <div class="rpwrap" id="rpwrap"></div>
-</div>
-
-<!-- ★ 底部工具列（純浮層） -->
-<div class="rfoot" id="rfoot">
-  <button class="rfbt" id="rfPlay">▶</button>
-  <button class="rfbt" id="rfStop">⏹</button>
-  <div class="rf-div"></div>
-  <button class="rffont" id="rfFontM">A−</button>
-  <button class="rffont" id="rfFontP">A+</button>
-  <div class="rf-div"></div>
-  <!-- ★ 繁/简 明確狀態按鈕 -->
-  <button class="rfconv tw" id="rfConv">繁 ✓</button>
-  <div class="rf-div"></div>
-  <button class="rftog" id="rfNight">🌙</button>
-  <div class="rf-prog-wrap">
-    <div class="rf-prog" id="rfProg"><div class="rf-prog-f" id="rfProgF" style="width:0%"></div></div>
-    <span class="rf-pct" id="rfPct">…</span>
-  </div>
-</div>
-```
-
+    <div class="rbook" id="rbook">
+      <div class="rzone rzone-L" id="zoneL"></div>
+      <div class="rzone rzone-M" id="zoneM"></div>
+      <div class="rzone rzone-R" id="zoneR"></div>
+      <div class="rpwrap" id="rpwrap"></div>
+    </div>
+    <div class="rfoot" id="rfoot">
+      <button class="rfbt" id="rfPlay">▶</button>
+      <button class="rfbt" id="rfStop">⏹</button>
+      <div class="rf-div"></div>
+      <button class="rffont" id="rfFontM">A−</button>
+      <button class="rffont" id="rfFontP">A+</button>
+      <div class="rf-div"></div>
+      <button class="rfconv tw" id="rfConv">繁 ✓</button>
+      <div class="rf-div"></div>
+      <button class="rftog" id="rfNight">🌙</button>
+      <div class="rf-prog-wrap">
+        <div class="rf-prog" id="rfProg"><div class="rf-prog-f" id="rfProgF" style="width:0%"></div></div>
+        <span class="rf-pct" id="rfPct">…</span>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -364,66 +316,56 @@ body.night .toast{background:#c09030;color:#0a0806}
 
 <script>
 'use strict';
-
-window.onerror=(msg,src,line,col,err)=>{const b=document.getElementById('errbox');b.style.display='block';b.textContent='ERR:'+msg+' ('+line+':'+col+')\n'+(err&&err.stack?err.stack.substring(0,200):'')};
+window.onerror=(m,s,l,c,e)=>{const b=document.getElementById('errbox');b.style.display='block';b.textContent='ERR:'+m+' ('+l+':'+c+')\n'+(e&&e.stack?e.stack.substring(0,200):'')};
 window.addEventListener('unhandledrejection',e=>{const b=document.getElementById('errbox');b.style.display='block';b.textContent='PROMISE:'+e.reason});
 
 /* ══ OpenCC ══ */
 let _conv=null;
-function getConv(){
-  if(_conv)return _conv;
-  try{if(typeof OpenCC!=='undefined'){_conv=OpenCC.Converter({from:'cn',to:'twp'});console.log('[OpenCC] ready')}}
-  catch(e){console.warn('[OpenCC]',e)}
-  return _conv;
-}
+function getConv(){if(_conv)return _conv;try{if(typeof OpenCC!=='undefined'){_conv=OpenCC.Converter({from:'cn',to:'twp'});console.log('[OpenCC]ready')}}catch(e){console.warn('[OpenCC]',e)}return _conv}
 const toTW=t=>{const c=getConv();return c?c(t):t};
 
 /* ══ IDB ══ */
 const Store={
-  _db:null,_ls:false,DB:'ShugeDB10',VER:1,ST:'paras',
+  _db:null,_ls:false,DB:'ShugeDB11',VER:1,ST:'paras',
   async init(){
-    try{
-      this._db=await new Promise((ok,err)=>{
-        const q=indexedDB.open(this.DB,this.VER);
-        q.onupgradeneeded=e=>{const db=e.target.result;if(!db.objectStoreNames.contains(this.ST))db.createObjectStore(this.ST,{keyPath:'id'})};
-        q.onsuccess=e=>ok(e.target.result);q.onerror=e=>err(e.target.error);q.onblocked=()=>err(new Error('blocked'));
-      });console.log('[Store] IDB ready');
-    }catch(e){console.warn('[Store] LS fallback:',e.message);this._ls=true;}
+    try{this._db=await new Promise((ok,err)=>{const q=indexedDB.open(this.DB,this.VER);q.onupgradeneeded=e=>{const db=e.target.result;if(!db.objectStoreNames.contains(this.ST))db.createObjectStore(this.ST,{keyPath:'id'})};q.onsuccess=e=>ok(e.target.result);q.onerror=e=>err(e.target.error);q.onblocked=()=>err(new Error('blocked'))});console.log('[Store]IDB')}
+    catch(e){console.warn('[Store]LS:',e.message);this._ls=true}
   },
   async put(id,paras){
-    if(this._ls){const chunk=180000,keys=[];for(let i=0,ci=0;i<paras.length;ci++){const k=`sg10_p_${id}_${ci}`;localStorage.setItem(k,JSON.stringify(paras.slice(i,i+chunk)));keys.push(k);i+=chunk;}localStorage.setItem(`sg10_pk_${id}`,JSON.stringify(keys));return;}
-    return new Promise((ok,err)=>{const tx=this._db.transaction(this.ST,'readwrite');tx.objectStore(this.ST).put({id,paras});tx.oncomplete=ok;tx.onerror=e=>err(e.target.error)});
+    if(this._ls){const chunk=180000,keys=[];for(let i=0,ci=0;i<paras.length;ci++){const k=`sg11_p_${id}_${ci}`;localStorage.setItem(k,JSON.stringify(paras.slice(i,i+chunk)));keys.push(k);i+=chunk}localStorage.setItem(`sg11_pk_${id}`,JSON.stringify(keys));return}
+    return new Promise((ok,err)=>{const tx=this._db.transaction(this.ST,'readwrite');tx.objectStore(this.ST).put({id,paras});tx.oncomplete=ok;tx.onerror=e=>err(e.target.error)})
   },
   async get(id){
-    if(this._ls){const raw=localStorage.getItem(`sg10_pk_${id}`);if(!raw)return[];let all=[];for(const k of JSON.parse(raw)){const v=localStorage.getItem(k);if(v)all=all.concat(JSON.parse(v))}return all;}
-    return new Promise((ok,err)=>{const q=this._db.transaction(this.ST,'readonly').objectStore(this.ST).get(id);q.onsuccess=e=>ok(e.target.result?.paras||[]);q.onerror=e=>err(e.target.error)});
+    if(this._ls){const raw=localStorage.getItem(`sg11_pk_${id}`);if(!raw)return[];let all=[];for(const k of JSON.parse(raw)){const v=localStorage.getItem(k);if(v)all=all.concat(JSON.parse(v))}return all}
+    return new Promise((ok,err)=>{const q=this._db.transaction(this.ST,'readonly').objectStore(this.ST).get(id);q.onsuccess=e=>ok(e.target.result?.paras||[]);q.onerror=e=>err(e.target.error)})
   },
   async del(id){
-    if(this._ls){const raw=localStorage.getItem(`sg10_pk_${id}`);if(raw)JSON.parse(raw).forEach(k=>localStorage.removeItem(k));localStorage.removeItem(`sg10_pk_${id}`);return;}
-    return new Promise((ok,err)=>{const tx=this._db.transaction(this.ST,'readwrite');tx.objectStore(this.ST).delete(id);tx.oncomplete=ok;tx.onerror=e=>err(e.target.error)});
+    if(this._ls){const raw=localStorage.getItem(`sg11_pk_${id}`);if(raw)JSON.parse(raw).forEach(k=>localStorage.removeItem(k));localStorage.removeItem(`sg11_pk_${id}`);return}
+    return new Promise((ok,err)=>{const tx=this._db.transaction(this.ST,'readwrite');tx.objectStore(this.ST).delete(id);tx.oncomplete=ok;tx.onerror=e=>err(e.target.error)})
   }
 };
 
 const Meta={
-  KM:'sg10_meta',KP:'sg10_prefs',
+  KM:'sg11_meta',KP:'sg11_prefs',
   load(){try{return JSON.parse(localStorage.getItem(this.KM)||'{}')}catch{return{}}},
   save(d){localStorage.setItem(this.KM,JSON.stringify(d))},
   loadP(){try{return JSON.parse(localStorage.getItem(this.KP)||'{}')}catch{return{}}},
   saveP(p){localStorage.setItem(this.KP,JSON.stringify(p))},
-  books(){return Object.values(this.load()).sort((a,b)=>(b.addedAt||0)-(a.addedAt||0))},
+  books(){return Object.values(this.load()).sort((a,b)=>(b.lastRead||b.addedAt||0)-(a.lastRead||a.addedAt||0))},
   saveBook(m){const d=this.load();d[m.id]=m;this.save(d)},
   delBook(id){const d=this.load();delete d[id];this.save(d)},
-  setPos(id,pg){const d=this.load();if(d[id]){d[id].pos=pg;d[id].lastRead=Date.now();}this.save(d)}
+  setPos(id,pg){const d=this.load();if(d[id]){d[id].pos=pg;d[id].lastRead=Date.now()}this.save(d)}
 };
 
-/* ★ 縮緊的章節 Regex（簡繁並列，移除 【】 誤判）*/
-const CH_RE=/^(第\s*[零一二三四五六七八九十百千萬万0-9]+\s*[章节節回卷集篇部]\s*[\s\S]{0,30}$|Chapter\s+\d+[\s\S]{0,30}$|CHAPTER\s+\d+|序章|尾声|尾聲|後記|后记|前言|番外|楔子|卷首)/i;
+/* ★ 章節 Regex：移除【】誤判，加長度限制 */
+const CH_RE=/^(第\s*[零一二三四五六七八九十百千萬万0-9]+\s*[章节節回卷集篇部][\s\S]{0,40}$|Chapter\s+\d+[\s\S]{0,40}$|CHAPTER\s+\d+|序章|尾声|尾聲|後記|后记|前言|番外|楔子|卷首)/i;
+const parseChs=p=>{const c=[];p.forEach((s,i)=>{const t=s.trim();if(t.length>=2&&t.length<80&&CH_RE.test(t))c.push({title:t,idx:i})});return c};
 
-const parseChs=p=>{const c=[];p.forEach((s,i)=>{const t=s.trim();if(t.length<80&&CH_RE.test(t))c.push({title:t,idx:i})});return c};
 const readFile=file=>{
   const try_=enc=>new Promise((ok,er)=>{const fr=new FileReader();fr.onload=e=>ok(e.target.result);fr.onerror=er;fr.readAsText(file,enc)});
-  return try_('UTF-8').then(t=>{const g=(t.match(/\ufffd/g)||[]).length;if(g>5)return try_('GBK').then(t2=>(t2.match(/\ufffd/g)||[]).length<g?t2:try_('BIG5'));return t});
+  return try_('UTF-8').then(t=>{const g=(t.match(/\ufffd/g)||[]).length;if(g>5)return try_('GBK').then(t2=>(t2.match(/\ufffd/g)||[]).length<g?t2:try_('BIG5'));return t})
 };
+
 const PALS=[['#243356','#141d36'],['#322256','#1c1236'],['#224438','#11291f'],['#4e3416','#2c1c08'],['#163356','#091d36'],['#3e1424','#22090f'],['#143e32','#09271e'],['#321244','#1c0826'],['#163844','#091f2a'],['#3e3214','#222008'],['#243e4e','#122430'],['#3c1a1a','#220a0a']];
 const cvColor=t=>{let h=0;for(let i=0;i<t.length;i++)h=(h*31+t.charCodeAt(i))|0;const[a,b]=PALS[Math.abs(h)%PALS.length];return`linear-gradient(150deg,${a},${b})`};
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -438,17 +380,43 @@ function applyTheme(night){
   document.getElementById('btnTheme').textContent=night?'☀':'🌙';
   document.getElementById('rfNight').classList.toggle('on',!!night);
 }
-function showLib(){document.getElementById('vLib').classList.remove('hidden');document.getElementById('vRdr').classList.remove('active')}
-function showRdr(){document.getElementById('vLib').classList.add('hidden');document.getElementById('vRdr').classList.add('active')}
+
+/* ★ 視圖切換：用 display:none / display:block，完全隔離 */
+function showLib(){
+  document.getElementById('vRdr').classList.remove('active'); // display:none via CSS
+  document.getElementById('vLib').style.display='block';
+}
+function showRdr(){
+  document.getElementById('vLib').style.display='none';
+  document.getElementById('vRdr').classList.add('active');   // display:block via CSS
+}
 
 /* ══ 書庫 ══ */
 const Lib={
   render(){
-    const g=document.getElementById('bgrid');const books=Meta.books();
+    const list=document.getElementById('blist');
+    const books=Meta.books();
     document.getElementById('libCnt').textContent=books.length+' 本';
-    if(!books.length){g.innerHTML=`<div class="bempty"><div class="bempty-ico">📚</div><p class="bempty-txt">書庫空空如也<br>上傳 TXT 格式小說開始閱讀</p><button class="bempty-btn" onclick="document.getElementById('fi').click()">＋ 上傳第一本書</button></div>`;return}
-    g.innerHTML=books.map(b=>{const pct=b.total>0?Math.round((b.pos||0)/b.total*100):0;
-      return`<div class="bcard" onclick="Reader.open('${b.id}')"><div class="bcov" id="cv_${b.id}"><div class="bcov-spine"></div><div class="bcov-lines"></div><div class="bcov-t">${esc(b.title)}</div><div class="bcov-rule"></div></div><div class="binfo"><div class="bname">${esc(b.title)}</div><div class="bmeta"><span>${b.chapters.length} 章</span><span>${pct}%</span></div><div class="bprog"><div class="bprog-f" style="width:${pct}%"></div></div></div><button class="bdel" onclick="event.stopPropagation();Lib.del('${b.id}','${esc(b.title)}')">✕</button></div>`
+    if(!books.length){
+      list.innerHTML=`<div class="bempty"><div class="bempty-ico">📚</div><p class="bempty-txt">書庫空空如也<br>上傳 TXT 格式小說開始閱讀</p><button class="bempty-btn" onclick="document.getElementById('fi').click()">＋ 上傳第一本書</button></div>`;
+      return;
+    }
+    list.innerHTML=books.map(b=>{
+      const pct=b.total>0?Math.round((b.pos||0)/b.total*100):0;
+      return`<div class="brow" onclick="Reader.open('${b.id}')">
+        <div class="brow-cov" id="cv_${b.id}" style="position:relative">
+          <div class="brow-cov-inner"><div class="brow-cov-spine"></div><div class="brow-cov-t">${esc(b.title)}</div></div>
+        </div>
+        <div class="brow-info">
+          <div class="brow-title">${esc(b.title)}</div>
+          <div class="brow-meta"><span>${b.chapters.length} 章</span><span>${b.total||0} 段</span></div>
+          <div class="brow-prog-wrap">
+            <div class="brow-prog"><div class="brow-prog-f" style="width:${pct}%"></div></div>
+            <span class="brow-pct">${pct}%</span>
+          </div>
+        </div>
+        <button class="brow-del" onclick="event.stopPropagation();Lib.del('${b.id}','${esc(b.title)}')">✕</button>
+      </div>`;
     }).join('');
     books.forEach(b=>{const el=document.getElementById('cv_'+b.id);if(el)el.style.background=cvColor(b.title)});
   },
@@ -471,14 +439,13 @@ const Lib={
 
 /* ══════════════════════════════════════════
    閱讀器
-   ★ 章節獨立分頁：每個章節從新頁開始
-   ★ 工具列純浮層：不觸發重分頁
-   ★ DOM probe 精確量測
+   ★ v2.1 分頁策略：
+   - 章節標題強制在新頁頂端（切頁）
+   - 章節內段落自由跨頁（不強制留白）
+   - 工具列純浮層，不觸發重分頁
 ══════════════════════════════════════════ */
 const Reader={
   id:null,rawParas:[],paras:[],chapters:[],
-  /* pages 陣列每項：{startPara, endPara, chapterIdx, isChapterFirst}
-     isChapterFirst=true 表示這是該章節的第一頁，需顯示大標題 */
   pages:[],curPage:0,totalPages:0,
   fontSize:18,toolbarOn:false,_paging:false,
   STEPS:[15,18,21,26],_probe:null,
@@ -486,31 +453,18 @@ const Reader={
   _ensureProbe(){
     if(this._probe)return;
     const p=document.createElement('div');
-    p.style.cssText='position:fixed;top:-9999px;left:0;visibility:hidden;pointer-events:none;'+
-      'padding:0;line-height:2;word-break:break-all;text-align:justify;'+
-      'font-family:"Noto Serif TC","Georgia",serif;';
+    p.style.cssText='position:fixed;top:-9999px;left:0;visibility:hidden;pointer-events:none;line-height:2;word-break:break-all;text-align:justify;font-family:"Noto Serif TC","Georgia",serif;';
     document.body.appendChild(p);this._probe=p;
   },
 
-  /* ★ 計算可用尺寸
-     工具列是浮層（不影響書頁佔位），所以永遠預留頂/底空間
-     availH = 視口高 - topH(50) - botH(56) - rp-chap(24) - rp-foot(26) - paddingTop(14) - paddingBot(8) */
   _getAvail(){
     const vw=window.innerWidth;
     const vh=window.visualViewport?window.visualViewport.height:window.innerHeight;
-    const topH=50,botH=56,chapH=24,footH=26,padTop=14,padBot=8;
-    return{
-      w:vw-40,  // 左右 padding 各 20
-      h:vh-topH-botH-chapH-footH-padTop-padBot
-    };
+    // 永遠預留頂部(50)+底部(56)+頁眉(24)+頁腳(24)+padTop(14)+padBot(8)
+    return{w:vw-40,h:vh-50-56-24-24-14-8};
   },
 
-  /* ★ 章節獨立分頁
-     邏輯：
-     1. 把段落依章節分組
-     2. 每組（章節）內部做 DOM probe 分頁
-     3. 每章第一頁標記 isChapterFirst=true，保留空間給大標題
-  */
+  /* ★ 分頁：遇到章節標題就強制切頁，章節內段落自由流動（不留白） */
   _paginate(goToParaIdx){
     this._ensureProbe();
     const{w,h}=this._getAvail();
@@ -519,92 +473,126 @@ const Reader={
     p.style.width=w+'px';
     p.style.fontSize=fs+'px';
 
-    // 章節標題佔用的高度（isChapterFirst 時要扣除）
-    const chTitleH=fs*1.1*1.5+12+10+1; // 約 font*lineH*lines + padding + margin + border
+    // 章節標題區塊預估高度
+    const chTitleH=Math.ceil(fs*1.08*1.5)+10+12+1+4; // font*lineH + padding + margin + border + after
 
     this._paging=true;
     const pages=[];
     let targetPage=0;
-    let cursor=0; // 段落指標
-
-    // 把段落分成章節群組
-    // 無章節時整本書作為一組
-    const groups=[];
-    if(this.chapters.length===0){
-      groups.push({title:'',startPara:0,endPara:this.paras.length-1});
-    } else {
-      for(let ci=0;ci<this.chapters.length;ci++){
-        const start=this.chapters[ci].idx;
-        const end=ci<this.chapters.length-1?this.chapters[ci+1].idx-1:this.paras.length-1;
-        groups.push({title:this.chapters[ci].title,startPara:start,endPara:end,chapterIdx:ci});
-      }
-      // 第一章前的段落（前言/版權頁）
-      if(this.chapters[0].idx>0){
-        groups.unshift({title:'',startPara:0,endPara:this.chapters[0].idx-1,chapterIdx:-1});
-      }
-    }
-
-    // 同步分頁到目標位置，之後背景分頁
     let reachedTarget=false;
+    let cursor=0;
 
-    const paginateGroup=(g,isFirst)=>{
-      let gCursor=g.startPara;
-      let firstPageOfGroup=true;
-      while(gCursor<=g.endPara){
-        const isChFirst=firstPageOfGroup&&g.title;
-        const pageAvailH=isChFirst?h-chTitleH:h;
-        const startPara=gCursor;
-        let accH=0;
-        let endPara=gCursor;
-        while(endPara<=g.endPara){
-          p.textContent=this.paras[endPara];
-          const lh=p.offsetHeight;
-          if(accH+lh>pageAvailH&&endPara>startPara)break;
-          accH+=lh;endPara++;
-        }
-        if(endPara===startPara)endPara=startPara+1;
-        const pg={startPara,endPara:endPara-1,chapterIdx:g.chapterIdx??-1,isChapterFirst:!!isChFirst,chapterTitle:g.title||''};
-        pages.push(pg);
-        if(!reachedTarget&&startPara<=goToParaIdx&&goToParaIdx<endPara){
-          targetPage=pages.length-1;
-          if(goToParaIdx<=g.endPara)reachedTarget=true;
-        }
-        firstPageOfGroup=false;
-        gCursor=endPara;
+    // 判斷每個段落是否是章節標題（對應到 chapters 陣列）
+    const chMap=new Map(); // paraIdx → chapterIdx
+    this.chapters.forEach((ch,i)=>chMap.set(ch.idx,i));
+
+    const addPage=(startPara,endPara,chapterIdx,isChapterFirst,chapterTitle)=>{
+      pages.push({startPara,endPara,chapterIdx,isChapterFirst,chapterTitle:chapterTitle||''});
+      if(!reachedTarget&&startPara<=goToParaIdx&&goToParaIdx<=endPara){
+        targetPage=pages.length-1;reachedTarget=true;
       }
     };
 
-    // 先同步處理含目標位置的章節及之前的章節
-    let gi=0;
-    for(;gi<groups.length;gi++){
-      paginateGroup(groups[gi],gi===0);
-      if(reachedTarget)break;
-    }
-    gi++;
+    // 找出當前游標所在章節
+    const getChIdx=paraIdx=>{
+      let ci=-1;
+      for(let i=this.chapters.length-1;i>=0;i--){if(this.chapters[i].idx<=paraIdx){ci=i;break}}
+      return ci;
+    };
 
-    this.pages=pages;
-    this.totalPages=pages.length;
-    this.curPage=targetPage;
-    this._render(targetPage);
-    hideLoad();
+    const paginate=()=>{
+      while(cursor<this.paras.length){
+        if(!this._paging)return false; // 被中止
 
-    // 背景繼續分剩餘章節
+        const isChStart=chMap.has(cursor);
+        const ci=isChStart?chMap.get(cursor):getChIdx(cursor);
+        const chTitle=isChStart&&ci>=0?this.chapters[ci].title:'';
+        const availH=isChStart&&chTitle?h-chTitleH:h;
+
+        // 確認剩餘可用高度夠至少放一段
+        let accH=0;
+        const startPara=cursor;
+        let endPara=cursor;
+
+        while(endPara<this.paras.length){
+          // 遇到下一個章節標題（且不是本頁第一段）就切頁
+          if(endPara>startPara&&chMap.has(endPara))break;
+          p.textContent=this.paras[endPara];
+          const lh=p.offsetHeight;
+          if(accH+lh>availH&&endPara>startPara)break;
+          accH+=lh;endPara++;
+        }
+        if(endPara===startPara)endPara=startPara+1; // 至少一段
+
+        addPage(startPara,endPara-1,ci,isChStart&&!!chTitle,chTitle);
+        cursor=endPara;
+
+        if(!reachedTarget&&cursor>goToParaIdx){
+          // 目標在上一頁
+          if(pages.length>0&&targetPage===0)targetPage=pages.length-1;
+        }
+      }
+      return true;
+    };
+
+    // 同步分頁直到包含目標位置
+    const runSync=()=>{
+      let limit=0;
+      while(!reachedTarget&&cursor<this.paras.length&&limit++<50000){
+        const isChStart=chMap.has(cursor);
+        const ci=isChStart?chMap.get(cursor):getChIdx(cursor);
+        const chTitle=isChStart&&ci>=0?this.chapters[ci].title:'';
+        const availH=isChStart&&chTitle?h-chTitleH:h;
+        let accH=0,startPara=cursor,endPara=cursor;
+        while(endPara<this.paras.length){
+          if(endPara>startPara&&chMap.has(endPara))break;
+          p.textContent=this.paras[endPara];
+          const lh=p.offsetHeight;
+          if(accH+lh>availH&&endPara>startPara)break;
+          accH+=lh;endPara++;
+        }
+        if(endPara===startPara)endPara=startPara+1;
+        addPage(startPara,endPara-1,ci,isChStart&&!!chTitle,chTitle);
+        cursor=endPara;
+      }
+    };
+    runSync();
+
+    this.pages=pages;this.totalPages=pages.length;this.curPage=targetPage;
+    this._render(targetPage);hideLoad();
+
+    // 背景繼續
     const self=this;
-    function bgPage(){
-      if(!self._paging||gi>=groups.length){self._paging=false;self.updFoot();return}
-      const end=Math.min(gi+3,groups.length); // 每批 3 章
-      for(;gi<end;gi++)paginateGroup(groups[gi],false);
+    function bg(){
+      if(!self._paging||cursor>=self.paras.length){self._paging=false;self.updFoot();return}
+      let done=0;
+      while(cursor<self.paras.length&&done++<3000){
+        const isChStart=chMap.has(cursor);
+        const ci=isChStart?chMap.get(cursor):self.chapters.reduce((a,c,i)=>c.idx<=cursor?i:a,-1);
+        const chTitle=isChStart&&ci>=0?self.chapters[ci].title:'';
+        const availH=isChStart&&chTitle?h-chTitleH:h;
+        let accH=0,startPara=cursor,endPara=cursor;
+        while(endPara<self.paras.length){
+          if(endPara>startPara&&chMap.has(endPara))break;
+          p.textContent=self.paras[endPara];
+          const lh=p.offsetHeight;
+          if(accH+lh>availH&&endPara>startPara)break;
+          accH+=lh;endPara++;
+        }
+        if(endPara===startPara)endPara=startPara+1;
+        pages.push({startPara,endPara:endPara-1,chapterIdx:ci,isChapterFirst:isChStart&&!!chTitle,chapterTitle:chTitle});
+        cursor=endPara;
+      }
       self.totalPages=pages.length;self.updFoot();
-      setTimeout(bgPage,0);
+      setTimeout(bg,0);
     }
-    setTimeout(bgPage,0);
+    setTimeout(bg,0);
   },
 
   getDisplayParas(){return Meta.loadP().conv!==false?this.rawParas.map(s=>toTW(s)):[...this.rawParas]},
 
   async open(id){
-    const meta=Meta.load()[id];
-    if(!meta){toast('找不到書籍');return}
+    const meta=Meta.load()[id];if(!meta){toast('找不到書籍');return}
     showLoad('載入中…');
     try{
       this.rawParas=await Store.get(id);
@@ -627,8 +615,7 @@ const Reader={
     if(!this.pages.length)return;
     pg=Math.max(0,Math.min(pg,this.pages.length-1));
     this.curPage=pg;
-    const wrap=document.getElementById('rpwrap');
-    wrap.innerHTML='';
+    const wrap=document.getElementById('rpwrap');wrap.innerHTML='';
     const vw=window.innerWidth;
     const prev=pg>0?this._mkPage(pg-1):null;
     const curr=this._mkPage(pg);
@@ -636,9 +623,8 @@ const Reader={
     if(prev)wrap.appendChild(prev);
     wrap.appendChild(curr);
     if(next)wrap.appendChild(next);
-    const total=wrap.children.length;
     const cIdx=prev?1:0;
-    wrap.style.width=(total*vw)+'px';
+    wrap.style.width=(wrap.children.length*vw)+'px';
     wrap.style.transition='none';
     wrap.style.transform=`translateX(${-cIdx*vw}px)`;
     Meta.setPos(this.id,this.pages[pg]?.startPara||0);
@@ -649,26 +635,26 @@ const Reader={
     if(pg<0||pg>=this.pages.length)return null;
     const{startPara,endPara,isChapterFirst,chapterTitle,chapterIdx}=this.pages[pg];
     const fs=this.fontSize;
-    const vw=window.innerWidth;
     const div=document.createElement('div');
     div.className='rpage';div.dataset.pg=pg;
-    div.style.width=vw+'px';div.style.height='100%';
+    div.style.width=window.innerWidth+'px';div.style.height='100%';
 
-    // ★ 章節第一頁：顯示大標題
     if(isChapterFirst&&chapterTitle){
       const hd=document.createElement('div');hd.className='rp-ch-title';hd.textContent=chapterTitle;div.appendChild(hd);
     } else {
-      // 非章節首頁：顯示淡淡的章節名作頁眉
       const chap=document.createElement('div');chap.className='rp-chap';
-      const ci=chapterIdx>=0?this.chapters[chapterIdx]:null;
-      chap.textContent=ci?ci.title:'';div.appendChild(chap);
+      chap.textContent=chapterIdx>=0&&this.chapters[chapterIdx]?this.chapters[chapterIdx].title:'';
+      div.appendChild(chap);
     }
 
     const body=document.createElement('div');body.className='rp-body';body.style.fontSize=fs+'px';body.style.lineHeight='2';
     for(let i=startPara;i<=endPara&&i<this.paras.length;i++){
+      // 跳過章節標題段落本身（已在頁頂顯示）
+      if(isChapterFirst&&i===startPara&&chapterTitle&&this.paras[i]===chapterTitle)continue;
       const p_=document.createElement('p');p_.className='para';p_.dataset.paraIdx=i;p_.textContent=this.paras[i];body.appendChild(p_);
     }
     div.appendChild(body);
+
     const ft=document.createElement('div');ft.className='rp-foot';
     const tot=this.totalPages||1;
     const pct=tot>1?Math.round(pg/(tot-1)*100):100;
@@ -694,12 +680,11 @@ const Reader={
     document.querySelector('.toc-item.cur')?.scrollIntoView({block:'nearest'});
   },
 
-  /* ★ 工具列切換：只顯示/隱藏浮層，不重分頁 */
+  /* ★ 工具列切換：純浮層，不重分頁 */
   toggleToolbar(){
     this.toolbarOn=!this.toolbarOn;
     document.getElementById('rhd').classList.toggle('show',this.toolbarOn);
     document.getElementById('rfoot').classList.toggle('show',this.toolbarOn);
-    // 重繪當前頁（更新 padding 佔位不變，只是重建 DOM 節點）
     if(this.pages.length)this._render(this.curPage);
   },
 
@@ -710,12 +695,10 @@ const Reader={
     this.updTOChl();
   },
   jumpCh(i){
-    const ch=this.chapters[i];if(!ch)return;
-    // 找到該章節的第一頁
     const pg=this.pages.findIndex(p=>p.chapterIdx===i&&p.isChapterFirst);
-    this._render(pg>=0?pg:this._paraToPage(ch.idx));
+    this._render(pg>=0?pg:this._paraToPage(this.chapters[i]?.idx||0));
     document.getElementById('tocBack').classList.remove('on');
-    toast(ch.title.substring(0,20));
+    toast((this.chapters[i]?.title||'').substring(0,20));
   },
   _paraToPage(pi){for(let i=0;i<this.pages.length;i++){if(pi>=this.pages[i].startPara&&pi<=this.pages[i].endPara)return i}return 0},
 
