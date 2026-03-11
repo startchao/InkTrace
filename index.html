@@ -295,6 +295,13 @@ body.night .toast{background:#c09030;color:#0a0806}
     <div class="phd"><span class="phd-t">⚙ 閱讀設定</span><button class="pcls" id="setCls">✕</button></div>
     <div class="pbody">
       <div class="sg">
+        <div class="sg-lbl">行間距</div>
+        <div class="spd-wrap">
+          <input type="range" class="spd-slider" id="lhSlider" min="1.5" max="2.5" step="0.1" value="2">
+          <span class="spd-val" id="lhVal">2.0×</span>
+        </div>
+      </div>
+      <div class="sg">
         <div class="sg-lbl">聽書語速</div>
         <div class="spd-wrap">
           <input type="range" class="spd-slider" id="spdSlider" min="0.5" max="2.5" step="0.1" value="1">
@@ -456,7 +463,7 @@ const Lib={
 const Reader={
   id:null,rawParas:[],paras:[],chapters:[],
   pages:[],curPage:0,totalPages:0,
-  fontSize:18,toolbarOn:false,_paging:false,
+  fontSize:18,lineHeight:2,toolbarOn:false,_paging:false,
   STEPS:[15,18,21,26],_probe:null,
 
   _ensureProbe(){
@@ -469,8 +476,8 @@ const Reader={
   _getAvail(){
     const vw=window.innerWidth;
     const vh=window.visualViewport?window.visualViewport.height:window.innerHeight;
-    // 永遠預留頂部(50)+底部(56)+頁眉(24)+頁腳(24)+padTop(14)+padBot(8)
-    return{w:vw-40,h:vh-50-56-24-24-14-8};
+    // 永遠預留頂部(50)+底部(56)+頁眉(24)+頁腳(24)+padTop(14)+padBot(8)+安全邊界(20)
+    return{w:vw-40,h:vh-50-56-24-24-14-8-20};
   },
 
   /* ★ 分頁：遇到章節標題就強制切頁，章節內段落自由流動（不留白） */
@@ -481,6 +488,7 @@ const Reader={
     const p=this._probe;
     p.style.width=w+'px';
     p.style.fontSize=fs+'px';
+    p.style.lineHeight=this.lineHeight.toString();
 
     // 章節標題區塊預估高度
     const chTitleH=Math.ceil(fs*1.08*1.5)+10+12+1+4; // font*lineH + padding + margin + border + after
@@ -614,7 +622,7 @@ const Reader={
       document.getElementById('rfoot').classList.remove('show');
       this.applyPrefs();showRdr();
       const goTo=meta.pos||0;
-      requestAnimationFrame(()=>requestAnimationFrame(()=>this._paginate(goTo)));
+      document.fonts.ready.then(()=>this._paginate(goTo));
     }catch(e){hideLoad();console.error(e);toast('開啟失敗：'+e.message)}
   },
 
@@ -656,7 +664,7 @@ const Reader={
       div.appendChild(chap);
     }
 
-    const body=document.createElement('div');body.className='rp-body';body.style.fontSize=fs+'px';body.style.lineHeight='2';
+    const body=document.createElement('div');body.className='rp-body';body.style.fontSize=fs+'px';body.style.lineHeight=this.lineHeight.toString();
     for(let i=startPara;i<=endPara&&i<this.paras.length;i++){
       // 跳過章節標題段落本身（已在頁頂顯示）
       if(isChapterFirst&&i===startPara&&chapterTitle&&this.paras[i]===chapterTitle)continue;
@@ -714,12 +722,15 @@ const Reader={
   applyPrefs(){
     const p=Meta.loadP();
     this.fontSize=p.fontSize||18;
+    this.lineHeight=p.lineHeight||2;
     applyTheme(!!p.night);
     const conv=p.conv!==false;
     this._updConvBtn(conv);
     const spd=p.speed||1;
     document.getElementById('spdSlider').value=spd;
     document.getElementById('spdVal').textContent=spd.toFixed(1)+'×';
+    document.getElementById('lhSlider').value=this.lineHeight;
+    document.getElementById('lhVal').textContent=this.lineHeight.toFixed(1)+'×';
     this._updFontBtns();
   },
   _updConvBtn(conv){
@@ -759,12 +770,14 @@ const Reader={
 
 /* ══ TTS ══ */
 const TTS={
-  idx:0,segs:[],on:false,paused:false,
+  idx:0,segs:[],on:false,paused:false,_hb:null,
   build(){this.segs=[];Reader.paras.forEach((p,i)=>{const parts=p.match(/[^。！？…]+[。！？…]*/g)||[p];if(parts.length<=1){this.segs.push({text:p,pi:i});return}parts.forEach(s=>{if(s.trim())this.segs.push({text:s,pi:i})})})},
-  start(from){if(!Reader.paras.length){toast('請先開啟書籍');return}this.build();const pg=Reader.pages[Reader.curPage];const startPi=from!=null?from:(pg?pg.startPara:0);const si=this.segs.findIndex(s=>s.pi>=startPi);this.idx=si>=0?si:0;this.on=true;this.paused=false;this.speak();this.updUI()},
+  /* iOS Safari 有 15 秒超時 bug，每 10 秒 pause/resume 保持活躍 */
+  _startHB(){this._stopHB();this._hb=setInterval(()=>{if(this.on&&!this.paused&&window.speechSynthesis.speaking){window.speechSynthesis.pause();window.speechSynthesis.resume()}},10000)},
+  _stopHB(){if(this._hb){clearInterval(this._hb);this._hb=null}},
+  start(from){if(!Reader.paras.length){toast('請先開啟書籍');return}this.build();const pg=Reader.pages[Reader.curPage];const startPi=from!=null?from:(pg?pg.startPara:0);const si=this.segs.findIndex(s=>s.pi>=startPi);this.idx=si>=0?si:0;this.on=true;this.paused=false;window.speechSynthesis.cancel();this._startHB();setTimeout(()=>this.speak(),80);this.updUI()},
   speak(){
     if(!this.on||this.idx>=this.segs.length){this.stop();return}
-    window.speechSynthesis.cancel();
     const seg=this.segs[this.idx];
     if(!seg.text.trim()){this.idx++;setTimeout(()=>this.speak(),10);return}
     const u=new SpeechSynthesisUtterance(seg.text);
@@ -773,12 +786,12 @@ const TTS={
     if(pr.voiceIdx!=null&&vs[pr.voiceIdx])u.voice=vs[pr.voiceIdx];
     else u.voice=vs.find(v=>/zh.*(TW|HK)/i.test(v.lang))||vs.find(v=>/zh/i.test(v.lang))||null;
     u.onstart=()=>Reader.hlPara(seg.pi);
-    u.onend=()=>{if(this.on){this.idx++;this.speak()}};
-    u.onerror=e=>{if(e.error!=='interrupted'&&this.on){this.idx++;setTimeout(()=>this.speak(),80)}};
+    u.onend=()=>{if(this.on){this.idx++;setTimeout(()=>this.speak(),50)}};
+    u.onerror=e=>{if(e.error!=='interrupted'&&this.on){this.idx++;setTimeout(()=>this.speak(),120)}};
     window.speechSynthesis.speak(u);
   },
-  toggle(){if(!this.on)this.start();else if(this.paused){window.speechSynthesis.resume();this.paused=false;this.updUI()}else{window.speechSynthesis.pause();this.paused=true;this.updUI()}},
-  stop(){this.on=false;this.paused=false;window.speechSynthesis.cancel();document.querySelectorAll('.tts-hi').forEach(el=>el.classList.remove('tts-hi'));this.updUI()},
+  toggle(){if(!this.on)this.start();else if(this.paused){window.speechSynthesis.resume();this.paused=false;this._startHB();this.updUI()}else{window.speechSynthesis.pause();this._stopHB();this.paused=true;this.updUI()}},
+  stop(){this.on=false;this.paused=false;this._stopHB();window.speechSynthesis.cancel();document.querySelectorAll('.tts-hi').forEach(el=>el.classList.remove('tts-hi'));this.updUI()},
   updUI(){const pb=document.getElementById('rfPlay');if(this.on&&!this.paused){pb.textContent='⏸';pb.classList.add('on')}else{pb.textContent='▶';pb.classList.remove('on')}},
   fillVoices(){const sel=document.getElementById('voiceSel');const vs=window.speechSynthesis.getVoices();sel.innerHTML='<option value="">自動選擇</option>'+vs.map((v,i)=>`<option value="${i}">${v.name} (${v.lang})</option>`).join('');const pr=Meta.loadP();if(pr.voiceIdx!=null)sel.value=pr.voiceIdx}
 };
@@ -818,6 +831,7 @@ document.addEventListener('DOMContentLoaded',async()=>{
   document.getElementById('rfNight').onclick=()=>{const p=Meta.loadP();p.night=!p.night;Meta.saveP(p);applyTheme(p.night);toast(p.night?'🌙 夜間模式':'☀ 日間模式')};
   document.getElementById('rfProg').onclick=e=>Reader.onProgClick(e);
 
+  document.getElementById('lhSlider').oninput=e=>{const v=parseFloat(e.target.value);document.getElementById('lhVal').textContent=v.toFixed(1)+'×';const p=Meta.loadP();p.lineHeight=v;Meta.saveP(p);Reader.lineHeight=v;if(Reader.id){const old=Reader.pages[Reader.curPage]?.startPara||0;Reader._paging=false;requestAnimationFrame(()=>Reader._paginate(old))}};
   document.getElementById('spdSlider').oninput=e=>{const v=parseFloat(e.target.value);document.getElementById('spdVal').textContent=v.toFixed(1)+'×';const p=Meta.loadP();p.speed=v;Meta.saveP(p)};
   document.getElementById('voiceSel').onchange=e=>{const p=Meta.loadP();p.voiceIdx=e.target.value?parseInt(e.target.value):null;Meta.saveP(p)};
 
