@@ -1,472 +1,300 @@
 <!DOCTYPE html>
 
-<!-- 書閣 Novel Reader v1.5.0 -->
+<!-- 書閣 Novel Reader v1.8.0 -->
 
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>書閣 v1.5</title>
+<title>書閣 v1.8</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-/* ══════════════════════════════════
-   CSS 變數 / 主題
-══════════════════════════════════ */
-:root {
-  --bg:   #f5f0e8;
-  --bg2:  #fffcf5;
-  --bg3:  #fff8ee;
-  --tx:   #1a1208;
-  --tx2:  #3d2e18;
-  --tx3:  #8a7456;
-  --ac:   #a07018;
-  --ac2:  #c09030;
-  --acp:  rgba(160,112,24,.14);
-  --bd:   rgba(160,112,24,.22);
-  --bd2:  rgba(160,112,24,.44);
-  --sh:   rgba(20,12,4,.15);
-  --sh2:  rgba(20,12,4,.32);
+:root{
+  --bg:#f5f0e8;--bg2:#fffcf5;--bg3:#fff8ee;
+  --tx:#1a1208;--tx2:#3d2e18;--tx3:#8a7456;
+  --ac:#a07018;--ac2:#c09030;
+  --acp:rgba(160,112,24,.14);--bd:rgba(160,112,24,.22);--bd2:rgba(160,112,24,.44);
+  --sh:rgba(20,12,4,.15);--sh2:rgba(20,12,4,.32);
   --serif:'Noto Serif TC','Georgia',serif;
-  --ease: cubic-bezier(.22,1,.36,1);
+  --ease:cubic-bezier(.22,1,.36,1);
 }
-body.night {
-  --bg:  #0a0806;
-  --bg2: #100d0a;
-  --bg3: #161210;
-  --tx:  #d5c9a8;
-  --tx2: #b5a57e;
-  --tx3: #6e6248;
-  --ac:  #c09030;
-  --ac2: #d4a840;
-  --acp: rgba(192,144,48,.15);
-  --bd:  rgba(192,144,48,.22);
-  --bd2: rgba(192,144,48,.46);
-  --sh:  rgba(0,0,0,.44);
-  --sh2: rgba(0,0,0,.68);
+body.night{
+  --bg:#0a0806;--bg2:#100d0a;--bg3:#161210;
+  --tx:#d5c9a8;--tx2:#b5a57e;--tx3:#6e6248;
+  --ac:#c09030;--ac2:#d4a840;
+  --acp:rgba(192,144,48,.15);--bd:rgba(192,144,48,.22);--bd2:rgba(192,144,48,.46);
+  --sh:rgba(0,0,0,.44);--sh2:rgba(0,0,0,.68);
 }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg)}
+body{font-family:var(--serif);color:var(--tx);transition:background .3s,color .3s}
+button{font-family:inherit;cursor:pointer;border:none;background:none;-webkit-appearance:none}
+input,select{font-family:inherit}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:2px}
 
-/* ══ 重設 ══ */
-*,*::before,*::after { box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent }
-html,body { width:100%;height:100%;overflow:hidden }
-body { font-family:var(–serif);background:var(–bg);color:var(–tx);transition:background .3s,color .3s }
-button { font-family:inherit;cursor:pointer;border:none;background:none;-webkit-appearance:none }
-input,select { font-family:inherit }
-::-webkit-scrollbar { width:4px }
-::-webkit-scrollbar-thumb { background:var(–bd2);border-radius:2px }
+/* ★ 視圖：兩層永遠在 DOM，用 z-index + pointer-events 切換
+不用 display:none，避免 Safari layout reflow 問題 */
+.view{
+position:fixed;
+top:0;left:0;
+width:100%;height:100%;
+background:var(–bg);
+transition:opacity .2s;
+}
+.view.lib-view{z-index:10;overflow-y:auto;overflow-x:hidden}
+.view.rdr-view{z-index:5;overflow:hidden}
+/* 書庫在上面時，閱讀器不響應事件 */
+.view.lib-view.hidden{opacity:0;pointer-events:none;z-index:5}
+.view.rdr-view.active{z-index:10}
 
-/* ══ 視圖 ══ */
-.view { position:fixed;inset:0;display:none;flex-direction:column;overflow:hidden }
-.view.on { display:flex }
+/* ═══ 書庫 ═══ */
+.lhd{position:sticky;top:0;z-index:50;height:56px;padding:0 18px;display:flex;align-items:center;gap:10px;background:var(–bg);border-bottom:1px solid var(–bd)}
+.lhd-logo{font-size:20px;font-weight:700;color:var(–ac);letter-spacing:.1em;flex:1}
+.lhd-logo small{font-size:11px;color:var(–tx3);margin-left:6px;font-weight:400}
+.lhd-ver{font-size:10px;color:var(–tx3)}
+.ibt{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(–tx2);border:1.5px solid var(–bd2);background:var(–bg3);transition:background .15s,transform .12s}
+.ibt:active{background:var(–acp);transform:scale(.9)}
+.lbody{padding:20px 14px 90px}
+.lbar{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.lbar-t{font-size:11px;letter-spacing:.18em;color:var(–ac);font-weight:600}
+.lbar-l{flex:1;height:1px;background:linear-gradient(90deg,var(–bd2),transparent)}
+.lbar-c{font-size:11px;color:var(–tx3)}
+.bgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.bcard{position:relative;cursor:pointer;border-radius:3px 10px 10px 3px;overflow:hidden;box-shadow:-4px 4px 16px var(–sh),-1px 0 0 rgba(0,0,0,.1);transition:transform .25s var(–ease);animation:cin .4s var(–ease) both}
+@keyframes cin{from{opacity:0;transform:translateY(12px) scale(.95)}to{opacity:1;transform:none}}
+.bcard:active{transform:scale(.97)}
+.bcov{aspect-ratio:3/4;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px 8px;position:relative;overflow:hidden}
+.bcov-spine{position:absolute;left:0;top:0;bottom:0;width:10px;background:linear-gradient(90deg,rgba(0,0,0,.28),rgba(0,0,0,.05),transparent);pointer-events:none}
+.bcov-lines{position:absolute;inset:0;background-image:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(255,255,255,.022) 3px,rgba(255,255,255,.022) 4px);pointer-events:none}
+.bcov-t{position:relative;z-index:1;font-weight:700;font-size:13px;color:#fff;text-align:center;line-height:1.5;word-break:break-all;text-shadow:0 2px 8px rgba(0,0,0,.55);display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.bcov-rule{position:relative;z-index:1;margin-top:9px;width:22px;height:1px;background:rgba(255,255,255,.38)}
+.binfo{padding:7px 9px;background:var(–bg2);border-top:1px solid var(–bd)}
+.bname{font-size:11px;font-weight:500;color:var(–tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bmeta{font-size:9px;color:var(–tx3);margin-top:2px;display:flex;justify-content:space-between}
+.bprog{height:2px;background:var(–bd);border-radius:1px;margin-top:5px;overflow:hidden}
+.bprog-f{height:100%;background:linear-gradient(90deg,var(–ac),var(–ac2));border-radius:1px}
+.bdel{position:absolute;top:5px;right:5px;z-index:5;opacity:0;transition:opacity .15s;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;background:rgba(0,0,0,.6)}
+.bcard:hover .bdel,.bcard:active .bdel{opacity:1}
+.bdel:active{background:rgba(180,30,30,.85)!important}
+.bempty{grid-column:1/-1;padding:44px 16px;text-align:center}
+.bempty-ico{font-size:48px;margin-bottom:12px;opacity:.45}
+.bempty-txt{font-size:14px;color:var(–tx3);line-height:1.8}
+.bempty-btn{display:inline-flex;align-items:center;gap:6px;margin-top:18px;padding:13px 28px;background:#a07018;color:#fff;border-radius:26px;font-size:15px;font-weight:700;border:none}
+.bempty-btn:active{background:#c09030;transform:scale(.96)}
+body.night .bempty-btn{background:#c09030}
+.fab{position:fixed;right:18px;bottom:20px;width:50px;height:50px;border-radius:50%;background:#a07018;color:#fff;font-size:24px;display:flex;align-items:center;justify-content:center;box-shadow:0 5px 20px rgba(160,112,24,.45);z-index:200}
+.fab:active{transform:scale(.9)}
+body.night .fab{background:#c09030}
+#fi{display:none}
 
-/* ══════════════════════════════════
-書庫
-══════════════════════════════════ */
-#vLib { overflow-y:auto;overflow-x:hidden;background:var(–bg) }
-
-.lhd {
-position:sticky;top:0;z-index:50;
-height:56px;padding:0 18px;
-display:flex;align-items:center;gap:10px;
-background:var(–bg);border-bottom:1px solid var(–bd);
-}
-.lhd-logo { font-size:20px;font-weight:700;color:var(–ac);letter-spacing:.1em;flex:1 }
-.lhd-logo small { font-size:11px;color:var(–tx3);margin-left:6px;font-weight:400 }
-.lhd-ver { font-size:10px;color:var(–tx3);letter-spacing:.06em }
-
-/* 圖示按鈕（書庫頂部） */
-.ibt {
-width:36px;height:36px;border-radius:50%;
-display:flex;align-items:center;justify-content:center;
-font-size:18px;color:var(–tx2);
-border:1.5px solid var(–bd2);background:var(–bg3);
-transition:background .15s,transform .12s;
-}
-.ibt:active { background:var(–acp);transform:scale(.9) }
-
-.lbody { padding:20px 16px 100px;max-width:800px;margin:0 auto }
-.lbar { display:flex;align-items:center;gap:10px;margin-bottom:16px }
-.lbar-t { font-size:11px;letter-spacing:.18em;color:var(–ac);text-transform:uppercase;font-weight:600 }
-.lbar-l { flex:1;height:1px;background:linear-gradient(90deg,var(–bd2),transparent) }
-.lbar-c { font-size:11px;color:var(–tx3) }
-
-/* ══ 書籍網格 ══ */
-.bgrid { display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:14px }
-@media(max-width:400px) { .bgrid { grid-template-columns:repeat(2,1fr);gap:10px } }
-
-.bcard {
-position:relative;cursor:pointer;
-border-radius:3px 10px 10px 3px;overflow:hidden;
-box-shadow:-4px 4px 16px var(–sh),-1px 0 0 rgba(0,0,0,.1);
-transition:transform .25s var(–ease),box-shadow .25s;
-animation:cin .4s var(–ease) both;
-}
-@keyframes cin { from{opacity:0;transform:translateY(12px) scale(.95)} to{opacity:1;transform:none} }
-.bcard:active { transform:scale(.97) }
-
-/* ★ 封面：純 div 背景，不用 before 偽元素，解決 Safari 繼承問題 */
-.bcov {
-aspect-ratio:3/4;
-display:flex;flex-direction:column;align-items:center;justify-content:center;
-padding:14px 10px;position:relative;overflow:hidden;
-/* background 由 JS 直接設在 element.style.background */
-}
-.bcov-spine {
-position:absolute;left:0;top:0;bottom:0;width:11px;
-background:linear-gradient(90deg,rgba(0,0,0,.28),rgba(0,0,0,.05),transparent);
-pointer-events:none;
-}
-.bcov-lines {
-position:absolute;inset:0;
-background-image:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(255,255,255,.022) 3px,rgba(255,255,255,.022) 4px);
-pointer-events:none;
-}
-.bcov-t {
-position:relative;z-index:1;
-font-weight:700;font-size:13px;color:#fff;
-text-align:center;line-height:1.5;word-break:break-all;
-text-shadow:0 2px 8px rgba(0,0,0,.55);
-display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;
-}
-.bcov-rule { position:relative;z-index:1;margin-top:10px;width:24px;height:1px;background:rgba(255,255,255,.38) }
-.binfo { padding:8px 10px;background:var(–bg2);border-top:1px solid var(–bd) }
-.bname { font-size:12px;font-weight:500;color:var(–tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis }
-.bmeta { font-size:10px;color:var(–tx3);margin-top:3px;display:flex;justify-content:space-between }
-.bprog { height:2px;background:var(–bd);border-radius:1px;margin-top:6px;overflow:hidden }
-.bprog-f { height:100%;background:linear-gradient(90deg,var(–ac),var(–ac2));border-radius:1px }
-.bdel {
-position:absolute;top:6px;right:6px;z-index:5;opacity:0;
-transition:opacity .15s;width:26px;height:26px;border-radius:50%;
-display:flex;align-items:center;justify-content:center;
-font-size:14px;font-weight:700;color:#fff;background:rgba(0,0,0,.6);
-}
-.bcard:hover .bdel { opacity:1 }
-.bdel:active { background:rgba(180,30,30,.85)!important }
-
-/* 空書庫 */
-.bempty { grid-column:1/-1;padding:48px 16px;text-align:center;animation:cin .4s var(–ease) }
-.bempty-ico { font-size:50px;margin-bottom:12px;opacity:.45 }
-.bempty-txt { font-size:14px;color:var(–tx3);line-height:1.8 }
-.bempty-btn {
-display:inline-flex;align-items:center;gap:6px;
-margin-top:18px;padding:13px 30px;
-background:#a07018;color:#fff;border-radius:26px;
-font-size:16px;font-weight:700;letter-spacing:.04em;
-box-shadow:0 4px 18px rgba(160,112,24,.4);
-border:none;-webkit-appearance:none;
-}
-.bempty-btn:active { background:#c09030;transform:scale(.96) }
-body.night .bempty-btn { background:#c09030 }
-
-.fab {
-position:fixed;right:20px;bottom:22px;
-width:52px;height:52px;border-radius:50%;
-background:#a07018;color:#fff;font-size:26px;
-display:flex;align-items:center;justify-content:center;
-box-shadow:0 5px 20px rgba(160,112,24,.45);
-z-index:200;-webkit-appearance:none;
-}
-.fab:active { transform:scale(.9) }
-body.night .fab { background:#c09030 }
-#fi { display:none }
-
-/* ══════════════════════════════════
-閱讀器 — 全螢幕文字優先
-══════════════════════════════════ */
-#vRdr { background:var(–bg);overflow:hidden;position:relative }
-
-/* ── 頂部工具列（平時隱藏） ── */
-.rhd {
-position:absolute;top:0;left:0;right:0;z-index:50;
-height:50px;padding:0 10px;
-display:flex;align-items:center;gap:6px;
-background:var(–bg);border-bottom:1.5px solid var(–bd);
-transform:translateY(-100%);
-transition:transform .3s var(–ease);
-/* 保持在 flex 流之外，不佔空間 */
-}
-.rhd.show { transform:translateY(0) }
-.rbk {
-display:flex;align-items:center;gap:4px;padding:6px 10px 6px 4px;
-border-radius:16px;font-size:14px;font-weight:600;color:var(–ac);white-space:nowrap;
-}
-.rbk:active { background:var(–acp) }
-.rtitle {
-flex:1;font-size:13px;font-weight:500;color:var(–tx2);
-text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-}
-.rtool { display:flex;gap:4px }
-.ribt {
-width:36px;height:36px;border-radius:50%;
-display:flex;align-items:center;justify-content:center;
-font-size:18px;color:var(–tx2);
-border:1.5px solid var(–bd2);background:var(–bg3);
-transition:background .15s,transform .12s;
-}
-.ribt:active { background:var(–acp);transform:scale(.9) }
-
-/* ── 閱讀主體（全螢幕） ── */
-.rbook {
-position:absolute;inset:0;overflow:hidden;
-/* 三個點擊區域水平排列 */
-}
-
-/* 點擊區（左/中/右） */
-.rzone {
-position:absolute;top:0;bottom:0;z-index:20;
-cursor:pointer;
-/* 不設 background，完全透明 */
-}
-.rzone-L { left:0;width:25% }
-.rzone-M { left:25%;width:50% }  /* 中間：呼出/收起工具列 */
-.rzone-R { right:0;width:25% }
-
-/* 頁面滑動容器 */
-.rpwrap {
-position:absolute;inset:0;
-display:flex;
-will-change:transform;
-}
-.rpage {
-/* 寬度由 JS 設定 */
-flex-shrink:0;overflow:hidden;
-display:flex;flex-direction:column;
-/* padding 由 JS 根據工具列狀態調整 */
-padding:14px 20px 8px;
-transition:padding .3s;
-}
-@media(max-width:400px) { .rpage { padding:10px 14px 6px } }
-
-/* 章節頁眉（極淡） */
-.rp-chap {
-font-size:10px;color:var(–tx3);opacity:.55;
-text-align:center;margin-bottom:8px;flex-shrink:0;
-overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:.06em;
-}
-/* 正文 */
-.rp-body { flex:1;overflow:hidden }
-.para {
-margin-bottom:.6em;text-align:justify;text-indent:2em;
-border-radius:3px;padding:1px 3px;word-break:break-all;
-}
-.para.ch {
-font-weight:700;font-size:1.05em;
-text-align:center;text-indent:0;
-letter-spacing:.08em;padding:6px 0 8px;
-}
-.para.ch::after { content:‘✦’;display:block;font-size:.6em;color:var(–ac);margin-top:4px;opacity:.55 }
-.para.tts-hi {
-background:rgba(160,112,24,.14);
-border-left:2px solid var(–ac);padding-left:8px;text-indent:0;
-}
-
-/* ── 頁腳（極淡頁碼） ── */
-.rp-foot {
-flex-shrink:0;padding-top:5px;margin-top:4px;
-display:flex;align-items:center;justify-content:space-between;
-border-top:1px solid var(–bd);
-opacity:.45;  /* 平時極淡 */
-transition:opacity .3s;
-}
-.rhd.show ~ .rbook .rp-foot,
-.rp-foot.bright { opacity:.9 }
-.rp-num { font-size:10px;color:var(–tx3);letter-spacing:.04em }
-.rp-pct { font-size:10px;color:var(–tx3) }
-
-/* ── 底部工具列（平時隱藏） ── */
-.rfoot {
-position:absolute;bottom:0;left:0;right:0;z-index:50;
-height:54px;padding:0 12px;
-display:flex;align-items:center;justify-content:space-between;
-background:var(–bg);border-top:1.5px solid var(–bd2);
-transform:translateY(100%);
-transition:transform .3s var(–ease);
-}
-.rfoot.show { transform:translateY(0) }
-
-.rfbtns { display:flex;gap:3px;flex-shrink:0 }
-.rfbt {
-width:38px;height:38px;border-radius:8px;
-display:flex;align-items:center;justify-content:center;
-font-size:18px;color:var(–tx2);
-border:1.5px solid var(–bd2);background:var(–bg3);
-transition:background .14s;-webkit-appearance:none;
-}
-.rfbt:active,.rfbt.on { background:var(–ac);color:#fff;border-color:var(–ac) }
-.rfprog {
-flex:1;margin:0 10px;height:4px;
-background:var(–bd);border-radius:2px;cursor:pointer;overflow:hidden;
-}
-.rfprog-f { height:100%;background:linear-gradient(90deg,var(–ac),var(–ac2));border-radius:2px;transition:width .3s }
-#rfLbl { font-size:11px;color:var(–tx3);flex-shrink:0;min-width:30px;text-align:right }
-
-/* ══════════════════════════════════
-面板（目錄 / 設定） — 底部 85%，完全不透明
-══════════════════════════════════ */
-.pback { display:none;position:fixed;inset:0;z-index:400 }
-.pback.on { display:flex;flex-direction:column;justify-content:flex-end }
-.pov { position:absolute;inset:0;background:rgba(0,0,0,.48) }
-.pbox {
-position:relative;z-index:1;
-height:85vh;
-background:var(–bg2);  /* 完全不透明純色 */
-border-radius:20px 20px 0 0;
-display:flex;flex-direction:column;
-box-shadow:0 -4px 32px var(–sh2);
-animation:pup .3s var(–ease);
+/* ═══ 閱讀器結構 ═══
+★ 所有子元素用絕對定位，高度寬度明確用 100% 或 vw/vh
+*/
+#rdrInner{
+position:absolute;
+top:0;left:0;
+width:100%;height:100%;
+background:var(–bg);
 overflow:hidden;
 }
-@keyframes pup { from{transform:translateY(100%)} to{transform:none} }
 
-.phd {
-padding:16px 18px 12px;flex-shrink:0;
-display:flex;align-items:center;justify-content:space-between;
-background:var(–bg2);  /* 同色，無透明 */
-border-bottom:2px solid var(–bd2);
+/* 頂部工具列 */
+.rhd{
+position:absolute;top:0;left:0;right:0;z-index:30;
+height:50px;padding:0 10px;
+display:flex;align-items:center;gap:6px;
+background:var(–bg2);border-bottom:1.5px solid var(–bd2);
+transform:translateY(-100%);
+transition:transform .28s var(–ease);
+will-change:transform;
 }
-.phd-t { font-size:14px;font-weight:700;color:var(–ac);letter-spacing:.08em }
-.pcls {
-width:32px;height:32px;border-radius:50%;
+.rhd.show{transform:translateY(0)}
+.rbk{display:flex;align-items:center;gap:4px;padding:6px 10px 6px 4px;border-radius:14px;font-size:14px;font-weight:600;color:var(–ac);white-space:nowrap}
+.rbk:active{background:var(–acp)}
+.rtitle{flex:1;font-size:13px;font-weight:500;color:var(–tx2);text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rtool{display:flex;gap:3px}
+.ribt{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;color:var(–tx2);border:1.5px solid var(–bd2);background:var(–bg3)}
+.ribt:active{background:var(–acp);transform:scale(.9)}
+
+/* 書頁區域：佔滿全部，點擊分左中右 */
+.rbook{
+position:absolute;
+top:0;left:0;
+width:100%;height:100%;
+overflow:hidden;
+}
+.rzone{position:absolute;top:0;bottom:0;z-index:20}
+.rzone-L{left:0;width:25%}
+.rzone-M{left:25%;width:50%}
+.rzone-R{right:0;width:25%}
+
+/* 頁面滑動容器 */
+.rpwrap{
+position:absolute;
+top:0;left:0;
+height:100%;
+display:flex;
+will-change:transform;
+/* width 由 JS 設定 */
+}
+/* ★ 每頁固定 100vw，height 100% 填滿父容器 */
+.rpage{
+width:100vw;
+height:100%;
+flex-shrink:0;
+overflow:hidden;
+display:flex;
+flex-direction:column;
+/* padding 由 JS 設定（因工具列高度動態） */
+}
+.rp-chap{font-size:10px;color:var(–tx3);opacity:.5;text-align:center;margin-bottom:8px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rp-body{flex:1;overflow:hidden}
+.para{margin-bottom:.6em;text-align:justify;text-indent:2em;word-break:break-all;padding:1px 3px}
+.para.ch{font-weight:700;font-size:1.05em;text-align:center;text-indent:0;letter-spacing:.08em;padding:6px 0 8px}
+.para.ch::after{content:‘✦’;display:block;font-size:.6em;color:var(–ac);margin-top:4px;opacity:.5}
+.para.tts-hi{background:rgba(160,112,24,.14);border-left:2px solid var(–ac);padding-left:8px;text-indent:0}
+.rp-foot{flex-shrink:0;padding-top:5px;margin-top:4px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(–bd);opacity:.4}
+.rp-num{font-size:10px;color:var(–tx3)}
+.rp-pct{font-size:10px;color:var(–tx3)}
+
+/* 底部工具列 */
+.rfoot-wrap{
+position:absolute;bottom:0;left:0;right:0;z-index:30;
+transform:translateY(100%);
+transition:transform .28s var(–ease);
+will-change:transform;
+}
+.rfoot-wrap.show{transform:translateY(0)}
+
+/* 快捷列（第二排） */
+.rfoot-quick{
+background:var(–bg3);border-top:1px solid var(–bd);
+display:flex;align-items:center;gap:8px;
+padding:0 14px;
+max-height:0;opacity:0;overflow:hidden;
+transition:max-height .28s var(–ease),opacity .2s,padding .28s;
+}
+.rfoot-quick.open{max-height:54px;opacity:1;padding:7px 14px}
+
+/* A− / A+ */
+.qfont-grp{display:flex;gap:4px;flex-shrink:0}
+.qfont-btn{
+width:46px;height:34px;border-radius:8px;
 display:flex;align-items:center;justify-content:center;
-font-size:16px;font-weight:700;color:#fff;
-background:var(–ac);border:none;-webkit-appearance:none;
+font-family:var(–serif);font-weight:700;
+color:var(–tx2);border:1.5px solid var(–bd2);background:var(–bg);
+transition:all .12s;
 }
-.pcls:active { background:var(–ac2) }
+.qfont-btn:active{background:var(–ac);color:#fff;border-color:var(–ac);transform:scale(.92)}
+.qfont-btn.off{opacity:.28;pointer-events:none}
+#qFontMinus{font-size:15px}
+#qFontPlus{font-size:19px}
 
-.pbody { flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(–bg2) }
-
-/* 目錄項 */
-.toc-item {
-display:flex;align-items:center;gap:12px;
-padding:14px 18px;cursor:pointer;
-border-bottom:1px solid var(–bd);
-background:var(–bg2);  /* 明確背景 */
-transition:background .12s;
+.qdiv{width:1px;height:26px;background:var(–bd2);flex-shrink:0}
+.qtog{
+height:34px;padding:0 11px;border-radius:8px;
+display:flex;align-items:center;
+font-size:13px;font-weight:700;
+color:var(–tx2);border:1.5px solid var(–bd2);background:var(–bg);
+white-space:nowrap;transition:all .12s;
 }
-.toc-item:last-child { border-bottom:none }
-.toc-item:active { background:var(–acp) }
-.toc-item.cur { background:var(–acp) }
-.toc-item.cur .toc-t { color:var(–ac);font-weight:700 }
-.toc-n { font-size:12px;color:var(–tx3);min-width:28px;text-align:right }
-.toc-t { font-size:15px;color:var(–tx2);flex:1;line-height:1.4 }
-.toc-arr { font-size:12px;color:var(–tx3) }
-.toc-empty { padding:32px 18px;font-size:14px;color:var(–tx3);text-align:center;background:var(–bg2) }
+.qtog:active{background:var(–acp)}
+.qtog.on{background:var(–ac);color:#fff;border-color:var(–ac)}
 
-/* ══════════════════════════════════
-設定面板內容
-══════════════════════════════════ */
-.sg { padding:18px 18px;border-bottom:1.5px solid var(–bd);background:var(–bg2) }
-.sg:last-child { border-bottom:none;padding-bottom:28px }
-.sg-lbl { font-size:11px;color:var(–tx3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px;font-weight:600 }
-
-/* 字體大小按鈕 */
-.fsz-btns { display:flex;gap:8px }
-.fsz-btn {
-flex:1;padding:14px 4px;border-radius:10px;
-display:flex;flex-direction:column;align-items:center;gap:6px;
-cursor:pointer;-webkit-appearance:none;
-background:var(–bg3);border:2px solid var(–bd2);color:var(–tx2);
-transition:all .15s;
-}
-.fsz-btn:active { transform:scale(.94) }
-.fsz-btn.on { background:var(–ac)!important;border-color:var(–ac)!important;color:#fff!important }
-.fsz-ico { font-family:var(–serif);line-height:1;font-weight:500 }
-.fsz-lbl { font-size:11px;letter-spacing:.03em }
-
-/* Toggle */
-.tog-row {
+/* 主工具列（第一排） */
+.rfoot-main{
+background:var(–bg2);border-top:1.5px solid var(–bd2);
+height:52px;padding:0 10px;
 display:flex;align-items:center;justify-content:space-between;
-padding:12px 0;border-bottom:1px solid var(–bd);
 }
-.tog-row:last-child { border-bottom:none }
-.tog-row-l { font-size:15px;color:var(–tx) }
-.tog { position:relative;width:48px;height:28px;flex-shrink:0 }
-.tog input { opacity:0;width:0;height:0 }
-.tog-sl { position:absolute;inset:0;background:var(–bd2);border-radius:14px;cursor:pointer;transition:background .22s }
-.tog-sl::before { content:’’;position:absolute;width:22px;height:22px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .22s var(–ease);box-shadow:0 1px 5px rgba(0,0,0,.25) }
-.tog input:checked + .tog-sl { background:var(–ac) }
-.tog input:checked + .tog-sl::before { transform:translateX(20px) }
+.rfbtns{display:flex;gap:3px;flex-shrink:0}
+.rfbt{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;color:var(–tx2);border:1.5px solid var(–bd2);background:var(–bg3);transition:background .12s}
+.rfbt:active,.rfbt.on{background:var(–ac);color:#fff;border-color:var(–ac)}
+.rfprog{flex:1;margin:0 8px;height:4px;background:var(–bd);border-radius:2px;cursor:pointer;overflow:hidden}
+.rfprog-f{height:100%;background:linear-gradient(90deg,var(–ac),var(–ac2));border-radius:2px;transition:width .3s}
+#rfLbl{font-size:11px;color:var(–tx3);flex-shrink:0;min-width:28px;text-align:right}
+.rfexpand{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(–tx3);border:1.5px solid var(–bd2);background:var(–bg3);transition:all .25s;flex-shrink:0;margin-left:4px}
+.rfexpand:active{background:var(–acp)}
+.rfexpand.open{background:var(–acp);transform:rotate(180deg)}
 
-/* 語速 */
-.spd-wrap { display:flex;align-items:center;gap:12px;padding:4px 0 }
-.spd-slider {
--webkit-appearance:none;appearance:none;
-flex:1;height:6px;border-radius:3px;background:var(–bd2);outline:none;
-}
-.spd-slider::-webkit-slider-thumb {
--webkit-appearance:none;width:22px;height:22px;border-radius:50%;
-background:var(–ac);cursor:pointer;box-shadow:0 2px 8px rgba(160,112,24,.4);
-}
-.spd-val { font-size:16px;font-weight:700;color:var(–ac);min-width:44px;text-align:right }
+/* ═══ 面板 ═══ */
+.pback{display:none;position:fixed;inset:0;z-index:400}
+.pback.on{display:flex;flex-direction:column;justify-content:flex-end}
+.pov{position:absolute;inset:0;background:rgba(0,0,0,.48)}
+.pbox{position:relative;z-index:1;height:85vh;background:var(–bg2);border-radius:20px 20px 0 0;display:flex;flex-direction:column;box-shadow:0 -4px 32px var(–sh2);animation:pup .28s var(–ease);overflow:hidden}
+@keyframes pup{from{transform:translateY(100%)}to{transform:none}}
+.phd{padding:16px 18px 12px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;background:var(–bg2);border-bottom:2px solid var(–bd2)}
+.phd-t{font-size:14px;font-weight:700;color:var(–ac);letter-spacing:.08em}
+.pcls{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;background:var(–ac);border:none}
+.pcls:active{background:var(–ac2)}
+.pbody{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(–bg2)}
+.toc-item{display:flex;align-items:center;gap:12px;padding:14px 18px;cursor:pointer;border-bottom:1px solid var(–bd);background:var(–bg2)}
+.toc-item:last-child{border-bottom:none}
+.toc-item:active,.toc-item.cur{background:var(–acp)}
+.toc-item.cur .toc-t{color:var(–ac);font-weight:700}
+.toc-n{font-size:12px;color:var(–tx3);min-width:28px;text-align:right}
+.toc-t{font-size:15px;color:var(–tx2);flex:1;line-height:1.4}
+.toc-arr{font-size:12px;color:var(–tx3)}
+.toc-empty{padding:32px 18px;font-size:14px;color:var(–tx3);text-align:center}
+.sg{padding:16px 18px;border-bottom:1.5px solid var(–bd);background:var(–bg2)}
+.sg:last-child{border-bottom:none;padding-bottom:28px}
+.sg-lbl{font-size:11px;color:var(–tx3);letter-spacing:.1em;margin-bottom:12px;font-weight:600}
+.tog-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(–bd)}
+.tog-row:last-child{border-bottom:none}
+.tog-row-l{font-size:15px;color:var(–tx)}
+.tog{position:relative;width:48px;height:28px;flex-shrink:0}
+.tog input{opacity:0;width:0;height:0}
+.tog-sl{position:absolute;inset:0;background:var(–bd2);border-radius:14px;cursor:pointer;transition:background .22s}
+.tog-sl::before{content:’’;position:absolute;width:22px;height:22px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .22s var(–ease);box-shadow:0 1px 5px rgba(0,0,0,.25)}
+.tog input:checked+.tog-sl{background:var(–ac)}
+.tog input:checked+.tog-sl::before{transform:translateX(20px)}
+.spd-wrap{display:flex;align-items:center;gap:12px;padding:4px 0}
+.spd-slider{-webkit-appearance:none;appearance:none;flex:1;height:6px;border-radius:3px;background:var(–bd2);outline:none}
+.spd-slider::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:var(–ac);cursor:pointer;box-shadow:0 2px 8px rgba(160,112,24,.4)}
+.spd-val{font-size:16px;font-weight:700;color:var(–ac);min-width:44px;text-align:right}
+.v-sel{width:100%;padding:11px 14px;border-radius:10px;border:2px solid var(–bd2);background:var(–bg3);color:var(–tx);font-size:14px;font-family:var(–serif);outline:none;-webkit-appearance:none;background-image:url(“data:image/svg+xml,%3Csvg xmlns=‘http://www.w3.org/2000/svg’ width=‘12’ height=‘8’%3E%3Cpath d=‘M1 1l5 5 5-5’ stroke=’%23a07018’ stroke-width=‘1.6’ fill=‘none’/%3E%3C/svg%3E”);background-repeat:no-repeat;background-position:right 14px center;padding-right:36px}
 
-/* 語音選擇 */
-.v-sel {
-width:100%;padding:11px 14px;border-radius:10px;
-border:2px solid var(–bd2);background:var(–bg3);
-color:var(–tx);font-size:14px;font-family:var(–serif);
-outline:none;-webkit-appearance:none;appearance:none;
-background-image:url(“data:image/svg+xml,%3Csvg xmlns=‘http://www.w3.org/2000/svg’ width=‘12’ height=‘8’%3E%3Cpath d=‘M1 1l5 5 5-5’ stroke=’%23a07018’ stroke-width=‘1.6’ fill=‘none’/%3E%3C/svg%3E”);
-background-repeat:no-repeat;background-position:right 14px center;padding-right:36px;
-}
+/* Toast */
+#toasts{position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:999;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none}
+.toast{background:#1a1208;color:#f5f0e8;padding:9px 22px;border-radius:20px;font-size:14px;font-weight:500;box-shadow:0 4px 18px rgba(0,0,0,.3);animation:tin .25s var(–ease);white-space:nowrap;max-width:80vw;overflow:hidden;text-overflow:ellipsis}
+body.night .toast{background:#c09030;color:#0a0806}
+.toast.out{animation:tout .2s ease-in forwards}
+@keyframes tin{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+@keyframes tout{to{opacity:0;transform:translateY(-6px)}}
 
-/* ══════════════════════════════════
-Toast
-══════════════════════════════════ */
-#toasts {
-position:fixed;top:60px;left:50%;transform:translateX(-50%);
-z-index:999;display:flex;flex-direction:column;
-gap:6px;align-items:center;pointer-events:none;
-}
-.toast {
-background:#1a1208;color:#f5f0e8;
-padding:9px 22px;border-radius:20px;
-font-size:14px;font-weight:500;
-box-shadow:0 4px 18px rgba(0,0,0,.3);
-animation:tin .25s var(–ease);
-white-space:nowrap;max-width:80vw;overflow:hidden;text-overflow:ellipsis;
-}
-body.night .toast { background:#c09030;color:#0a0806 }
-.toast.out { animation:tout .22s ease-in forwards }
-@keyframes tin { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:none} }
-@keyframes tout { to{opacity:0;transform:translateY(-6px)} }
+/* Dialog */
+.dlg-back{display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.55);align-items:center;justify-content:center}
+.dlg-back.on{display:flex}
+.dlg-box{background:var(–bg2);border-radius:16px;padding:26px 22px;width:min(300px,86vw);box-shadow:0 12px 40px var(–sh2);animation:scin .22s var(–ease)}
+@keyframes scin{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:none}}
+.dlg-t{font-size:17px;font-weight:700;color:var(–tx);margin-bottom:8px}
+.dlg-m{font-size:14px;color:var(–tx3);line-height:1.65;margin-bottom:20px}
+.dlg-bts{display:flex;gap:10px;justify-content:flex-end}
+.dlg-no{padding:10px 20px;border-radius:9px;font-size:14px;color:var(–tx2);border:2px solid var(–bd2);background:var(–bg3)}
+.dlg-yes{padding:10px 20px;border-radius:9px;font-size:14px;font-weight:700;background:#b83226;color:#fff;border:none}
+.dlg-yes:active{background:#d9392b}
 
-/* ══════════════════════════════════
-對話框
-══════════════════════════════════ */
-.dlg-back { display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);align-items:center;justify-content:center }
-.dlg-back.on { display:flex }
-.dlg-box { background:var(–bg2);border-radius:16px;padding:26px 22px;width:min(300px,86vw);box-shadow:0 12px 40px var(–sh2);animation:scin .25s var(–ease) }
-@keyframes scin { from{opacity:0;transform:scale(.88)} to{opacity:1;transform:none} }
-.dlg-t { font-size:17px;font-weight:700;color:var(–tx);margin-bottom:8px }
-.dlg-m { font-size:14px;color:var(–tx3);line-height:1.65;margin-bottom:20px }
-.dlg-bts { display:flex;gap:10px;justify-content:flex-end }
-.dlg-no { padding:10px 20px;border-radius:9px;font-size:14px;color:var(–tx2);border:2px solid var(–bd2);background:var(–bg3) }
-.dlg-no:active { background:var(–bd) }
-.dlg-yes { padding:10px 20px;border-radius:9px;font-size:14px;font-weight:700;background:#b83226;color:#fff;border:none }
-.dlg-yes:active { background:#d9392b }
+/* Mask */
+.lmask{display:none;position:fixed;inset:0;z-index:800;background:rgba(0,0,0,.52);align-items:center;justify-content:center;flex-direction:column;gap:16px}
+.lmask.on{display:flex}
+.lspin{width:44px;height:44px;border-radius:50%;border:4px solid rgba(160,112,24,.3);border-top-color:var(–ac);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ltxt{font-size:14px;color:#fff}
 
-/* 載入遮罩 */
-.lmask {
-display:none;position:fixed;inset:0;z-index:800;
-background:rgba(0,0,0,.52);
-align-items:center;justify-content:center;flex-direction:column;gap:16px;
-}
-.lmask.on { display:flex }
-.lspin { width:44px;height:44px;border-radius:50%;border:4px solid rgba(160,112,24,.3);border-top-color:var(–ac);animation:spin .8s linear infinite }
-@keyframes spin { to{transform:rotate(360deg)} }
-.ltxt { font-size:14px;color:#fff;letter-spacing:.05em }
+/* 錯誤訊息（debug 用） */
+#errbox{display:none;position:fixed;bottom:80px;left:10px;right:10px;z-index:900;background:rgba(160,0,0,.9);color:#fff;padding:10px 14px;border-radius:10px;font-size:12px;line-height:1.5;word-break:break-all}
 </style>
 
 </head>
 <body>
 
-<!-- ══════════════════════════════════
-     書庫
-══════════════════════════════════ -->
+<!-- ★ 書庫：lib-view，永遠在 DOM -->
 
-<div id="vLib" class="view on">
+<div id="vLib" class="view lib-view">
   <header class="lhd">
     <div class="lhd-logo">書閣 <small>Novel Reader</small></div>
-    <span class="lhd-ver">v1.5</span>
+    <span class="lhd-ver">v1.8</span>
     <button class="ibt" id="btnTheme">🌙</button>
     <button class="ibt" id="btnUp">＋</button>
   </header>
@@ -482,81 +310,66 @@ align-items:center;justify-content:center;flex-direction:column;gap:16px;
   <input type="file" id="fi" accept=".txt">
 </div>
 
-<!-- ══════════════════════════════════
-     閱讀器（全螢幕）
-══════════════════════════════════ -->
+<!-- ★ 閱讀器：rdr-view，永遠在 DOM -->
 
-<div id="vRdr" class="view">
-
-  <!-- 頂部工具列（預設隱藏，translateY(-100%)） -->
-
-  <header class="rhd" id="rhd">
-    <button class="rbk" id="btnBack">◀ 書庫</button>
-    <div class="rtitle" id="rdTitle">—</div>
-    <div class="rtool">
-      <button class="ribt" id="btnToc">☰</button>
-      <button class="ribt" id="btnSet">⚙</button>
+<div id="vRdr" class="view rdr-view">
+  <div id="rdrInner">
+    <!-- 頂部工具列 -->
+    <header class="rhd" id="rhd">
+      <button class="rbk" id="btnBack">◀ 書庫</button>
+      <div class="rtitle" id="rdTitle">—</div>
+      <div class="rtool">
+        <button class="ribt" id="btnToc">☰</button>
+        <button class="ribt" id="btnSet">⚙</button>
+      </div>
+    </header>
+    <!-- 翻頁主體 -->
+    <div class="rbook" id="rbook">
+      <div class="rzone rzone-L" id="zoneL"></div>
+      <div class="rzone rzone-M" id="zoneM"></div>
+      <div class="rzone rzone-R" id="zoneR"></div>
+      <div class="rpwrap" id="rpwrap"></div>
     </div>
-  </header>
-
-  <!-- 書頁主體（全螢幕） -->
-
-  <div class="rbook" id="rbook">
-    <!-- 三個點擊區 -->
-    <div class="rzone rzone-L" id="zoneL"></div>
-    <div class="rzone rzone-M" id="zoneM"></div>
-    <div class="rzone rzone-R" id="zoneR"></div>
-    <!-- 頁面容器 -->
-    <div class="rpwrap" id="rpwrap"></div>
+    <!-- 底部工具列 -->
+    <div class="rfoot-wrap" id="rfootWrap">
+      <div class="rfoot-quick" id="rfootQuick">
+        <div class="qfont-grp">
+          <button class="qfont-btn" id="qFontMinus">A−</button>
+          <button class="qfont-btn" id="qFontPlus">A+</button>
+        </div>
+        <div class="qdiv"></div>
+        <button class="qtog" id="qConvBtn">繁</button>
+        <button class="qtog" id="qNightBtn">🌙</button>
+      </div>
+      <div class="rfoot-main">
+        <div class="rfbtns">
+          <button class="rfbt" id="btnPrev">⏮</button>
+          <button class="rfbt" id="btnPlay">▶</button>
+          <button class="rfbt" id="btnNext">⏭</button>
+          <button class="rfbt" id="btnStop">⏹</button>
+        </div>
+        <div class="rfprog" id="rfprog"><div class="rfprog-f" id="rfprogF" style="width:0%"></div></div>
+        <div id="rfLbl">0%</div>
+        <button class="rfexpand" id="rfexpand">▲</button>
+      </div>
+    </div>
   </div>
-
-  <!-- 底部工具列（預設隱藏） -->
-
-  <footer class="rfoot" id="rfoot">
-    <div class="rfbtns">
-      <button class="rfbt" id="btnPrev">⏮</button>
-      <button class="rfbt" id="btnPlay">▶</button>
-      <button class="rfbt" id="btnNext">⏭</button>
-      <button class="rfbt" id="btnStop">⏹</button>
-    </div>
-    <div class="rfprog" id="rfprog"><div class="rfprog-f" id="rfprogF" style="width:0%"></div></div>
-    <div id="rfLbl">0%</div>
-  </footer>
-
 </div>
 
-<!-- 目錄面板 -->
+<!-- 面板 -->
 
 <div class="pback" id="tocBack">
   <div class="pov" id="tocOv"></div>
   <div class="pbox">
-    <div class="phd">
-      <span class="phd-t">📖 章節目錄</span>
-      <button class="pcls" id="tocCls">✕</button>
-    </div>
+    <div class="phd"><span class="phd-t">📖 章節目錄</span><button class="pcls" id="tocCls">✕</button></div>
     <div class="pbody" id="tocBody"></div>
   </div>
 </div>
-
-<!-- 設定面板 -->
-
 <div class="pback" id="setBack">
   <div class="pov" id="setOv"></div>
   <div class="pbox">
-    <div class="phd">
-      <span class="phd-t">⚙ 閱讀設定</span>
-      <button class="pcls" id="setCls">✕</button>
-    </div>
+    <div class="phd"><span class="phd-t">⚙ 閱讀設定</span><button class="pcls" id="setCls">✕</button></div>
     <div class="pbody">
-      <div class="sg">
-        <div class="sg-lbl">字體大小</div>
-        <div class="fsz-btns" id="fszBtns">
-          <button class="fsz-btn" data-sz="15"><span class="fsz-ico" style="font-size:15px">文</span><span class="fsz-lbl">小</span></button>
-          <button class="fsz-btn" data-sz="18"><span class="fsz-ico" style="font-size:18px">文</span><span class="fsz-lbl">中</span></button>
-          <button class="fsz-btn" data-sz="21"><span class="fsz-ico" style="font-size:21px">文</span><span class="fsz-lbl">大</span></button>
-          <button class="fsz-btn" data-sz="26"><span class="fsz-ico" style="font-size:26px">文</span><span class="fsz-lbl">特大</span></button>
-        </div>
-      </div>
       <div class="sg">
         <div class="sg-lbl">顯示主題</div>
         <div class="tog-row">
@@ -583,423 +396,377 @@ align-items:center;justify-content:center;flex-direction:column;gap:16px;
   </div>
 </div>
 
-<!-- 對話框 -->
-
 <div class="dlg-back" id="dlgBack">
   <div class="dlg-box">
     <div class="dlg-t" id="dlgT">確認刪除</div>
-    <div class="dlg-m" id="dlgM">確定要刪除嗎？</div>
+    <div class="dlg-m" id="dlgM"></div>
     <div class="dlg-bts">
       <button class="dlg-no" id="dlgNo">取消</button>
       <button class="dlg-yes" id="dlgYes">刪除</button>
     </div>
   </div>
 </div>
-
-<!-- 載入遮罩 -->
-
-<div class="lmask" id="lmask">
-  <div class="lspin"></div>
-  <div class="ltxt" id="ltxt">處理中…</div>
-</div>
-
+<div class="lmask" id="lmask"><div class="lspin"></div><div class="ltxt" id="ltxt">處理中…</div></div>
 <div id="toasts"></div>
+<div id="errbox"></div>
 
 <script>
 'use strict';
-/* ══════════════════════════════════
-   簡繁對照表
-══════════════════════════════════ */
-const S2T = (() => {
+
+/* ════════════════════════════════
+   全域錯誤捕捉（方便 debug）
+════════════════════════════════ */
+window.onerror = function(msg,src,line,col,err){
+  const b = document.getElementById('errbox');
+  b.style.display = 'block';
+  b.textContent = `ERR: ${msg} (${line}:${col})\n${err&&err.stack?err.stack.substring(0,200):''}`;
+};
+window.addEventListener('unhandledrejection', e=>{
+  const b = document.getElementById('errbox');
+  b.style.display = 'block';
+  b.textContent = `PROMISE: ${e.reason}`;
+});
+
+/* ════════════════════════════════
+   簡繁對照
+════════════════════════════════ */
+const S2T = (()=>{
   const r = '爱愛碍礙暗暗拔拔摆擺败敗办辦帮幫报報备備贝貝笔筆毕畢边邊变變标標别別宾賓补補财財参參测測层層产產长長场場尝嘗厂廠车車彻徹陈陳称稱冲衝处處传傳创創从從达達带帶单單担擔当當党黨导導灯燈敌敵递遞点點电電东東动動断斷对對队隊尔爾发發烦煩飞飛废廢费費风風凤鳳妇婦复複该該盖蓋干幹赶趕刚剛个個给給购購观觀关關归歸国國过過汉漢号號护護划劃华華画畫话話坏壞欢歡换換汇匯会會获獲机機积積极極际際继繼价價见見将將讲講进進经經举舉据據绝絕开開来來兰蘭乐樂类類里裡联聯炼煉两兩临臨龙龍录錄轮輪论論罗羅马馬买買卖賣满滿么麼门門梦夢灭滅庙廟灵靈拟擬鸟鳥宁寧农農欧歐盘盤飘飄苹蘋齐齊气氣签簽迁遷钱錢强強亲親区區权權确確热熱认認软軟烧燒设設声聲时時实實视視书書树樹数數说說态態台臺体體听聽头頭图圖团團万萬网網为為问問无無务務线線现現乡鄉响響写寫学學压壓样樣叶葉医醫义義艺藝阴陰应應拥擁优優语語园園远遠运運杂雜战戰张張证證质質众眾专專庄莊钟鐘种種终終转轉装裝状狀总總组組词詞错錯调調读讀额額儿兒恶惡档檔兑兌';
   const m = {};
-  for (let i = 0; i + 1 < r.length; i += 2) m[r[i]] = r[i + 1];
+  for (let i = 0; i+1 < r.length; i+=2) m[r[i]] = r[i+1];
   return m;
 })();
-const s2t = t => { let r = ''; for (let i = 0; i < t.length; i++) r += S2T[t[i]] || t[i]; return r };
+const s2t = t => { let r=''; for (let i=0;i<t.length;i++) r+=S2T[t[i]]||t[i]; return r };
 
-/* ══════════════════════════════════
-   儲存層（IDB 優先，失敗降級 LS）
-   ★ 存原始文字，不轉換
-══════════════════════════════════ */
+/* ════════════════════════════════
+   IDB 儲存層
+════════════════════════════════ */
 const Store = {
-  _db: null, _useLS: false,
-  IDB: 'ShugeDB5', VER: 1, ST: 'paras',
-
-  async init() {
+  _db:null, _ls:false, DB:'ShugeDB8', VER:1, ST:'paras',
+  async init(){
     try {
-      this._db = await new Promise((ok, err) => {
-        const q = indexedDB.open(this.IDB, this.VER);
+      this._db = await new Promise((ok,err)=>{
+        const q = indexedDB.open(this.DB, this.VER);
         q.onupgradeneeded = e => {
           const db = e.target.result;
           if (!db.objectStoreNames.contains(this.ST))
-            db.createObjectStore(this.ST, { keyPath: 'id' });
+            db.createObjectStore(this.ST, {keyPath:'id'});
         };
         q.onsuccess = e => ok(e.target.result);
         q.onerror = e => err(e.target.error);
-        q.onblocked = () => err(new Error('IDB blocked'));
+        q.onblocked = () => err(new Error('blocked'));
       });
-      this._useLS = false;
       console.log('[Store] IDB ready');
-    } catch (e) {
-      console.warn('[Store] fallback to LS:', e.message);
-      this._useLS = true;
+    } catch(e) {
+      console.warn('[Store] LS fallback:', e.message);
+      this._ls = true;
     }
   },
-
-  async put(id, paras) {
-    if (this._useLS) {
-      const chunk = 180000, keys = [];
-      for (let i = 0, ci = 0; i < paras.length; ci++) {
-        const k = `sg5_p_${id}_${ci}`;
-        localStorage.setItem(k, JSON.stringify(paras.slice(i, i + chunk)));
-        keys.push(k); i += chunk;
+  async put(id, paras){
+    if (this._ls) {
+      const chunk=180000, keys=[];
+      for (let i=0,ci=0; i<paras.length; ci++) {
+        const k=`sg8_p_${id}_${ci}`;
+        localStorage.setItem(k, JSON.stringify(paras.slice(i, i+chunk)));
+        keys.push(k); i+=chunk;
       }
-      localStorage.setItem(`sg5_pk_${id}`, JSON.stringify(keys));
+      localStorage.setItem(`sg8_pk_${id}`, JSON.stringify(keys));
       return;
     }
-    await new Promise((ok, err) => {
-      const tx = this._db.transaction(this.ST, 'readwrite');
-      tx.objectStore(this.ST).put({ id, paras });
-      tx.oncomplete = ok; tx.onerror = e => err(e.target.error);
+    return new Promise((ok,err)=>{
+      const tx = this._db.transaction(this.ST,'readwrite');
+      tx.objectStore(this.ST).put({id, paras});
+      tx.oncomplete = ok; tx.onerror = e=>err(e.target.error);
     });
   },
-
-  async get(id) {
-    if (this._useLS) {
-      const raw = localStorage.getItem(`sg5_pk_${id}`);
+  async get(id){
+    if (this._ls) {
+      const raw = localStorage.getItem(`sg8_pk_${id}`);
       if (!raw) return [];
       let all = [];
       for (const k of JSON.parse(raw)) {
-        const v = localStorage.getItem(k);
-        if (v) all = all.concat(JSON.parse(v));
+        const v = localStorage.getItem(k); if(v) all=all.concat(JSON.parse(v));
       }
       return all;
     }
-    return new Promise((ok, err) => {
-      const q = this._db.transaction(this.ST, 'readonly').objectStore(this.ST).get(id);
+    return new Promise((ok,err)=>{
+      const q = this._db.transaction(this.ST,'readonly').objectStore(this.ST).get(id);
       q.onsuccess = e => ok(e.target.result?.paras || []);
       q.onerror = e => err(e.target.error);
     });
   },
-
-  async del(id) {
-    if (this._useLS) {
-      const raw = localStorage.getItem(`sg5_pk_${id}`);
-      if (raw) JSON.parse(raw).forEach(k => localStorage.removeItem(k));
-      localStorage.removeItem(`sg5_pk_${id}`);
-      return;
+  async del(id){
+    if (this._ls) {
+      const raw = localStorage.getItem(`sg8_pk_${id}`);
+      if (raw) JSON.parse(raw).forEach(k=>localStorage.removeItem(k));
+      localStorage.removeItem(`sg8_pk_${id}`); return;
     }
-    await new Promise((ok, err) => {
-      const tx = this._db.transaction(this.ST, 'readwrite');
+    return new Promise((ok,err)=>{
+      const tx = this._db.transaction(this.ST,'readwrite');
       tx.objectStore(this.ST).delete(id);
-      tx.oncomplete = ok; tx.onerror = e => err(e.target.error);
+      tx.oncomplete=ok; tx.onerror=e=>err(e.target.error);
     });
   }
 };
 
-/* ══════════════════════════════════
+/* ════════════════════════════════
    Metadata
-══════════════════════════════════ */
+════════════════════════════════ */
 const Meta = {
-  KM: 'sg5_meta', KP: 'sg5_prefs',
-  load() { try { return JSON.parse(localStorage.getItem(this.KM) || '{}') } catch { return {} } },
-  save(d) { localStorage.setItem(this.KM, JSON.stringify(d)) },
-  loadP() { try { return JSON.parse(localStorage.getItem(this.KP) || '{}') } catch { return {} } },
-  saveP(p) { localStorage.setItem(this.KP, JSON.stringify(p)) },
-  books() { return Object.values(this.load()).sort((a, b) => (b.addedAt || 0) - (a.addedAt || 0)) },
-  saveBook(m) { const d = this.load(); d[m.id] = m; this.save(d) },
-  delBook(id) { const d = this.load(); delete d[id]; this.save(d) },
-  setPos(id, pg) { const d = this.load(); if (d[id]) { d[id].pos = pg; d[id].lastRead = Date.now(); } this.save(d) }
+  KM:'sg8_meta', KP:'sg8_prefs',
+  load(){ try{return JSON.parse(localStorage.getItem(this.KM)||'{}')}catch{return{}} },
+  save(d){ localStorage.setItem(this.KM,JSON.stringify(d)) },
+  loadP(){ try{return JSON.parse(localStorage.getItem(this.KP)||'{}')}catch{return{}} },
+  saveP(p){ localStorage.setItem(this.KP,JSON.stringify(p)) },
+  books(){ return Object.values(this.load()).sort((a,b)=>(b.addedAt||0)-(a.addedAt||0)) },
+  saveBook(m){ const d=this.load(); d[m.id]=m; this.save(d) },
+  delBook(id){ const d=this.load(); delete d[id]; this.save(d) },
+  setPos(id,pg){ const d=this.load(); if(d[id]){d[id].pos=pg;d[id].lastRead=Date.now();} this.save(d) }
 };
 
-/* ══════════════════════════════════
-   章節解析
-══════════════════════════════════ */
+/* 章節解析 */
 const CH_RE = /^(第\s*[零一二三四五六七八九十百千萬0-9]+\s*[章節回卷集篇部]|Chapter\s+\d+|CHAPTER\s+\d+|序章|尾聲|後記|前言|番外|卷首|楔子|【.{1,30}】|《.{1,30}》)/i;
-const parseChs = paras => {
-  const c = [];
-  paras.forEach((p, i) => { if (CH_RE.test(p.trim())) c.push({ title: p.trim(), idx: i }) });
-  return c;
-};
+const parseChs = p => { const c=[]; p.forEach((s,i)=>{ if(CH_RE.test(s.trim())) c.push({title:s.trim(),idx:i}) }); return c };
 
-/* ══════════════════════════════════
-   編碼偵測
-══════════════════════════════════ */
+/* 編碼偵測 */
 const readFile = file => {
-  const try_ = enc => new Promise((ok, er) => {
-    const fr = new FileReader();
-    fr.onload = e => ok(e.target.result); fr.onerror = er;
-    fr.readAsText(file, enc);
-  });
-  return try_('UTF-8').then(t => {
-    const g = (t.match(/\ufffd/g) || []).length;
-    if (g > 5) return try_('GBK').then(t2 => (t2.match(/\ufffd/g) || []).length < g ? t2 : try_('BIG5'));
-    return t;
-  });
+  const try_ = enc => new Promise((ok,er)=>{ const fr=new FileReader(); fr.onload=e=>ok(e.target.result); fr.onerror=er; fr.readAsText(file,enc) });
+  return try_('UTF-8').then(t=>{ const g=(t.match(/\ufffd/g)||[]).length; if(g>5) return try_('GBK').then(t2=>(t2.match(/\ufffd/g)||[]).length<g?t2:try_('BIG5')); return t });
 };
 
-/* ══════════════════════════════════
-   封面顏色（雜湊）
-══════════════════════════════════ */
-const PALS = [
-  ['#243356', '#141d36'], ['#322256', '#1c1236'], ['#224438', '#11291f'],
-  ['#4e3416', '#2c1c08'], ['#163356', '#091d36'], ['#3e1424', '#22090f'],
-  ['#143e32', '#09271e'], ['#321244', '#1c0826'], ['#163844', '#091f2a'],
-  ['#3e3214', '#222008'], ['#243e4e', '#122430'], ['#3c1a1a', '#220a0a'],
-];
-const cvColor = title => {
-  let h = 0;
-  for (let i = 0; i < title.length; i++) h = (h * 31 + title.charCodeAt(i)) | 0;
-  const [a, b] = PALS[Math.abs(h) % PALS.length];
-  return `linear-gradient(150deg, ${a}, ${b})`;
-};
+/* 封面顏色 */
+const PALS = [['#243356','#141d36'],['#322256','#1c1236'],['#224438','#11291f'],['#4e3416','#2c1c08'],['#163356','#091d36'],['#3e1424','#22090f'],['#143e32','#09271e'],['#321244','#1c0826'],['#163844','#091f2a'],['#3e3214','#222008'],['#243e4e','#122430'],['#3c1a1a','#220a0a']];
+const cvColor = t => { let h=0; for(let i=0;i<t.length;i++) h=(h*31+t.charCodeAt(i))|0; const[a,b]=PALS[Math.abs(h)%PALS.length]; return`linear-gradient(150deg,${a},${b})` };
 
-/* ══════════════════════════════════
-   工具函式
-══════════════════════════════════ */
-const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-
-function toast(msg, dur = 2200) {
-  const c = document.getElementById('toasts');
-  const el = Object.assign(document.createElement('div'), { className: 'toast', textContent: msg });
+/* 工具 */
+const esc = s => String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function toast(msg,dur=2200){
+  const c=document.getElementById('toasts');
+  const el=Object.assign(document.createElement('div'),{className:'toast',textContent:msg});
   c.appendChild(el);
-  setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 250) }, dur);
+  setTimeout(()=>{ el.classList.add('out'); setTimeout(()=>el.remove(),220) },dur);
 }
-
-function showLoad(txt) { document.getElementById('ltxt').textContent = txt || '處理中…'; document.getElementById('lmask').classList.add('on') }
-function hideLoad() { document.getElementById('lmask').classList.remove('on') }
-
-function confirm_(t, m) {
-  return new Promise(r => {
-    document.getElementById('dlgT').textContent = t;
-    document.getElementById('dlgM').textContent = m;
-    document.getElementById('dlgBack').classList.add('on');
-    const done = v => { document.getElementById('dlgBack').classList.remove('on'); r(v) };
-    document.getElementById('dlgYes').onclick = () => done(true);
-    document.getElementById('dlgNo').onclick = () => done(false);
-  });
-}
-
-function applyTheme(night) {
+function showLoad(t){ document.getElementById('ltxt').textContent=t||'處理中…'; document.getElementById('lmask').classList.add('on') }
+function hideLoad(){ document.getElementById('lmask').classList.remove('on') }
+function confirm_(t,m){ return new Promise(r=>{
+  document.getElementById('dlgT').textContent=t;
+  document.getElementById('dlgM').textContent=m;
+  document.getElementById('dlgBack').classList.add('on');
+  const done=v=>{ document.getElementById('dlgBack').classList.remove('on'); r(v) };
+  document.getElementById('dlgYes').onclick=()=>done(true);
+  document.getElementById('dlgNo').onclick=()=>done(false);
+})}
+function applyTheme(night){
   night ? document.body.classList.add('night') : document.body.classList.remove('night');
   document.getElementById('togNight').checked = !!night;
-  document.getElementById('btnTheme').textContent = night ? '☀' : '🌙';
+  document.getElementById('btnTheme').textContent = night?'☀':'🌙';
+  document.getElementById('qNightBtn').classList.toggle('on',!!night);
 }
 
-/* ══════════════════════════════════
+/* ════════════════════════════════
+   視圖切換（不用 display:none）
+════════════════════════════════ */
+function showLib(){
+  document.getElementById('vLib').classList.remove('hidden');
+  document.getElementById('vRdr').classList.remove('active');
+}
+function showRdr(){
+  document.getElementById('vLib').classList.add('hidden');
+  document.getElementById('vRdr').classList.add('active');
+}
+
+/* ════════════════════════════════
    書庫
-══════════════════════════════════ */
+════════════════════════════════ */
 const Lib = {
-  render() {
+  render(){
     const g = document.getElementById('bgrid');
     const books = Meta.books();
-    document.getElementById('libCnt').textContent = books.length + ' 本';
+    document.getElementById('libCnt').textContent = books.length+' 本';
     if (!books.length) {
-      g.innerHTML = `<div class="bempty">
-        <div class="bempty-ico">📚</div>
-        <p class="bempty-txt">書庫空空如也<br>上傳 TXT 格式小說開始閱讀</p>
-        <button class="bempty-btn" onclick="document.getElementById('fi').click()">＋ 上傳第一本書</button>
-      </div>`; return;
+      g.innerHTML = `<div class="bempty"><div class="bempty-ico">📚</div><p class="bempty-txt">書庫空空如也<br>上傳 TXT 格式小說開始閱讀</p><button class="bempty-btn" onclick="document.getElementById('fi').click()">＋ 上傳第一本書</button></div>`;
+      return;
     }
-    g.innerHTML = books.map(b => {
-      const pct = b.total > 0 ? Math.round((b.pos || 0) / b.total * 100) : 0;
+    g.innerHTML = books.map(b=>{
+      const pct = b.total>0 ? Math.round((b.pos||0)/b.total*100) : 0;
       return `<div class="bcard" onclick="Reader.open('${b.id}')">
-        <div class="bcov" id="cv_${b.id}">
-          <div class="bcov-spine"></div>
-          <div class="bcov-lines"></div>
-          <div class="bcov-t">${esc(b.title)}</div>
-          <div class="bcov-rule"></div>
-        </div>
-        <div class="binfo">
-          <div class="bname">${esc(b.title)}</div>
-          <div class="bmeta"><span>${b.chapters.length} 章</span><span>${pct}%</span></div>
-          <div class="bprog"><div class="bprog-f" style="width:${pct}%"></div></div>
-        </div>
+        <div class="bcov" id="cv_${b.id}"><div class="bcov-spine"></div><div class="bcov-lines"></div><div class="bcov-t">${esc(b.title)}</div><div class="bcov-rule"></div></div>
+        <div class="binfo"><div class="bname">${esc(b.title)}</div><div class="bmeta"><span>${b.chapters.length} 章</span><span>${pct}%</span></div><div class="bprog"><div class="bprog-f" style="width:${pct}%"></div></div></div>
         <button class="bdel" onclick="event.stopPropagation();Lib.del('${b.id}','${esc(b.title)}')">✕</button>
       </div>`;
     }).join('');
-    // ★ 封面顏色直接設在 element.style，解決 Safari 偽元素繼承問題
-    books.forEach(b => {
-      const el = document.getElementById('cv_' + b.id);
-      if (el) el.style.background = cvColor(b.title);
-    });
+    books.forEach(b=>{ const el=document.getElementById('cv_'+b.id); if(el) el.style.background=cvColor(b.title) });
   },
-
-  async del(id, title) {
-    if (!await confirm_('刪除書籍', `確定要移除《${title}》嗎？`)) return;
-    showLoad('刪除中…');
-    await Store.del(id); Meta.delBook(id);
-    hideLoad(); this.render(); toast(`已刪除《${title}》`);
+  async del(id,title){
+    if (!await confirm_('刪除書籍',`確定要移除《${title}》嗎？`)) return;
+    showLoad('刪除中…'); await Store.del(id); Meta.delBook(id); hideLoad(); this.render(); toast(`已刪除《${title}》`);
   },
-
-  async addFile(file) {
+  async addFile(file){
     if (!file) return;
-    if (!file.name.toLowerCase().endsWith('.txt')) { toast('請選擇 .txt 格式'); return }
-    if (file.size > 30 * 1024 * 1024) { toast('文件過大（上限 30MB）'); return }
+    if (!file.name.toLowerCase().endsWith('.txt')){ toast('請選擇 .txt 格式'); return }
+    if (file.size > 30*1024*1024){ toast('文件過大（上限 30MB）'); return }
     showLoad('正在讀取文件…');
     try {
       const raw = await readFile(file);
-      // ★ 存原始文字（不做簡繁轉換），顯示時再轉
-      const paras = raw.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+      const paras = raw.split(/\r?\n/).map(l=>l.trim()).filter(l=>l.length>0);
       const chapters = parseChs(paras);
-      const id = 'b' + Date.now();
-      const title = file.name.replace(/\.txt$/i, '');
+      const id = 'b'+Date.now();
+      const title = file.name.replace(/\.txt$/i,'');
       document.getElementById('ltxt').textContent = '正在儲存，請稍候…';
       await Store.put(id, paras);
-      Meta.saveBook({ id, title, chapters, total: paras.length, pos: 0, addedAt: Date.now() });
+      Meta.saveBook({id,title,chapters,total:paras.length,pos:0,addedAt:Date.now()});
       hideLoad(); this.render();
       toast(`✓ 已加入《${title}》（${paras.length} 段 · ${chapters.length} 章）`);
-    } catch (e) {
-      hideLoad(); console.error(e);
-      toast('讀取失敗：' + (e.message || '').substring(0, 40));
-    }
+    } catch(e){ hideLoad(); console.error(e); toast('讀取失敗：'+(e.message||'').substring(0,40)) }
   }
 };
 
-/* ══════════════════════════════════
+/* ════════════════════════════════
    閱讀器
-══════════════════════════════════ */
+   ★ 分頁用 window.innerWidth/Height，完全不讀 DOM 尺寸
+   ★ 漸進式分頁：先顯示第一頁，背景繼續分頁
+════════════════════════════════ */
 const Reader = {
-  id: null,
-  rawParas: [],     // ★ 原始文字（不轉換）
-  paras: [],        // 顯示用（可能已轉換）
-  chapters: [],
-  pages: [], curPage: 0, totalPages: 0,
-  fontSize: 18, lineH: 2,
-  toolbarOn: false, // 工具列是否顯示
-  _busy: false,
+  id:null, rawParas:[], paras:[], chapters:[],
+  pages:[], curPage:0, totalPages:0,
+  fontSize:18,
+  toolbarOn:false, quickOn:false,
+  _paging:false,   // 是否正在背景分頁
+  STEPS:[15,18,21,26],
 
-  /* 取得顯示用段落（依設定即時轉換） */
-  getDisplayParas() {
-    const conv = Meta.loadP().conv !== false;
-    return conv ? this.rawParas.map(s2t) : this.rawParas;
+  /* ★ 用 window.innerWidth/Height，不依賴任何 DOM */
+  _cpp(){
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const fs = this.fontSize;
+    const topH = this.toolbarOn ? 50 : 0;
+    const botH = this.toolbarOn ? (this.quickOn ? 107 : 52) : 0;
+    const padV = 22 + 13;   // rpage padding-top(14) + extra(8) + bottom(8) + chap(5)
+    const footH = 22;
+    const chapH = 26;
+    const availH = vh - topH - botH - padV - footH - chapH;
+    const availW = vw - 40;
+    const cpl = Math.floor(availW / fs);      // chars per line
+    const lpp = Math.floor(availH / (fs*2));  // lines per page (line-height=2)
+    return Math.max(60, cpl * lpp);
   },
 
-  async open(id) {
+  /* 計算單一頁面的起止，從 startPara 開始，最多 cpp 字 */
+  _onePage(startPara, cpp){
+    let used=0;
+    for (let i=startPara; i<this.paras.length; i++){
+      const len = this.paras[i].length + 1;
+      if (used+len > cpp && i > startPara) return {startPara, endPara:i-1};
+      used += len;
+    }
+    return {startPara, endPara:this.paras.length-1};
+  },
+
+  getDisplayParas(){
+    return Meta.loadP().conv!==false ? this.rawParas.map(s2t) : [...this.rawParas];
+  },
+
+  /* ★ 漸進式分頁
+     1. 立即算第一頁並顯示
+     2. 用 setTimeout(0) 在背景繼續算其餘頁
+  */
+  _startPaging(goToParaIdx){
+    this._paging = true;
+    const cpp = this._cpp();
+    this.pages = [];
+    this.totalPages = 0;
+
+    // 先算「目標位置的那一頁」，立即顯示
+    // 為了快速開啟，只算從段落 0 到目標位置
+    let cursor = 0;
+    let targetPage = 0;
+    while (cursor <= goToParaIdx && cursor < this.paras.length) {
+      const pg = this._onePage(cursor, cpp);
+      this.pages.push(pg);
+      if (pg.startPara <= goToParaIdx && goToParaIdx <= pg.endPara) {
+        targetPage = this.pages.length - 1;
+      }
+      if (goToParaIdx <= pg.endPara) { cursor = pg.endPara + 1; break; }
+      cursor = pg.endPara + 1;
+    }
+    this.totalPages = this.pages.length; // 暫時值，背景會更新
+
+    // 立即顯示目標頁
+    this.curPage = targetPage;
+    this._render(targetPage);
+    hideLoad();
+
+    // 背景繼續分頁：從 cursor 開始
+    const batchSize = 500; // 每批最多 500 段
+    const self = this;
+    function bgPage(){
+      if (!self._paging || cursor >= self.paras.length){ self._paging=false; self.updFoot(); return }
+      let count = 0;
+      while (cursor < self.paras.length && count < batchSize){
+        const pg = self._onePage(cursor, cpp);
+        self.pages.push(pg);
+        cursor = pg.endPara + 1;
+        count++;
+      }
+      self.totalPages = self.pages.length;
+      self.updFoot();
+      setTimeout(bgPage, 0);
+    }
+    setTimeout(bgPage, 0);
+  },
+
+  async open(id){
     const meta = Meta.load()[id];
-    if (!meta) { toast('找不到書籍'); return }
+    if (!meta){ toast('找不到書籍'); return }
     showLoad('載入中…');
     try {
       this.rawParas = await Store.get(id);
+      if (!this.rawParas.length){ hideLoad(); toast('書籍內容為空'); return }
       this.paras = this.getDisplayParas();
-      this.id = id; this.chapters = meta.chapters || [];
-      document.getElementById('vLib').classList.remove('on');
-      document.getElementById('vRdr').classList.add('on');
+      this.id = id;
+      this.chapters = meta.chapters || [];
+      this.toolbarOn = false; this.quickOn = false; this._paging = false;
+
+      // 更新 UI 標題
       document.getElementById('rdTitle').textContent = meta.title;
-      this.toolbarOn = false;
-      this.syncToolbar();
+
+      // 隱藏工具列
+      document.getElementById('rhd').classList.remove('show');
+      document.getElementById('rfootWrap').classList.remove('show');
+      document.getElementById('rfootQuick').classList.remove('open');
+      document.getElementById('rfexpand').classList.remove('open');
+
       this.applyPrefs();
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        this.paginate();
-        this.goToPage(this.paraToPage(meta.pos || 0), false);
-        hideLoad();
-      }));
-    } catch (e) { hideLoad(); console.error(e); toast('開啟失敗：' + e.message) }
+      showRdr();
+
+      // ★ 漸進式分頁，先顯示目標頁，背景繼續
+      this._startPaging(meta.pos || 0);
+
+    } catch(e){ hideLoad(); console.error(e); toast('開啟失敗：'+e.message) }
   },
 
-  close() {
+  close(){
     TTS.stop();
-    document.getElementById('vRdr').classList.remove('on');
-    document.getElementById('vLib').classList.add('on');
+    this._paging = false;
+    showLib();
     Lib.render();
   },
 
-  /* ── 工具列切換 ── */
-  toggleToolbar() {
-    this.toolbarOn = !this.toolbarOn;
-    this.syncToolbar();
-  },
-
-  syncToolbar() {
-    const rhd = document.getElementById('rhd');
-    const rfoot = document.getElementById('rfoot');
-    if (this.toolbarOn) {
-      rhd.classList.add('show');
-      rfoot.classList.add('show');
-    } else {
-      rhd.classList.remove('show');
-      rfoot.classList.remove('show');
-    }
-    // 重新渲染頁面以調整可用高度
-    if (this.id) {
-      const old = this.pages[this.curPage]?.startPara || 0;
-      this.paginate();
-      this.goToPage(this.paraToPage(old), false);
-    }
-  },
-
-  /* ── 分頁 ── */
-  paginate() {
-    const rbook = document.getElementById('rbook');
-    const bH = rbook.clientHeight;
-    const bW = rbook.clientWidth;
-    const fs = this.fontSize;
-    const lh = this.lineH;
-
-    // 工具列佔用的高度
-    const topH = this.toolbarOn ? 50 : 0;
-    const botH = this.toolbarOn ? 54 : 0;
-
-    // 頁面自身的 padding 和固定元素
-    const padV = 14 + 8; // top + bottom page padding
-    const chapH = 8 + 18 + 8; // chap margin + font + margin
-    const footH = 5 + 1 + 4 + 14; // foot padding + border + margin + font
-    const availH = bH - topH - botH - padV - chapH - footH;
-    const availW = bW - 40;
-
-    const m = document.createElement('div');
-    m.style.cssText = `position:fixed;top:-9999px;left:0;visibility:hidden;` +
-      `width:${availW}px;font-size:${fs}px;line-height:${lh};` +
-      `font-family:'Noto Serif TC',Georgia,serif;word-break:break-all;`;
-    document.body.appendChild(m);
-
-    const pages = [];
-    let startPara = 0, usedH = 0;
-
-    for (let i = 0; i < this.paras.length; i++) {
-      const isCh = this.chapters.some(c => c.idx === i);
-      m.style.textIndent = isCh ? '0' : '2em';
-      m.style.fontSize = isCh ? (fs * 1.05) + 'px' : fs + 'px';
-      m.textContent = this.paras[i];
-      const ph = m.offsetHeight + (isCh ? fs * 1.2 : fs * 0.6);
-
-      if (usedH + ph > availH && i > startPara) {
-        pages.push({ startPara, endPara: i - 1 });
-        startPara = i; usedH = ph;
-      } else {
-        usedH += ph;
-      }
-    }
-    if (startPara < this.paras.length) pages.push({ startPara, endPara: this.paras.length - 1 });
-    m.remove();
-
-    this.pages = pages;
-    this.totalPages = pages.length || 1;
-  },
-
-  paraToPage(pi) {
-    for (let i = 0; i < this.pages.length; i++) {
-      if (pi >= this.pages[i].startPara && pi <= this.pages[i].endPara) return i;
-    }
-    return 0;
-  },
-
-  goToPage(pg, anim = true) {
-    if (this._busy) return;
-    pg = Math.max(0, Math.min(pg, this.totalPages - 1));
-    if (anim && pg !== this.curPage) { this._busy = true; setTimeout(() => this._busy = false, 360) }
+  /* 渲染當前頁 + 前後各一頁 */
+  _render(pg){
+    if (this.pages.length === 0) return;
+    pg = Math.max(0, Math.min(pg, this.pages.length-1));
+    this.curPage = pg;
 
     const wrap = document.getElementById('rpwrap');
-    const rbook = document.getElementById('rbook');
     wrap.innerHTML = '';
-
     const topH = this.toolbarOn ? 50 : 0;
-    const botH = this.toolbarOn ? 54 : 0;
+    const botH = this.toolbarOn ? (this.quickOn ? 107 : 52) : 0;
+    const vw = window.innerWidth;
 
-    const prev = pg > 0 ? this.mkPage(pg - 1, rbook, topH, botH) : null;
-    const curr = this.mkPage(pg, rbook, topH, botH);
-    const next = pg < this.totalPages - 1 ? this.mkPage(pg + 1, rbook, topH, botH) : null;
+    const prev = pg>0 ? this._mkPage(pg-1,topH,botH) : null;
+    const curr = this._mkPage(pg,topH,botH);
+    const next = pg<this.pages.length-1 ? this._mkPage(pg+1,topH,botH) : null;
 
     if (prev) wrap.appendChild(prev);
     wrap.appendChild(curr);
@@ -1007,306 +774,277 @@ const Reader = {
 
     const total = wrap.children.length;
     const cIdx = prev ? 1 : 0;
-    Array.from(wrap.children).forEach(c => { c.style.width = (100 / total) + '%' });
-    wrap.style.width = (total * 100) + '%';
+    wrap.style.width = (total*vw)+'px';
     wrap.style.transition = 'none';
-    wrap.style.transform = `translateX(${-cIdx * (100 / total)}%)`;
+    wrap.style.transform = `translateX(${-cIdx*vw}px)`;
 
-    this.curPage = pg;
-    Meta.setPos(this.id, this.pages[pg]?.startPara || 0);
+    Meta.setPos(this.id, this.pages[pg]?.startPara||0);
     this.updFoot();
     this.updTOChl();
   },
 
-  mkPage(pg, rbook, topH, botH) {
-    if (pg < 0 || pg >= this.totalPages) return null;
-    const { startPara, endPara } = this.pages[pg];
+  goToPage(pg, anim=true){
+    if (this.pages.length===0) return;
+    pg = Math.max(0, Math.min(pg, this.pages.length-1));
+    if (pg===this.curPage && anim===false){ this._render(pg); return }
+    this._render(pg);
+  },
+
+  _mkPage(pg, topH, botH){
+    if (pg<0||pg>=this.pages.length) return null;
+    const {startPara,endPara} = this.pages[pg];
     const fs = this.fontSize;
-
     let chapTitle = '';
-    for (let i = this.chapters.length - 1; i >= 0; i--) {
-      if (this.chapters[i].idx <= startPara) { chapTitle = this.chapters[i].title; break }
+    for (let i=this.chapters.length-1; i>=0; i--){
+      if (this.chapters[i].idx <= startPara){ chapTitle=this.chapters[i].title; break }
     }
-
     const div = document.createElement('div');
-    div.className = 'rpage';
-    div.dataset.pg = pg;
-    // 頂部留空給工具列
-    div.style.paddingTop = (topH + 14) + 'px';
-    div.style.paddingBottom = (botH + 8) + 'px';
+    div.className = 'rpage'; div.dataset.pg = pg;
+    div.style.paddingTop = (topH+14)+'px';
+    div.style.paddingBottom = (botH+8)+'px';
+    div.style.paddingLeft = '20px'; div.style.paddingRight = '20px';
 
-    const hd = document.createElement('div');
-    hd.className = 'rp-chap'; hd.textContent = chapTitle;
-    div.appendChild(hd);
-
-    const body = document.createElement('div');
-    body.className = 'rp-body';
-    body.style.fontSize = fs + 'px';
-    body.style.lineHeight = this.lineH;
-
-    for (let i = startPara; i <= endPara && i < this.paras.length; i++) {
-      const isCh = this.chapters.some(c => c.idx === i);
+    const hd = document.createElement('div'); hd.className='rp-chap'; hd.textContent=chapTitle; div.appendChild(hd);
+    const body = document.createElement('div'); body.className='rp-body'; body.style.fontSize=fs+'px'; body.style.lineHeight='2';
+    for (let i=startPara; i<=endPara&&i<this.paras.length; i++){
+      const isCh = this.chapters.some(c=>c.idx===i);
       const p = document.createElement('p');
-      p.className = 'para' + (isCh ? ' ch' : '');
-      p.dataset.paraIdx = i;
-      if (isCh) p.style.fontSize = (fs * 1.05) + 'px';
+      p.className = 'para'+(isCh?' ch':''); p.dataset.paraIdx=i;
+      if(isCh) p.style.fontSize=(fs*1.05)+'px';
       p.textContent = this.paras[i];
       body.appendChild(p);
     }
     div.appendChild(body);
-
-    const ft = document.createElement('div');
-    ft.className = 'rp-foot';
-    // 頁碼格式：558 / 18753
-    ft.innerHTML = `<span class="rp-num">${pg + 1} / ${this.totalPages}</span><span class="rp-pct">${this.totalPages > 1 ? Math.round(pg / (this.totalPages - 1) * 100) : 100}%</span>`;
+    const ft = document.createElement('div'); ft.className='rp-foot';
+    const tot = this.totalPages||1;
+    const pct = tot>1 ? Math.round(pg/(tot-1)*100) : 100;
+    ft.innerHTML = `<span class="rp-num">${pg+1} / ${tot}</span><span class="rp-pct">${pct}%</span>`;
     div.appendChild(ft);
     return div;
   },
 
-  turnNext() { if (this.curPage >= this.totalPages - 1) { toast('已是最後一頁'); return } this.goToPage(this.curPage + 1) },
-  turnPrev() { if (this.curPage <= 0) { toast('已是第一頁'); return } this.goToPage(this.curPage - 1) },
-
-  updFoot() {
-    const pct = this.totalPages > 1 ? Math.round(this.curPage / (this.totalPages - 1) * 100) : 100;
-    document.getElementById('rfprogF').style.width = pct + '%';
-    document.getElementById('rfLbl').textContent = pct + '%';
+  turnNext(){
+    if (this.curPage >= this.pages.length-1){ toast('已是最後一頁'); return }
+    this._render(this.curPage+1);
+  },
+  turnPrev(){
+    if (this.curPage <= 0){ toast('已是第一頁'); return }
+    this._render(this.curPage-1);
   },
 
-  updTOChl() {
-    const pg = this.pages[this.curPage]; if (!pg) return;
-    const pi = pg.startPara;
-    let ai = 0;
-    for (let i = this.chapters.length - 1; i >= 0; i--) { if (this.chapters[i].idx <= pi) { ai = i; break } }
-    document.querySelectorAll('.toc-item').forEach((el, i) => el.classList.toggle('cur', i === ai));
-    document.querySelector('.toc-item.cur')?.scrollIntoView({ block: 'nearest' });
+  updFoot(){
+    const tot = this.totalPages||1;
+    const pct = tot>1 ? Math.round(this.curPage/(tot-1)*100) : 100;
+    document.getElementById('rfprogF').style.width = pct+'%';
+    document.getElementById('rfLbl').textContent = pct+'%';
   },
 
-  renderTOC() {
+  updTOChl(){
+    const pg = this.pages[this.curPage]; if(!pg) return;
+    const pi = pg.startPara; let ai=0;
+    for (let i=this.chapters.length-1;i>=0;i--){ if(this.chapters[i].idx<=pi){ai=i;break} }
+    document.querySelectorAll('.toc-item').forEach((el,i)=>el.classList.toggle('cur',i===ai));
+    document.querySelector('.toc-item.cur')?.scrollIntoView({block:'nearest'});
+  },
+
+  toggleToolbar(){
+    this.toolbarOn = !this.toolbarOn;
+    if (!this.toolbarOn) this.quickOn = false;
+    document.getElementById('rhd').classList.toggle('show', this.toolbarOn);
+    document.getElementById('rfootWrap').classList.toggle('show', this.toolbarOn);
+    if (!this.toolbarOn){
+      document.getElementById('rfootQuick').classList.remove('open');
+      document.getElementById('rfexpand').classList.remove('open');
+    }
+    this._rerender();
+  },
+
+  toggleQuick(){
+    this.quickOn = !this.quickOn;
+    document.getElementById('rfootQuick').classList.toggle('open', this.quickOn);
+    document.getElementById('rfexpand').classList.toggle('open', this.quickOn);
+    this._rerender();
+  },
+
+  _rerender(){
+    if (!this.id) return;
+    // 重算 cpp，重新分頁
+    const old = this.pages[this.curPage]?.startPara || 0;
+    this._paging = false;
+    this._startPaging(old);
+  },
+
+  renderTOC(){
     const b = document.getElementById('tocBody');
-    if (!this.chapters.length) { b.innerHTML = '<div class="toc-empty">未偵測到章節標題</div>'; return }
-    b.innerHTML = this.chapters.map((ch, i) =>
-      `<div class="toc-item" onclick="Reader.jumpCh(${i})">
-         <span class="toc-n">${i + 1}</span>
-         <span class="toc-t">${esc(ch.title)}</span>
-         <span class="toc-arr">›</span>
-       </div>`
-    ).join('');
+    if (!this.chapters.length){ b.innerHTML='<div class="toc-empty">未偵測到章節標題</div>'; return }
+    b.innerHTML = this.chapters.map((ch,i)=>`<div class="toc-item" onclick="Reader.jumpCh(${i})"><span class="toc-n">${i+1}</span><span class="toc-t">${esc(ch.title)}</span><span class="toc-arr">›</span></div>`).join('');
     this.updTOChl();
   },
-
-  jumpCh(i) {
-    const ch = this.chapters[i]; if (!ch) return;
-    this.goToPage(this.paraToPage(ch.idx));
+  jumpCh(i){
+    const ch=this.chapters[i]; if(!ch) return;
+    const pg = this._paraToPage(ch.idx);
+    this._render(pg);
     document.getElementById('tocBack').classList.remove('on');
-    toast(ch.title.substring(0, 20));
+    toast(ch.title.substring(0,20));
+  },
+  _paraToPage(pi){
+    for(let i=0;i<this.pages.length;i++){ if(pi>=this.pages[i].startPara&&pi<=this.pages[i].endPara) return i }
+    return 0;
   },
 
-  applyPrefs() {
+  applyPrefs(){
     const p = Meta.loadP();
     this.fontSize = p.fontSize || 18;
-    this.lineH = p.lineH || 2;
-    document.querySelectorAll('.fsz-btn').forEach(b => b.classList.toggle('on', +b.dataset.sz === this.fontSize));
     applyTheme(!!p.night);
-    document.getElementById('togConv').checked = p.conv !== false;
-    const spd = p.speed || 1;
+    const conv = p.conv!==false;
+    document.getElementById('togConv').checked = conv;
+    document.getElementById('qConvBtn').textContent = conv?'繁':'简';
+    document.getElementById('qConvBtn').classList.toggle('on',conv);
+    const spd = p.speed||1;
     document.getElementById('spdSlider').value = spd;
-    document.getElementById('spdVal').textContent = spd.toFixed(1) + '×';
+    document.getElementById('spdVal').textContent = spd.toFixed(1)+'×';
+    this._updFontBtns();
   },
-
-  setFont(sz) {
-    this.fontSize = sz;
-    const p = Meta.loadP(); p.fontSize = sz; Meta.saveP(p);
-    document.querySelectorAll('.fsz-btn').forEach(b => b.classList.toggle('on', +b.dataset.sz === sz));
-    if (this.id) {
-      const old = this.pages[this.curPage]?.startPara || 0;
-      this.paginate(); this.goToPage(this.paraToPage(old), false);
-    }
-    toast(`字體 ${sz}px`);
+  _updFontBtns(){
+    const idx = this.STEPS.indexOf(this.fontSize);
+    document.getElementById('qFontMinus').classList.toggle('off', idx<=0);
+    document.getElementById('qFontPlus').classList.toggle('off', idx>=this.STEPS.length-1);
   },
-
-  /* ★ 簡繁切換：直接從 rawParas 重新轉換，不需重讀 IDB */
-  switchConv(conv) {
+  fontStep(dir){
+    const idx = this.STEPS.indexOf(this.fontSize);
+    const ni = Math.max(0,Math.min(this.STEPS.length-1, idx+dir));
+    if (ni===idx) return;
+    this.fontSize = this.STEPS[ni];
+    const p=Meta.loadP(); p.fontSize=this.fontSize; Meta.saveP(p);
+    this._updFontBtns();
+    this._rerender();
+    toast(`字體 ${this.fontSize}px`);
+  },
+  switchConv(conv){
     this.paras = conv ? this.rawParas.map(s2t) : [...this.rawParas];
-    const old = this.pages[this.curPage]?.startPara || 0;
-    this.paginate(); this.goToPage(this.paraToPage(old), false);
-    TTS.segs = [];  // 清空 TTS 快取
-    toast(conv ? '已切換為繁體' : '已切換為原文');
+    document.getElementById('qConvBtn').textContent = conv?'繁':'简';
+    document.getElementById('qConvBtn').classList.toggle('on',conv);
+    document.getElementById('togConv').checked = conv;
+    this._rerender(); TTS.segs=[];
+    toast(conv?'已切換為繁體':'已切換為原文');
   },
-
-  onProgClick(e) {
-    const r = e.currentTarget.getBoundingClientRect();
-    const ratio = (e.clientX - r.left) / r.width;
-    this.goToPage(Math.round(ratio * (this.totalPages - 1)));
+  onProgClick(e){
+    const r=e.currentTarget.getBoundingClientRect();
+    const ratio=(e.clientX-r.left)/r.width;
+    this._render(Math.round(ratio*(this.totalPages-1)));
   },
-
-  hlPara(pi) {
-    document.querySelectorAll('.para.tts-hi').forEach(el => el.classList.remove('tts-hi'));
-    const el = document.querySelector(`.para[data-para-idx="${pi}"]`);
-    if (el) el.classList.add('tts-hi');
-    const pg = this.paraToPage(pi);
-    if (pg !== this.curPage) this.goToPage(pg, true);
+  hlPara(pi){
+    document.querySelectorAll('.para.tts-hi').forEach(el=>el.classList.remove('tts-hi'));
+    const el=document.querySelector(`.para[data-para-idx="${pi}"]`);
+    if(el) el.classList.add('tts-hi');
+    const pg=this._paraToPage(pi);
+    if(pg!==this.curPage) this._render(pg);
   }
 };
 
-/* ══════════════════════════════════
+/* ════════════════════════════════
    TTS
-══════════════════════════════════ */
+════════════════════════════════ */
 const TTS = {
-  idx: 0, segs: [], on: false, paused: false,
-
-  build() {
-    // 用當前顯示段落（已依設定轉換）
-    this.segs = Reader.paras.map((p, i) => ({ text: p, pi: i }));
-  },
-
-  start(from) {
-    if (!Reader.paras.length) { toast('請先開啟書籍'); return }
+  idx:0, segs:[], on:false, paused:false,
+  build(){ this.segs=Reader.paras.map((p,i)=>({text:p,pi:i})) },
+  start(from){
+    if (!Reader.paras.length){ toast('請先開啟書籍'); return }
     this.build();
-    const pg = Reader.pages[Reader.curPage];
-    this.idx = from != null ? from : (pg ? pg.startPara : 0);
-    this.on = true; this.paused = false; this.speak(); this.updUI();
+    const pg=Reader.pages[Reader.curPage];
+    this.idx=from!=null?from:(pg?pg.startPara:0);
+    this.on=true; this.paused=false; this.speak(); this.updUI();
   },
-
-  speak() {
-    if (!this.on || this.idx >= this.segs.length) { this.stop(); return }
+  speak(){
+    if (!this.on||this.idx>=this.segs.length){ this.stop(); return }
     window.speechSynthesis.cancel();
-    const seg = this.segs[this.idx];
-    if (!seg.text.trim()) { this.idx++; setTimeout(() => this.speak(), 10); return }
-    const u = new SpeechSynthesisUtterance(seg.text);
-    const pr = Meta.loadP(); u.rate = pr.speed || 1; u.lang = 'zh-TW';
-    const vs = window.speechSynthesis.getVoices();
-    if (pr.voiceIdx != null && vs[pr.voiceIdx]) u.voice = vs[pr.voiceIdx];
-    else u.voice = vs.find(v => /zh.*(TW|HK)/i.test(v.lang)) || vs.find(v => /zh/i.test(v.lang)) || null;
-    u.onstart = () => Reader.hlPara(seg.pi);
-    u.onend = () => { if (this.on) { this.idx++; this.speak() } };
-    u.onerror = e => { if (e.error !== 'interrupted' && this.on) { this.idx++; setTimeout(() => this.speak(), 80) } };
+    const seg=this.segs[this.idx];
+    if (!seg.text.trim()){ this.idx++; setTimeout(()=>this.speak(),10); return }
+    const u=new SpeechSynthesisUtterance(seg.text);
+    const pr=Meta.loadP(); u.rate=pr.speed||1; u.lang='zh-TW';
+    const vs=window.speechSynthesis.getVoices();
+    if(pr.voiceIdx!=null&&vs[pr.voiceIdx]) u.voice=vs[pr.voiceIdx];
+    else u.voice=vs.find(v=>/zh.*(TW|HK)/i.test(v.lang))||vs.find(v=>/zh/i.test(v.lang))||null;
+    u.onstart=()=>Reader.hlPara(seg.pi);
+    u.onend=()=>{ if(this.on){this.idx++;this.speak()} };
+    u.onerror=e=>{ if(e.error!=='interrupted'&&this.on){this.idx++;setTimeout(()=>this.speak(),80)} };
     window.speechSynthesis.speak(u);
   },
-
-  toggle() {
-    if (!this.on) this.start();
-    else if (this.paused) { window.speechSynthesis.resume(); this.paused = false; this.updUI() }
-    else { window.speechSynthesis.pause(); this.paused = true; this.updUI() }
-  },
-
-  stop() {
-    this.on = false; this.paused = false; window.speechSynthesis.cancel();
-    document.querySelectorAll('.tts-hi').forEach(el => el.classList.remove('tts-hi'));
-    this.updUI();
-  },
-
-  prev() { if (!this.on) return; this.idx = Math.max(0, this.idx - 2); window.speechSynthesis.cancel(); setTimeout(() => this.speak(), 50) },
-  next() { if (!this.on) return; window.speechSynthesis.cancel(); this.idx = Math.min(this.segs.length - 1, this.idx + 1); setTimeout(() => this.speak(), 50) },
-
-  updUI() {
-    const pb = document.getElementById('btnPlay');
-    if (this.on && !this.paused) { pb.textContent = '⏸'; pb.classList.add('on') }
-    else { pb.textContent = '▶'; pb.classList.remove('on') }
-  },
-
-  fillVoices() {
-    const sel = document.getElementById('voiceSel');
-    const vs = window.speechSynthesis.getVoices();
-    sel.innerHTML = '<option value="">自動選擇</option>' +
-      vs.map((v, i) => `<option value="${i}">${v.name} (${v.lang})</option>`).join('');
-    const pr = Meta.loadP(); if (pr.voiceIdx != null) sel.value = pr.voiceIdx;
+  toggle(){ if(!this.on)this.start(); else if(this.paused){window.speechSynthesis.resume();this.paused=false;this.updUI()} else{window.speechSynthesis.pause();this.paused=true;this.updUI()} },
+  stop(){ this.on=false;this.paused=false;window.speechSynthesis.cancel();document.querySelectorAll('.tts-hi').forEach(el=>el.classList.remove('tts-hi'));this.updUI() },
+  prev(){ if(!this.on)return; this.idx=Math.max(0,this.idx-2); window.speechSynthesis.cancel(); setTimeout(()=>this.speak(),50) },
+  next(){ if(!this.on)return; window.speechSynthesis.cancel(); this.idx=Math.min(this.segs.length-1,this.idx+1); setTimeout(()=>this.speak(),50) },
+  updUI(){ const pb=document.getElementById('btnPlay'); if(this.on&&!this.paused){pb.textContent='⏸';pb.classList.add('on')}else{pb.textContent='▶';pb.classList.remove('on')} },
+  fillVoices(){
+    const sel=document.getElementById('voiceSel');
+    const vs=window.speechSynthesis.getVoices();
+    sel.innerHTML='<option value="">自動選擇</option>'+vs.map((v,i)=>`<option value="${i}">${v.name} (${v.lang})</option>`).join('');
+    const pr=Meta.loadP(); if(pr.voiceIdx!=null) sel.value=pr.voiceIdx;
   }
 };
 
-/* ══════════════════════════════════
-   初始化 & 事件綁定
-══════════════════════════════════ */
-document.addEventListener('DOMContentLoaded', async () => {
+/* ════════════════════════════════
+   初始化
+════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', async ()=>{
   await Store.init();
-
-  const prefs = Meta.loadP();
-  applyTheme(!!prefs.night);
+  applyTheme(!!Meta.loadP().night);
   Reader.applyPrefs();
   Lib.render();
 
-  /* 書庫 */
   const fi = document.getElementById('fi');
-  fi.onchange = e => { if (e.target.files[0]) Lib.addFile(e.target.files[0]); e.target.value = '' };
-  document.getElementById('btnUp').onclick = () => fi.click();
-  document.getElementById('fab').onclick = () => fi.click();
-  document.getElementById('vLib').addEventListener('dragover', e => e.preventDefault());
-  document.getElementById('vLib').addEventListener('drop', e => { e.preventDefault(); Lib.addFile(e.dataTransfer.files[0]) });
-  document.getElementById('btnTheme').onclick = () => {
-    const p = Meta.loadP(); p.night = !p.night; Meta.saveP(p); applyTheme(p.night);
-    toast(p.night ? '🌙 夜間模式' : '☀ 日間模式');
+  fi.onchange = e=>{ if(e.target.files[0]) Lib.addFile(e.target.files[0]); e.target.value='' };
+  document.getElementById('btnUp').onclick = ()=>fi.click();
+  document.getElementById('fab').onclick   = ()=>fi.click();
+  document.getElementById('vLib').addEventListener('dragover',e=>e.preventDefault());
+  document.getElementById('vLib').addEventListener('drop',e=>{ e.preventDefault(); Lib.addFile(e.dataTransfer.files[0]) });
+  document.getElementById('btnTheme').onclick = ()=>{
+    const p=Meta.loadP(); p.night=!p.night; Meta.saveP(p); applyTheme(p.night);
+    toast(p.night?'🌙 夜間模式':'☀ 日間模式');
   };
 
-  /* 閱讀器：三個點擊區 */
-  document.getElementById('zoneL').onclick = () => Reader.turnPrev();
-  document.getElementById('zoneM').onclick = () => Reader.toggleToolbar();
-  document.getElementById('zoneR').onclick = () => Reader.turnNext();
+  document.getElementById('zoneL').onclick = ()=>Reader.turnPrev();
+  document.getElementById('zoneM').onclick = ()=>Reader.toggleToolbar();
+  document.getElementById('zoneR').onclick = ()=>Reader.turnNext();
 
-  /* 頂部工具列 */
-  document.getElementById('btnBack').onclick = () => Reader.close();
-  document.getElementById('btnToc').onclick = () => { Reader.renderTOC(); document.getElementById('tocBack').classList.add('on') };
-  document.getElementById('btnSet').onclick = () => { TTS.fillVoices(); document.getElementById('setBack').classList.add('on') };
+  document.getElementById('btnBack').onclick = ()=>Reader.close();
+  document.getElementById('btnToc').onclick  = ()=>{ Reader.renderTOC(); document.getElementById('tocBack').classList.add('on') };
+  document.getElementById('btnSet').onclick  = ()=>{ TTS.fillVoices(); document.getElementById('setBack').classList.add('on') };
 
-  /* 目錄面板 */
-  document.getElementById('tocOv').onclick = () => document.getElementById('tocBack').classList.remove('on');
-  document.getElementById('tocCls').onclick = () => document.getElementById('tocBack').classList.remove('on');
+  document.getElementById('tocOv').onclick  = ()=>document.getElementById('tocBack').classList.remove('on');
+  document.getElementById('tocCls').onclick = ()=>document.getElementById('tocBack').classList.remove('on');
+  document.getElementById('setOv').onclick  = ()=>document.getElementById('setBack').classList.remove('on');
+  document.getElementById('setCls').onclick = ()=>document.getElementById('setBack').classList.remove('on');
 
-  /* 設定面板 */
-  document.getElementById('setOv').onclick = () => document.getElementById('setBack').classList.remove('on');
-  document.getElementById('setCls').onclick = () => document.getElementById('setBack').classList.remove('on');
+  document.getElementById('qFontMinus').onclick = ()=>Reader.fontStep(-1);
+  document.getElementById('qFontPlus').onclick  = ()=>Reader.fontStep(1);
+  document.getElementById('qConvBtn').onclick   = ()=>{ const p=Meta.loadP(); p.conv=!p.conv; Meta.saveP(p); Reader.switchConv(p.conv) };
+  document.getElementById('qNightBtn').onclick  = ()=>{ const p=Meta.loadP(); p.night=!p.night; Meta.saveP(p); applyTheme(p.night); toast(p.night?'🌙 夜間模式':'☀ 日間模式') };
+  document.getElementById('rfexpand').onclick   = ()=>Reader.toggleQuick();
 
-  /* 字體 */
-  document.querySelectorAll('.fsz-btn').forEach(btn => {
-    btn.onclick = () => Reader.setFont(parseInt(btn.dataset.sz));
+  document.getElementById('rfprog').onclick = e=>Reader.onProgClick(e);
+  document.getElementById('btnPlay').onclick = ()=>TTS.toggle();
+  document.getElementById('btnStop').onclick = ()=>TTS.stop();
+  document.getElementById('btnPrev').onclick = ()=>TTS.prev();
+  document.getElementById('btnNext').onclick = ()=>TTS.next();
+
+  document.getElementById('togNight').onchange = e=>{ const p=Meta.loadP(); p.night=e.target.checked; Meta.saveP(p); applyTheme(p.night); toast(p.night?'🌙 夜間模式':'☀ 日間模式') };
+  document.getElementById('togConv').onchange  = e=>{ const p=Meta.loadP(); p.conv=e.target.checked; Meta.saveP(p); Reader.switchConv(p.conv) };
+  document.getElementById('spdSlider').oninput = e=>{ const v=parseFloat(e.target.value); document.getElementById('spdVal').textContent=v.toFixed(1)+'×'; const p=Meta.loadP(); p.speed=v; Meta.saveP(p) };
+  document.getElementById('voiceSel').onchange = e=>{ const p=Meta.loadP(); p.voiceIdx=e.target.value?parseInt(e.target.value):null; Meta.saveP(p) };
+
+  document.addEventListener('keydown',e=>{
+    if (!document.getElementById('vRdr').classList.contains('active')) return;
+    if(e.key==='ArrowRight'||e.key==='ArrowDown') Reader.turnNext();
+    if(e.key==='ArrowLeft'||e.key==='ArrowUp') Reader.turnPrev();
+    if(e.key===' ') Reader.toggleToolbar();
   });
 
-  /* 夜間模式 */
-  document.getElementById('togNight').onchange = e => {
-    const p = Meta.loadP(); p.night = e.target.checked; Meta.saveP(p); applyTheme(p.night);
-    toast(p.night ? '🌙 夜間模式' : '☀ 日間模式');
-  };
+  if ('speechSynthesis' in window){ speechSynthesis.onvoiceschanged=()=>TTS.fillVoices(); TTS.fillVoices() }
 
-  /* ★ 簡繁轉換：即時從 rawParas 轉換 */
-  document.getElementById('togConv').onchange = e => {
-    const p = Meta.loadP(); p.conv = e.target.checked; Meta.saveP(p);
-    Reader.switchConv(p.conv);
-  };
-
-  /* 語速 */
-  document.getElementById('spdSlider').oninput = e => {
-    const v = parseFloat(e.target.value);
-    document.getElementById('spdVal').textContent = v.toFixed(1) + '×';
-    const p = Meta.loadP(); p.speed = v; Meta.saveP(p);
-  };
-
-  /* 語音 */
-  document.getElementById('voiceSel').onchange = e => {
-    const p = Meta.loadP(); p.voiceIdx = e.target.value ? parseInt(e.target.value) : null; Meta.saveP(p);
-  };
-
-  /* 底部 TTS */
-  document.getElementById('rfprog').onclick = e => Reader.onProgClick(e);
-  document.getElementById('btnPlay').onclick = () => TTS.toggle();
-  document.getElementById('btnStop').onclick = () => TTS.stop();
-  document.getElementById('btnPrev').onclick = () => TTS.prev();
-  document.getElementById('btnNext').onclick = () => TTS.next();
-
-  /* 鍵盤 */
-  document.addEventListener('keydown', e => {
-    if (!document.getElementById('vRdr').classList.contains('on')) return;
-    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') Reader.turnNext();
-    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') Reader.turnPrev();
-    if (e.key === ' ') Reader.toggleToolbar();
-  });
-
-  /* 語音列表 */
-  if ('speechSynthesis' in window) { speechSynthesis.onvoiceschanged = () => TTS.fillVoices(); TTS.fillVoices() }
-
-  /* 視窗改變 */
   let rt;
-  window.addEventListener('resize', () => {
-    clearTimeout(rt); rt = setTimeout(() => {
-      if (Reader.id) { const old = Reader.pages[Reader.curPage]?.startPara || 0; Reader.paginate(); Reader.goToPage(Reader.paraToPage(old), false) }
-    }, 350);
+  window.addEventListener('resize',()=>{
+    clearTimeout(rt); rt=setTimeout(()=>{ if(Reader.id) Reader._rerender() },350);
   });
 });
 </script>
