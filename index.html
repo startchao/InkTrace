@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-title" content="書閣">
 <link rel="apple-touch-icon" href="icon.svg">
 <meta name="theme-color" content="#a07018">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js"></script>
 <style>
 :root{
@@ -192,6 +192,12 @@ body.night .rfconv.cn{color:#6e6248;border-color:rgba(192,144,48,.35)}
 .spd-slider::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:var(--ac);cursor:pointer}
 .spd-val{font-size:16px;font-weight:700;color:var(--ac);min-width:44px;text-align:right}
 .v-sel{width:100%;padding:10px 14px;border-radius:10px;border:2px solid var(--bd2);background:var(--panelbg2);color:var(--tx);font-size:14px;font-family:var(--serif);outline:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23a07018' stroke-width='1.6' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px}
+.font-opts{display:flex;gap:8px;padding:4px 0}
+.font-opt{flex:1;padding:11px 0;border-radius:10px;border:2px solid var(--bd2);background:var(--panelbg2);color:var(--tx2);font-size:16px;font-weight:500;transition:background .15s,color .15s,border-color .15s}
+.font-opt.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+.font-opt:active{opacity:.75}
+#fontOptSung{font-family:'Noto Serif TC','Georgia',serif}
+#fontOptHei{font-family:'Noto Sans TC','Arial',sans-serif}
 
 /* Toast / Dialog / Mask */
 #toasts{position:fixed;top:66px;left:50%;transform:translateX(-50%);z-index:999;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none}
@@ -294,6 +300,13 @@ body.night .toast{background:#c09030;color:#0a0806}
   <div class="pbox">
     <div class="phd"><span class="phd-t">⚙ 閱讀設定</span><button class="pcls" id="setCls">✕</button></div>
     <div class="pbody">
+      <div class="sg">
+        <div class="sg-lbl">字體</div>
+        <div class="font-opts">
+          <button class="font-opt on" id="fontOptSung" data-font='"Noto Serif TC","Georgia",serif'>宋體</button>
+          <button class="font-opt" id="fontOptHei" data-font='"Noto Sans TC","Arial",sans-serif'>黑體</button>
+        </div>
+      </div>
       <div class="sg">
         <div class="sg-lbl">行間距</div>
         <div class="spd-wrap">
@@ -463,14 +476,29 @@ const Lib={
 const Reader={
   id:null,rawParas:[],paras:[],chapters:[],
   pages:[],curPage:0,totalPages:0,
-  fontSize:18,lineHeight:2,toolbarOn:false,_paging:false,
+  fontSize:18,lineHeight:2,fontFamily:'"Noto Serif TC","Georgia",serif',toolbarOn:false,_paging:false,
   STEPS:[15,18,21,26],_probe:null,
 
   _ensureProbe(){
     if(this._probe)return;
     const p=document.createElement('div');
-    p.style.cssText='position:fixed;top:-9999px;left:0;visibility:hidden;pointer-events:none;line-height:2;word-break:break-all;text-align:justify;font-family:"Noto Serif TC","Georgia",serif;';
+    p.style.cssText='position:fixed;top:-9999px;left:0;visibility:hidden;pointer-events:none;line-height:2;word-break:break-all;text-align:justify;text-indent:2em;';
+    p.style.fontFamily=this.fontFamily;
     document.body.appendChild(p);this._probe=p;
+  },
+
+  setFont(family){
+    this.fontFamily=family;
+    if(this._probe)this._probe.style.fontFamily=family;
+    document.documentElement.style.setProperty('--serif',family);
+    const pr=Meta.loadP();pr.fontFamily=family;Meta.saveP(pr);
+    this._updFontOpts();
+    if(this.id){const old=this.pages[this.curPage]?.startPara||0;this._paging=false;requestAnimationFrame(()=>this._paginate(old))}
+    toast('字體已切換');
+  },
+
+  _updFontOpts(){
+    document.querySelectorAll('.font-opt').forEach(btn=>btn.classList.toggle('on',btn.dataset.font===this.fontFamily));
   },
 
   _getAvail(){
@@ -723,6 +751,9 @@ const Reader={
     const p=Meta.loadP();
     this.fontSize=p.fontSize||18;
     this.lineHeight=p.lineHeight||2;
+    const validFonts=['"Noto Serif TC","Georgia",serif','"Noto Sans TC","Arial",sans-serif'];
+    this.fontFamily=validFonts.includes(p.fontFamily)?p.fontFamily:'"Noto Serif TC","Georgia",serif';
+    document.documentElement.style.setProperty('--serif',this.fontFamily);
     applyTheme(!!p.night);
     const conv=p.conv!==false;
     this._updConvBtn(conv);
@@ -732,6 +763,7 @@ const Reader={
     document.getElementById('lhSlider').value=this.lineHeight;
     document.getElementById('lhVal').textContent=this.lineHeight.toFixed(1)+'×';
     this._updFontBtns();
+    this._updFontOpts();
   },
   _updConvBtn(conv){
     const btn=document.getElementById('rfConv');
@@ -831,6 +863,7 @@ document.addEventListener('DOMContentLoaded',async()=>{
   document.getElementById('rfNight').onclick=()=>{const p=Meta.loadP();p.night=!p.night;Meta.saveP(p);applyTheme(p.night);toast(p.night?'🌙 夜間模式':'☀ 日間模式')};
   document.getElementById('rfProg').onclick=e=>Reader.onProgClick(e);
 
+  document.querySelectorAll('.font-opt').forEach(btn=>btn.onclick=()=>Reader.setFont(btn.dataset.font));
   document.getElementById('lhSlider').oninput=e=>{const v=parseFloat(e.target.value);document.getElementById('lhVal').textContent=v.toFixed(1)+'×';const p=Meta.loadP();p.lineHeight=v;Meta.saveP(p);Reader.lineHeight=v;if(Reader.id){const old=Reader.pages[Reader.curPage]?.startPara||0;Reader._paging=false;requestAnimationFrame(()=>Reader._paginate(old))}};
   document.getElementById('spdSlider').oninput=e=>{const v=parseFloat(e.target.value);document.getElementById('spdVal').textContent=v.toFixed(1)+'×';const p=Meta.loadP();p.speed=v;Meta.saveP(p)};
   document.getElementById('voiceSel').onchange=e=>{const p=Meta.loadP();p.voiceIdx=e.target.value?parseInt(e.target.value):null;Meta.saveP(p)};
