@@ -1,5 +1,5 @@
-/* 書閣 Service Worker v2.4.0 */
-const CACHE = 'shuge-v2.4.0';
+/* 書閣 Service Worker v2.5.0 */
+const CACHE = 'shuge-v2.5.0';
 const SHELL = ['./index.html', './manifest.json', './icon.svg'];
 
 self.addEventListener('install', e => {
