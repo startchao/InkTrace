@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<!-- 書閣 Novel Reader v2.3.0 -->
+<!-- 書閣 Novel Reader v2.4.0 -->
 
 <html lang="zh-TW">
 <head>
@@ -9,7 +9,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>書閣 v2.3.0</title>
+<title>書閣 v2.4.0</title>
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -185,6 +185,9 @@ body.night .rfconv.cn{color:#6e6248;border-color:rgba(192,144,48,.35)}
 .spd-slider::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:var(--ac);cursor:pointer}
 .spd-val{font-size:16px;font-weight:700;color:var(--ac);min-width:44px;text-align:right}
 .v-sel{width:100%;padding:10px 14px;border-radius:10px;border:2px solid var(--bd2);background:var(--panelbg2);color:var(--tx);font-size:14px;font-family:var(--serif);outline:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23a07018' stroke-width='1.6' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px}
+.v-test{flex-shrink:0;height:38px;padding:0 12px;border-radius:10px;border:2px solid var(--bd2);background:var(--panelbg2);color:var(--ac);font-size:13px;font-weight:700;font-family:var(--serif)}
+.v-test:active{background:var(--acp)}
+.sg-hint{font-size:11px;color:var(--tx3);margin-top:8px;line-height:1.5}
 .font-opts{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:4px 0}
 .font-opt{padding:11px 0;border-radius:10px;border:2px solid var(--bd2);background:var(--panelbg2);color:var(--tx2);font-size:16px;font-weight:500;transition:background .15s,color .15s,border-color .15s}
 .font-opt.on{background:var(--ac);color:#fff;border-color:var(--ac)}
@@ -226,7 +229,7 @@ body.night .toast{background:#c09030;color:#0a0806}
 
 <div id="vLib" class="view">
   <header class="lhd">
-    <div class="lhd-logo">書閣 <small>v2.3.0</small></div>
+    <div class="lhd-logo">書閣 <small>v2.4.0</small></div>
     <button class="ibt" id="btnTheme">🌙</button>
     <button class="ibt" id="btnUp">＋</button>
   </header>
@@ -313,7 +316,11 @@ body.night .toast{background:#c09030;color:#0a0806}
       </div>
       <div class="sg">
         <div class="sg-lbl">朗讀語音</div>
-        <select class="v-sel" id="voiceSel"><option value="">自動選擇</option></select>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select class="v-sel" id="voiceSel" style="flex:1"><option value="">自動選擇</option></select>
+          <button class="v-test" id="voiceTest">試聽</button>
+        </div>
+        <div class="sg-hint">手機可在系統設定下載更多高品質中文語音</div>
       </div>
     </div>
   </div>
@@ -467,7 +474,7 @@ const Reader={
   id:null,rawParas:[],paras:[],chapters:[],
   pages:[],curPage:0,totalPages:0,
   fontSize:18,lineHeight:2,fontFamily:'"Noto Serif TC","Georgia",serif',toolbarOn:false,_paging:false,
-  STEPS:[15,18,21,26],_probe:null,
+  STEPS:[15,18,21,26],_probe:null,_lastHl:null,
 
   _ensureProbe(){
     if(this._probe)return;
@@ -483,7 +490,14 @@ const Reader={
     document.documentElement.style.setProperty('--serif',family);
     const pr=Meta.loadP();pr.fontFamily=family;Meta.saveP(pr);
     this._updFontOpts();
-    if(this.id){const old=this.pages[this.curPage]?.startPara||0;this._paging=false;requestAnimationFrame(()=>this._paginate(old))}
+    if(this.id){
+      const old=this.pages[this.curPage]?.startPara||0;
+      this._paging=false;
+      const pf=family.split(',')[0].trim();
+      document.fonts.load(`${this.fontSize}px ${pf}`).finally(()=>{
+        requestAnimationFrame(()=>this._paginate(old));
+      });
+    }
     toast('字體已切換');
   },
 
@@ -655,7 +669,7 @@ const Reader={
     const pg=this.pages[this.curPage];if(!pg)return;
     const ci=pg.chapterIdx;
     document.querySelectorAll('.toc-item').forEach((el,i)=>el.classList.toggle('cur',i===ci));
-    document.querySelector('.toc-item.cur')?.scrollIntoView({block:'nearest'});
+    document.querySelector('.toc-item.cur')?.scrollIntoView({block:'nearest',behavior:'smooth'});
   },
 
   /* ★ 工具列切換：純浮層，不重分頁 */
@@ -722,11 +736,11 @@ const Reader={
     if(this.id){const old=this.pages[this.curPage]?.startPara||0;this._paging=false;requestAnimationFrame(()=>this._paginate(old))}
     TTS.segs=[];toast(conv?'已切換為繁體':'已切換為原文');
   },
-  onProgClick(e){const r=e.currentTarget.getBoundingClientRect();const ratio=(e.clientX-r.left)/r.width;this._render(Math.round(ratio*(this.totalPages-1)))},
+  onProgClick(e){const r=e.currentTarget.getBoundingClientRect();const ratio=(e.clientX-r.left)/r.width;this._render(Math.floor(ratio*(this.totalPages-1)))},
   hlPara(pi){
-    document.querySelectorAll('.para.tts-hi').forEach(el=>el.classList.remove('tts-hi'));
+    if(this._lastHl)this._lastHl.classList.remove('tts-hi');
     const el=document.querySelector(`.para[data-para-idx="${pi}"]`);
-    if(el)el.classList.add('tts-hi');
+    if(el){el.classList.add('tts-hi');this._lastHl=el;}else{this._lastHl=null;}
     const pg=this._paraToPage(pi);if(pg!==this.curPage)this._render(pg);
   }
 };
@@ -756,7 +770,17 @@ const TTS={
   toggle(){if(!this.on)this.start();else if(this.paused){window.speechSynthesis.resume();this.paused=false;this._startHB();this.updUI()}else{window.speechSynthesis.pause();this._stopHB();this.paused=true;this.updUI()}},
   stop(){this.on=false;this.paused=false;this._stopHB();window.speechSynthesis.cancel();document.querySelectorAll('.tts-hi').forEach(el=>el.classList.remove('tts-hi'));this.updUI()},
   updUI(){const pb=document.getElementById('rfPlay');if(this.on&&!this.paused){pb.textContent='⏸';pb.classList.add('on')}else{pb.textContent='▶';pb.classList.remove('on')}},
-  fillVoices(){const sel=document.getElementById('voiceSel');const vs=window.speechSynthesis.getVoices();sel.innerHTML='<option value="">自動選擇</option>'+vs.map((v,i)=>`<option value="${i}">${v.name} (${v.lang})</option>`).join('');const pr=Meta.loadP();if(pr.voiceIdx!=null)sel.value=pr.voiceIdx}
+  fillVoices(){
+    const sel=document.getElementById('voiceSel');
+    const vs=window.speechSynthesis.getVoices();
+    const zh=vs.map((v,i)=>({v,i})).filter(({v})=>/^zh/i.test(v.lang));
+    const other=vs.map((v,i)=>({v,i})).filter(({v})=>!/^zh/i.test(v.lang));
+    const toOpt=({v,i})=>`<option value="${i}">${v.name} (${v.lang})</option>`;
+    sel.innerHTML='<option value="">自動選擇</option>'
+      +(zh.length?'<optgroup label="─ 中文語音 ─">'+zh.map(toOpt).join('')+'</optgroup>':'')
+      +(other.length?'<optgroup label="─ 其他語音 ─">'+other.map(toOpt).join('')+'</optgroup>':'');
+    const pr=Meta.loadP();if(pr.voiceIdx!=null)sel.value=pr.voiceIdx;
+  }
 };
 
 /* ══ 初始化 ══ */
@@ -797,6 +821,13 @@ document.addEventListener('DOMContentLoaded',async()=>{
   document.querySelectorAll('.font-opt').forEach(btn=>btn.onclick=()=>Reader.setFont(btn.dataset.font));
   document.getElementById('spdSlider').oninput=e=>{const v=parseFloat(e.target.value);document.getElementById('spdVal').textContent=v.toFixed(1)+'×';const p=Meta.loadP();p.speed=v;Meta.saveP(p)};
   document.getElementById('voiceSel').onchange=e=>{const p=Meta.loadP();p.voiceIdx=e.target.value?parseInt(e.target.value):null;Meta.saveP(p)};
+  document.getElementById('voiceTest').onclick=()=>{
+    const u=new SpeechSynthesisUtterance('春眠不覺曉，處處聞啼鳥。');
+    const pr=Meta.loadP();u.rate=pr.speed||1;u.lang='zh-TW';
+    const vs=window.speechSynthesis.getVoices();
+    if(pr.voiceIdx!=null&&vs[pr.voiceIdx])u.voice=vs[pr.voiceIdx];
+    window.speechSynthesis.cancel();window.speechSynthesis.speak(u);
+  };
 
   document.addEventListener('keydown',e=>{
     if(!document.getElementById('vRdr').classList.contains('active'))return;
