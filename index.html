@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<!-- 書閣 Novel Reader v2.1.0 -->
+<!-- 書閣 Novel Reader v2.3.0 -->
 
 <html lang="zh-TW">
 <head>
@@ -9,14 +9,14 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>書閣 v2.1.0</title>
+<title>書閣 v2.3.0</title>
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="書閣">
 <link rel="apple-touch-icon" href="icon.svg">
 <meta name="theme-color" content="#a07018">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700&family=LXGW+WenKai+TC&family=Chiron+Sung+HK&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js"></script>
 <style>
 :root{
@@ -185,12 +185,14 @@ body.night .rfconv.cn{color:#6e6248;border-color:rgba(192,144,48,.35)}
 .spd-slider::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:var(--ac);cursor:pointer}
 .spd-val{font-size:16px;font-weight:700;color:var(--ac);min-width:44px;text-align:right}
 .v-sel{width:100%;padding:10px 14px;border-radius:10px;border:2px solid var(--bd2);background:var(--panelbg2);color:var(--tx);font-size:14px;font-family:var(--serif);outline:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23a07018' stroke-width='1.6' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px}
-.font-opts{display:flex;gap:8px;padding:4px 0}
-.font-opt{flex:1;padding:11px 0;border-radius:10px;border:2px solid var(--bd2);background:var(--panelbg2);color:var(--tx2);font-size:16px;font-weight:500;transition:background .15s,color .15s,border-color .15s}
+.font-opts{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:4px 0}
+.font-opt{padding:11px 0;border-radius:10px;border:2px solid var(--bd2);background:var(--panelbg2);color:var(--tx2);font-size:16px;font-weight:500;transition:background .15s,color .15s,border-color .15s}
 .font-opt.on{background:var(--ac);color:#fff;border-color:var(--ac)}
 .font-opt:active{opacity:.75}
 #fontOptSung{font-family:'Noto Serif TC','Georgia',serif}
 #fontOptHei{font-family:'Noto Sans TC','Arial',sans-serif}
+#fontOptKai{font-family:'LXGW WenKai TC',serif}
+#fontOptSung2{font-family:'Chiron Sung HK',serif}
 
 /* Toast / Dialog / Mask */
 #toasts{position:fixed;top:66px;left:50%;transform:translateX(-50%);z-index:999;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none}
@@ -224,7 +226,7 @@ body.night .toast{background:#c09030;color:#0a0806}
 
 <div id="vLib" class="view">
   <header class="lhd">
-    <div class="lhd-logo">書閣 <small>v2.1.0</small></div>
+    <div class="lhd-logo">書閣 <small>v2.3.0</small></div>
     <button class="ibt" id="btnTheme">🌙</button>
     <button class="ibt" id="btnUp">＋</button>
   </header>
@@ -298,6 +300,8 @@ body.night .toast{background:#c09030;color:#0a0806}
         <div class="font-opts">
           <button class="font-opt on" id="fontOptSung" data-font='"Noto Serif TC","Georgia",serif'>宋體</button>
           <button class="font-opt" id="fontOptHei" data-font='"Noto Sans TC","Arial",sans-serif'>黑體</button>
+          <button class="font-opt" id="fontOptKai" data-font='"LXGW WenKai TC",serif'>楷體</button>
+          <button class="font-opt" id="fontOptSung2" data-font='"Chiron Sung HK",serif'>仿宋</button>
         </div>
       </div>
       <div class="sg">
@@ -467,15 +471,15 @@ const Reader={
 
   _ensureProbe(){
     if(this._probe)return;
-    const p=document.createElement('div');
-    p.style.cssText='position:fixed;top:-9999px;left:0;visibility:hidden;pointer-events:none;line-height:2;word-break:break-all;text-align:justify;text-indent:2em;';
-    p.style.fontFamily=this.fontFamily;
-    document.body.appendChild(p);this._probe=p;
+    const b=document.createElement('div');
+    b.className='rp-body';
+    b.style.cssText='position:fixed;top:-9999px;left:0;visibility:hidden;pointer-events:none;overflow:hidden;';
+    document.body.appendChild(b);this._probe=b;
   },
 
   setFont(family){
     this.fontFamily=family;
-    if(this._probe)this._probe.style.fontFamily=family;
+    this._probe=null; // 強制重建 probe，套用新字體
     document.documentElement.style.setProperty('--serif',family);
     const pr=Meta.loadP();pr.fontFamily=family;Meta.saveP(pr);
     this._updFontOpts();
@@ -490,19 +494,21 @@ const Reader={
   _getAvail(){
     const vw=window.innerWidth;
     const vh=window.visualViewport?window.visualViewport.height:window.innerHeight;
-    // padTop(10)+padBot(12)+rp-foot(18)+安全邊界(10)
-    return{w:vw-40,h:vh-50};
+    // body高度 = vh - padTop(10) - padBot(12) - rp-foot(20)
+    return{w:vw-40,h:vh-42};
   },
 
-  /* ★ 分頁：遇到章節標題就強制切頁，章節內段落自由流動（不留白） */
+  /* ★ 分頁：overflow 偵測法，100% 精準，不截斷文字 */
   _paginate(goToParaIdx){
     this._ensureProbe();
     const{w,h}=this._getAvail();
-    const fs=this.fontSize;
-    const p=this._probe;
-    p.style.width=w+'px';
-    p.style.fontSize=fs+'px';
-    p.style.lineHeight=this.lineHeight.toString();
+    const probe=this._probe;
+    probe.style.width=w+'px';
+    probe.style.height=h+'px';
+    probe.style.fontSize=this.fontSize+'px';
+    probe.style.lineHeight=this.lineHeight.toString();
+    probe.style.fontFamily=this.fontFamily;
+    probe.innerHTML='';
 
     this._paging=true;
     const pages=[];
@@ -510,9 +516,14 @@ const Reader={
     let reachedTarget=false;
     let cursor=0;
 
-    // 判斷每個段落是否是章節標題（對應到 chapters 陣列）
-    const chMap=new Map(); // paraIdx → chapterIdx
+    const chMap=new Map();
     this.chapters.forEach((ch,i)=>chMap.set(ch.idx,i));
+
+    const getChIdx=paraIdx=>{
+      let ci=-1;
+      for(let i=this.chapters.length-1;i>=0;i--){if(this.chapters[i].idx<=paraIdx){ci=i;break}}
+      return ci;
+    };
 
     const addPage=(startPara,endPara,chapterIdx,isChapterFirst,chapterTitle)=>{
       pages.push({startPara,endPara,chapterIdx,isChapterFirst,chapterTitle:chapterTitle||''});
@@ -521,93 +532,46 @@ const Reader={
       }
     };
 
-    // 找出當前游標所在章節
-    const getChIdx=paraIdx=>{
-      let ci=-1;
-      for(let i=this.chapters.length-1;i>=0;i--){if(this.chapters[i].idx<=paraIdx){ci=i;break}}
-      return ci;
-    };
-
-    const paginate=()=>{
-      while(cursor<this.paras.length){
-        if(!this._paging)return false; // 被中止
-
-        const isChStart=chMap.has(cursor);
-        const ci=isChStart?chMap.get(cursor):getChIdx(cursor);
-        const chTitle=isChStart&&ci>=0?this.chapters[ci].title:'';
-
-        // 確認剩餘可用高度夠至少放一段
-        let accH=0;
-        const startPara=cursor;
-        let endPara=cursor;
-
-        while(endPara<this.paras.length){
-          // 遇到下一個章節標題（且不是本頁第一段）就切頁
-          if(endPara>startPara&&chMap.has(endPara))break;
-          p.textContent=this.paras[endPara];
-          const lh=p.offsetHeight+Math.ceil(fs*0.75);
-          if(accH+lh>h&&endPara>startPara)break;
-          accH+=lh;endPara++;
+    // 每次分一頁：把段落加入 probe，溢出即停止
+    const paginateOne=()=>{
+      probe.innerHTML='';
+      const startPara=cursor;
+      let endPara=cursor;
+      const isChStart=chMap.has(cursor);
+      const ci=isChStart?chMap.get(cursor):getChIdx(cursor);
+      const chTitle=isChStart&&ci>=0?this.chapters[ci].title:'';
+      while(endPara<this.paras.length){
+        if(endPara>startPara&&chMap.has(endPara))break;
+        const p_=document.createElement('p');
+        p_.className='para';p_.textContent=this.paras[endPara];
+        probe.appendChild(p_);
+        if(probe.scrollHeight>probe.clientHeight){
+          probe.removeChild(p_);
+          if(endPara===startPara)endPara++;
+          break;
         }
-        if(endPara===startPara)endPara=startPara+1; // 至少一段
-
-        addPage(startPara,endPara-1,ci,isChStart&&!!chTitle,chTitle);
-        cursor=endPara;
-
-        if(!reachedTarget&&cursor>goToParaIdx){
-          // 目標在上一頁
-          if(pages.length>0&&targetPage===0)targetPage=pages.length-1;
-        }
+        endPara++;
       }
-      return true;
+      if(endPara===startPara)endPara=startPara+1;
+      addPage(startPara,endPara-1,ci,isChStart&&!!chTitle,chTitle);
+      cursor=endPara;
     };
 
     // 同步分頁直到包含目標位置
-    const runSync=()=>{
-      let limit=0;
-      while(!reachedTarget&&cursor<this.paras.length&&limit++<50000){
-        const isChStart=chMap.has(cursor);
-        const ci=isChStart?chMap.get(cursor):getChIdx(cursor);
-        const chTitle=isChStart&&ci>=0?this.chapters[ci].title:'';
-        let accH=0,startPara=cursor,endPara=cursor;
-        while(endPara<this.paras.length){
-          if(endPara>startPara&&chMap.has(endPara))break;
-          p.textContent=this.paras[endPara];
-          const lh=p.offsetHeight+Math.ceil(fs*0.75);
-          if(accH+lh>h&&endPara>startPara)break;
-          accH+=lh;endPara++;
-        }
-        if(endPara===startPara)endPara=startPara+1;
-        addPage(startPara,endPara-1,ci,isChStart&&!!chTitle,chTitle);
-        cursor=endPara;
-      }
-    };
-    runSync();
+    let limit=0;
+    while(!reachedTarget&&cursor<this.paras.length&&limit++<50000){
+      paginateOne();
+    }
 
     this.pages=pages;this.totalPages=pages.length;this.curPage=targetPage;
     this._render(targetPage);hideLoad();
 
-    // 背景繼續
+    // 背景繼續分頁
     const self=this;
     function bg(){
       if(!self._paging||cursor>=self.paras.length){self._paging=false;self.updFoot();return}
       let done=0;
-      while(cursor<self.paras.length&&done++<3000){
-        const isChStart=chMap.has(cursor);
-        const ci=isChStart?chMap.get(cursor):self.chapters.reduce((a,c,i)=>c.idx<=cursor?i:a,-1);
-        const chTitle=isChStart&&ci>=0?self.chapters[ci].title:'';
-        let accH=0,startPara=cursor,endPara=cursor;
-        while(endPara<self.paras.length){
-          if(endPara>startPara&&chMap.has(endPara))break;
-          p.textContent=self.paras[endPara];
-          const lh=p.offsetHeight+Math.ceil(fs*0.75);
-          if(accH+lh>h&&endPara>startPara)break;
-          accH+=lh;endPara++;
-        }
-        if(endPara===startPara)endPara=startPara+1;
-        pages.push({startPara,endPara:endPara-1,chapterIdx:ci,isChapterFirst:isChStart&&!!chTitle,chapterTitle:chTitle});
-        cursor=endPara;
-      }
+      while(cursor<self.paras.length&&done++<300){paginateOne()}
       self.totalPages=pages.length;self.updFoot();
       setTimeout(bg,0);
     }
@@ -720,7 +684,7 @@ const Reader={
     const p=Meta.loadP();
     this.fontSize=p.fontSize||18;
     this.lineHeight=p.lineHeight||2;
-    const validFonts=['"Noto Serif TC","Georgia",serif','"Noto Sans TC","Arial",sans-serif'];
+    const validFonts=['"Noto Serif TC","Georgia",serif','"Noto Sans TC","Arial",sans-serif','"LXGW WenKai TC",serif','"Chiron Sung HK",serif'];
     this.fontFamily=validFonts.includes(p.fontFamily)?p.fontFamily:'"Noto Serif TC","Georgia",serif';
     document.documentElement.style.setProperty('--serif',this.fontFamily);
     applyTheme(!!p.night);
