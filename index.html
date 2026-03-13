@@ -117,20 +117,13 @@ input,select{font-family:inherit}
 .rzone-R{right:0;width:25%}
 .rpwrap{position:absolute;top:0;left:0;height:100%;display:flex;will-change:transform}
 
-/* 每頁：永遠預留頂/底工具列 padding，浮層不佔位所以不需重算 */
-.rpage{flex-shrink:0;overflow:hidden;display:flex;flex-direction:column;padding-top:calc(var(--topH) + 14px);padding-bottom:calc(var(--botH) + 8px);padding-left:20px;padding-right:20px}
-
-/* ★ 章節標題區塊（只在該章節第一頁頂端顯示，段落可跨頁流動） */
-.rp-ch-title{flex-shrink:0;font-size:1.08em;font-weight:700;text-align:center;letter-spacing:.1em;color:var(--ac);padding:6px 0 10px;border-bottom:1px solid var(--bd);margin-bottom:10px;line-height:1.5;word-break:break-all}
-.rp-ch-title::after{content:'✦';display:block;font-size:.55em;color:var(--ac2);margin-top:4px;opacity:.55}
-
-.rp-chap{font-size:10px;color:var(--tx3);opacity:.4;text-align:center;margin-bottom:6px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 每頁：上下僅留極小 padding，工具列以浮層疊加 */
+.rpage{flex-shrink:0;overflow:hidden;display:flex;flex-direction:column;padding-top:10px;padding-bottom:12px;padding-left:20px;padding-right:20px}
 .rp-body{flex:1;overflow:hidden}
 .para{margin-bottom:.75em;line-height:2;text-align:justify;text-indent:2em;word-break:break-all}
 .para.tts-hi{background:rgba(160,112,24,.14);border-left:2px solid var(--ac);padding-left:8px;text-indent:0}
-.rp-foot{flex-shrink:0;padding-top:4px;margin-top:2px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--bd);opacity:.38}
+.rp-foot{flex-shrink:0;padding-top:4px;margin-top:2px;display:flex;align-items:center;justify-content:center;border-top:1px solid var(--bd);opacity:.38}
 .rp-num{font-size:10px;color:var(--tx3)}
-.rp-pct{font-size:10px;color:var(--tx3)}
 
 /* ★ 底部工具列：固定浮層 */
 .rfoot{position:fixed;bottom:0;left:0;right:0;z-index:60;height:var(--botH);display:flex;align-items:center;padding:0 10px;gap:5px;background:var(--bg2);border-top:1.5px solid var(--bd2);box-shadow:0 -2px 10px var(--sh);transform:translateY(100%);transition:transform .28s var(--ease)}
@@ -305,13 +298,6 @@ body.night .toast{background:#c09030;color:#0a0806}
         <div class="font-opts">
           <button class="font-opt on" id="fontOptSung" data-font='"Noto Serif TC","Georgia",serif'>宋體</button>
           <button class="font-opt" id="fontOptHei" data-font='"Noto Sans TC","Arial",sans-serif'>黑體</button>
-        </div>
-      </div>
-      <div class="sg">
-        <div class="sg-lbl">行間距</div>
-        <div class="spd-wrap">
-          <input type="range" class="spd-slider" id="lhSlider" min="1.5" max="2.5" step="0.1" value="2">
-          <span class="spd-val" id="lhVal">2.0×</span>
         </div>
       </div>
       <div class="sg">
@@ -504,8 +490,8 @@ const Reader={
   _getAvail(){
     const vw=window.innerWidth;
     const vh=window.visualViewport?window.visualViewport.height:window.innerHeight;
-    // 永遠預留頂部(50)+底部(56)+頁眉(24)+頁腳(24)+padTop(14)+padBot(8)+安全邊界(20)
-    return{w:vw-40,h:vh-50-56-24-24-14-8-20};
+    // padTop(10)+padBot(12)+rp-foot(18)+安全邊界(10)
+    return{w:vw-40,h:vh-50};
   },
 
   /* ★ 分頁：遇到章節標題就強制切頁，章節內段落自由流動（不留白） */
@@ -517,9 +503,6 @@ const Reader={
     p.style.width=w+'px';
     p.style.fontSize=fs+'px';
     p.style.lineHeight=this.lineHeight.toString();
-
-    // 章節標題區塊預估高度
-    const chTitleH=Math.ceil(fs*1.08*1.5)+10+12+1+4; // font*lineH + padding + margin + border + after
 
     this._paging=true;
     const pages=[];
@@ -552,7 +535,6 @@ const Reader={
         const isChStart=chMap.has(cursor);
         const ci=isChStart?chMap.get(cursor):getChIdx(cursor);
         const chTitle=isChStart&&ci>=0?this.chapters[ci].title:'';
-        const availH=isChStart&&chTitle?h-chTitleH:h;
 
         // 確認剩餘可用高度夠至少放一段
         let accH=0;
@@ -564,7 +546,7 @@ const Reader={
           if(endPara>startPara&&chMap.has(endPara))break;
           p.textContent=this.paras[endPara];
           const lh=p.offsetHeight+Math.ceil(fs*0.75);
-          if(accH+lh>availH&&endPara>startPara)break;
+          if(accH+lh>h&&endPara>startPara)break;
           accH+=lh;endPara++;
         }
         if(endPara===startPara)endPara=startPara+1; // 至少一段
@@ -587,13 +569,12 @@ const Reader={
         const isChStart=chMap.has(cursor);
         const ci=isChStart?chMap.get(cursor):getChIdx(cursor);
         const chTitle=isChStart&&ci>=0?this.chapters[ci].title:'';
-        const availH=isChStart&&chTitle?h-chTitleH:h;
         let accH=0,startPara=cursor,endPara=cursor;
         while(endPara<this.paras.length){
           if(endPara>startPara&&chMap.has(endPara))break;
           p.textContent=this.paras[endPara];
           const lh=p.offsetHeight+Math.ceil(fs*0.75);
-          if(accH+lh>availH&&endPara>startPara)break;
+          if(accH+lh>h&&endPara>startPara)break;
           accH+=lh;endPara++;
         }
         if(endPara===startPara)endPara=startPara+1;
@@ -615,13 +596,12 @@ const Reader={
         const isChStart=chMap.has(cursor);
         const ci=isChStart?chMap.get(cursor):self.chapters.reduce((a,c,i)=>c.idx<=cursor?i:a,-1);
         const chTitle=isChStart&&ci>=0?self.chapters[ci].title:'';
-        const availH=isChStart&&chTitle?h-chTitleH:h;
         let accH=0,startPara=cursor,endPara=cursor;
         while(endPara<self.paras.length){
           if(endPara>startPara&&chMap.has(endPara))break;
           p.textContent=self.paras[endPara];
           const lh=p.offsetHeight+Math.ceil(fs*0.75);
-          if(accH+lh>availH&&endPara>startPara)break;
+          if(accH+lh>h&&endPara>startPara)break;
           accH+=lh;endPara++;
         }
         if(endPara===startPara)endPara=startPara+1;
@@ -684,26 +664,15 @@ const Reader={
     div.className='rpage';div.dataset.pg=pg;
     div.style.width=window.innerWidth+'px';div.style.height='100%';
 
-    if(isChapterFirst&&chapterTitle){
-      const hd=document.createElement('div');hd.className='rp-ch-title';hd.textContent=chapterTitle;div.appendChild(hd);
-    } else {
-      const chap=document.createElement('div');chap.className='rp-chap';
-      chap.textContent=chapterIdx>=0&&this.chapters[chapterIdx]?this.chapters[chapterIdx].title:'';
-      div.appendChild(chap);
-    }
-
     const body=document.createElement('div');body.className='rp-body';body.style.fontSize=fs+'px';body.style.lineHeight=this.lineHeight.toString();
     for(let i=startPara;i<=endPara&&i<this.paras.length;i++){
-      // 跳過章節標題段落本身（已在頁頂顯示）
-      if(isChapterFirst&&i===startPara&&chapterTitle&&this.paras[i]===chapterTitle)continue;
       const p_=document.createElement('p');p_.className='para';p_.dataset.paraIdx=i;p_.textContent=this.paras[i];body.appendChild(p_);
     }
     div.appendChild(body);
 
     const ft=document.createElement('div');ft.className='rp-foot';
     const tot=this.totalPages||1;
-    const pct=tot>1?Math.round(pg/(tot-1)*100):100;
-    ft.innerHTML=`<span class="rp-num">${pg+1} / ${tot>1?tot:'…'}</span><span class="rp-pct">${tot>1?pct+'%':'…'}</span>`;
+    ft.innerHTML=`<span class="rp-num">${pg+1} / ${tot>1?tot:'…'}</span>`;
     div.appendChild(ft);
     return div;
   },
@@ -760,8 +729,6 @@ const Reader={
     const spd=p.speed||1;
     document.getElementById('spdSlider').value=spd;
     document.getElementById('spdVal').textContent=spd.toFixed(1)+'×';
-    document.getElementById('lhSlider').value=this.lineHeight;
-    document.getElementById('lhVal').textContent=this.lineHeight.toFixed(1)+'×';
     this._updFontBtns();
     this._updFontOpts();
   },
@@ -864,7 +831,6 @@ document.addEventListener('DOMContentLoaded',async()=>{
   document.getElementById('rfProg').onclick=e=>Reader.onProgClick(e);
 
   document.querySelectorAll('.font-opt').forEach(btn=>btn.onclick=()=>Reader.setFont(btn.dataset.font));
-  document.getElementById('lhSlider').oninput=e=>{const v=parseFloat(e.target.value);document.getElementById('lhVal').textContent=v.toFixed(1)+'×';const p=Meta.loadP();p.lineHeight=v;Meta.saveP(p);Reader.lineHeight=v;if(Reader.id){const old=Reader.pages[Reader.curPage]?.startPara||0;Reader._paging=false;requestAnimationFrame(()=>Reader._paginate(old))}};
   document.getElementById('spdSlider').oninput=e=>{const v=parseFloat(e.target.value);document.getElementById('spdVal').textContent=v.toFixed(1)+'×';const p=Meta.loadP();p.speed=v;Meta.saveP(p)};
   document.getElementById('voiceSel').onchange=e=>{const p=Meta.loadP();p.voiceIdx=e.target.value?parseInt(e.target.value):null;Meta.saveP(p)};
 
