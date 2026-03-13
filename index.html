@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<!-- 書閣 Novel Reader v2.4.0 -->
+<!-- 書閣 Novel Reader v2.5.0 -->
 
 <html lang="zh-TW">
 <head>
@@ -9,7 +9,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>書閣 v2.4.0</title>
+<title>書閣 v2.5.0</title>
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -187,7 +187,17 @@ body.night .rfconv.cn{color:#6e6248;border-color:rgba(192,144,48,.35)}
 .v-sel{width:100%;padding:10px 14px;border-radius:10px;border:2px solid var(--bd2);background:var(--panelbg2);color:var(--tx);font-size:14px;font-family:var(--serif);outline:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23a07018' stroke-width='1.6' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px}
 .v-test{flex-shrink:0;height:38px;padding:0 12px;border-radius:10px;border:2px solid var(--bd2);background:var(--panelbg2);color:var(--ac);font-size:13px;font-weight:700;font-family:var(--serif)}
 .v-test:active{background:var(--acp)}
+.v-gfilter{display:flex;gap:6px}
+.v-gbt{flex:1;height:32px;border-radius:8px;border:1.5px solid var(--bd2);background:var(--panelbg2);color:var(--tx2);font-size:12px;font-weight:600;font-family:var(--serif);transition:all .15s}
+.v-gbt.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+.v-gbt:active{opacity:.75}
 .sg-hint{font-size:11px;color:var(--tx3);margin-top:8px;line-height:1.5}
+.v-guide-btn{background:none;border:none;color:var(--ac);font-size:11px;font-family:var(--serif);padding:0;margin-top:4px;text-decoration:underline;cursor:pointer}
+.v-guide{display:none;margin-top:10px;border-radius:10px;border:1.5px solid var(--bd2);overflow:hidden}
+.v-guide.on{display:block}
+.v-guide-row{padding:10px 14px;font-size:12px;color:var(--tx2);line-height:1.7;border-bottom:1px solid var(--bd)}
+.v-guide-row:last-child{border-bottom:none}
+.v-guide-row strong{color:var(--tx);display:block;margin-bottom:2px}
 .font-opts{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:4px 0}
 .font-opt{padding:11px 0;border-radius:10px;border:2px solid var(--bd2);background:var(--panelbg2);color:var(--tx2);font-size:16px;font-weight:500;transition:background .15s,color .15s,border-color .15s}
 .font-opt.on{background:var(--ac);color:#fff;border-color:var(--ac)}
@@ -229,7 +239,7 @@ body.night .toast{background:#c09030;color:#0a0806}
 
 <div id="vLib" class="view">
   <header class="lhd">
-    <div class="lhd-logo">書閣 <small>v2.4.0</small></div>
+    <div class="lhd-logo">書閣 <small>v2.5.0</small></div>
     <button class="ibt" id="btnTheme">🌙</button>
     <button class="ibt" id="btnUp">＋</button>
   </header>
@@ -316,11 +326,24 @@ body.night .toast{background:#c09030;color:#0a0806}
       </div>
       <div class="sg">
         <div class="sg-lbl">朗讀語音</div>
-        <div style="display:flex;gap:8px;align-items:center">
+        <div class="v-gfilter">
+          <button class="v-gbt on" data-g="all">全部</button>
+          <button class="v-gbt" data-g="f">♀ 女聲</button>
+          <button class="v-gbt" data-g="m">♂ 男聲</button>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
           <select class="v-sel" id="voiceSel" style="flex:1"><option value="">自動選擇</option></select>
           <button class="v-test" id="voiceTest">試聽</button>
         </div>
-        <div class="sg-hint">手機可在系統設定下載更多高品質中文語音</div>
+        <div class="sg-hint">✨ = AI神經語音（音質最佳）&ensp;·&ensp;Edge瀏覽器可用更多免費神經語音<br>
+          <button class="v-guide-btn" id="voiceGuideBtn">如何取得更多高品質語音 ▸</button>
+        </div>
+        <div class="v-guide" id="voiceGuide">
+          <div class="v-guide-row"><strong>🪟 Windows Edge</strong><br>已內建 Microsoft 雲希(男)、曉曉(女) 等神經語音，直接選用即可</div>
+          <div class="v-guide-row"><strong>🤖 Android</strong><br>設定 › 一般管理 › 語言與輸入法 › 文字轉語音輸出 › 下載中文語音</div>
+          <div class="v-guide-row"><strong>🍎 iPhone / iPad</strong><br>設定 › 輔助使用 › 口語內容 › 語音 › 中文 › 下載更多語音</div>
+          <div class="v-guide-row"><strong>💡 推薦</strong><br>使用 Microsoft Edge 瀏覽器，可免費獲得最自然的 AI 男女語音</div>
+        </div>
       </div>
     </div>
   </div>
@@ -747,7 +770,15 @@ const Reader={
 
 /* ══ TTS ══ */
 const TTS={
-  idx:0,segs:[],on:false,paused:false,_hb:null,
+  idx:0,segs:[],on:false,paused:false,_hb:null,_gFilter:'all',
+  _voiceGender(name){
+    if(/\b(yun|wanlung|yunlung)\b/i.test(name)||/yun.jhe/i.test(name))return'm';
+    if(/\b(xiao|hsiao|hiu|sin.ji|tian.tian|mei.jia)\b/i.test(name))return'f';
+    if(/\bmale\b/i.test(name))return'm';
+    if(/\b(female|woman|girl)\b/i.test(name))return'f';
+    return'?';
+  },
+  _voiceNeural(name){return/online|neural|natural|wavenet/i.test(name)},
   build(){this.segs=[];Reader.paras.forEach((p,i)=>{const parts=p.match(/[^。！？…]+[。！？…]*/g)||[p];if(parts.length<=1){this.segs.push({text:p,pi:i});return}parts.forEach(s=>{if(s.trim())this.segs.push({text:s,pi:i})})})},
   /* iOS Safari 有 15 秒超時 bug，每 10 秒 pause/resume 保持活躍 */
   _startHB(){this._stopHB();this._hb=setInterval(()=>{if(this.on&&!this.paused&&window.speechSynthesis.speaking){window.speechSynthesis.pause();window.speechSynthesis.resume()}},10000)},
@@ -773,9 +804,12 @@ const TTS={
   fillVoices(){
     const sel=document.getElementById('voiceSel');
     const vs=window.speechSynthesis.getVoices();
-    const zh=vs.map((v,i)=>({v,i})).filter(({v})=>/^zh/i.test(v.lang));
-    const other=vs.map((v,i)=>({v,i})).filter(({v})=>!/^zh/i.test(v.lang));
-    const toOpt=({v,i})=>`<option value="${i}">${v.name} (${v.lang})</option>`;
+    const gf=this._gFilter||'all';
+    const all=vs.map((v,i)=>({v,i,g:this._voiceGender(v.name),n:this._voiceNeural(v.name)}));
+    const filter=x=>gf==='all'||x.g===gf||x.g==='?';
+    const toOpt=({v,i,g,n})=>`<option value="${i}">${g==='m'?'♂ ':g==='f'?'♀ ':''}${v.name}${n?'✨':''} (${v.lang})</option>`;
+    const zh=all.filter(x=>/^zh/i.test(x.v.lang)&&filter(x));
+    const other=all.filter(x=>!/^zh/i.test(x.v.lang)&&filter(x));
     sel.innerHTML='<option value="">自動選擇</option>'
       +(zh.length?'<optgroup label="─ 中文語音 ─">'+zh.map(toOpt).join('')+'</optgroup>':'')
       +(other.length?'<optgroup label="─ 其他語音 ─">'+other.map(toOpt).join('')+'</optgroup>':'');
@@ -827,6 +861,17 @@ document.addEventListener('DOMContentLoaded',async()=>{
     const vs=window.speechSynthesis.getVoices();
     if(pr.voiceIdx!=null&&vs[pr.voiceIdx])u.voice=vs[pr.voiceIdx];
     window.speechSynthesis.cancel();window.speechSynthesis.speak(u);
+  };
+  document.querySelectorAll('.v-gbt').forEach(btn=>btn.onclick=()=>{
+    document.querySelectorAll('.v-gbt').forEach(b=>b.classList.remove('on'));
+    btn.classList.add('on');
+    TTS._gFilter=btn.dataset.g;
+    TTS.fillVoices();
+  });
+  document.getElementById('voiceGuideBtn').onclick=()=>{
+    const g=document.getElementById('voiceGuide');
+    const open=g.classList.toggle('on');
+    document.getElementById('voiceGuideBtn').textContent=open?'如何取得更多高品質語音 ▾':'如何取得更多高品質語音 ▸';
   };
 
   document.addEventListener('keydown',e=>{
