@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<!-- 書閣 Novel Reader v2.6.0 -->
+<!-- 書閣 Novel Reader v2.7.0 -->
 
 <html lang="zh-TW">
 <head>
@@ -9,7 +9,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>書閣 v2.6.0</title>
+<title>書閣 v2.7.0</title>
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -239,7 +239,7 @@ body.night .toast{background:#c09030;color:#0a0806}
 
 <div id="vLib" class="view">
   <header class="lhd">
-    <div class="lhd-logo">書閣 <small>v2.6.0</small></div>
+    <div class="lhd-logo">書閣 <small>v2.7.0</small></div>
     <button class="ibt" id="btnTheme">🌙</button>
     <button class="ibt" id="btnUp">＋</button>
   </header>
@@ -339,11 +339,10 @@ body.night .toast{background:#c09030;color:#0a0806}
           <button class="v-guide-btn" id="voiceGuideBtn">如何取得更多高品質語音 ▸</button>
         </div>
         <div class="v-guide" id="voiceGuide">
-          <div class="v-guide-row"><strong>🪟 Windows Edge</strong><br>已內建 Microsoft 雲希(男)、曉曉(女) 等神經語音，直接選用即可</div>
-          <div class="v-guide-row"><strong>🤖 Android</strong><br>設定 › 一般管理 › 語言與輸入法 › 文字轉語音輸出 › 下載中文語音</div>
-          <div class="v-guide-row"><strong>🍎 iPhone / iPad</strong><br>設定 › 輔助使用 › 口語內容 › 語音 › 中文 › 下載更多語音</div>
-          <div class="v-guide-row"><strong>💡 推薦</strong><br>使用 Microsoft Edge 瀏覽器，可免費獲得最自然的 AI 男女語音</div>
-          <div class="v-guide-row"><strong>🚗 開車同時導航聽書</strong><br>將書閣加入主畫面以 PWA 模式執行（iOS 分享 ›「加入主畫面」／Android 選單 ›「安裝應用程式」），背景播放最穩定，可與導航 App 同時使用</div>
+          <div class="v-guide-row"><strong>🪟 Windows / Mac Edge</strong><br>已內建 Microsoft 雲希(男)、曉曉(女) 等 AI 神經語音，直接選用音質最佳</div>
+          <div class="v-guide-row"><strong>🤖 Android</strong><br>設定 › 一般管理 › 語言與輸入法 › 文字轉語音 › 下載中文語音<br>切換 App 後繼續播放：設定 › 應用程式 › Chrome › 電池 ›「不受限制」</div>
+          <div class="v-guide-row"><strong>🍎 iPhone / iPad</strong><br>設定 › 輔助使用 › 口語內容 › 語音 › 中文 › 下載更多語音<br>⚠️ iOS 系統限制：切換到其他 App 後聽書會中斷（Apple 尚未解決此問題）<br>建議：聽書時保持書閣在前台，不要切換其他 App</div>
+          <div class="v-guide-row"><strong>🚗 開車聽書建議</strong><br>Android：可與導航 App 同時使用（Chrome 電池設為「不受限制」）<br>iPhone：建議連接 CarPlay，或保持手機螢幕在書閣不切換其他 App</div>
         </div>
       </div>
     </div>
@@ -771,7 +770,7 @@ const Reader={
 
 /* ══ TTS ══ */
 const TTS={
-  idx:0,segs:[],on:false,paused:false,_hb:null,_gFilter:'all',_silentCtx:null,
+  idx:0,segs:[],on:false,paused:false,_hb:null,_gFilter:'all',_silentCtx:null,_wl:null,
   _voiceGender(name){
     if(/\b(yun|wanlung|yunlung)\b/i.test(name)||/yun.jhe/i.test(name))return'm';
     if(/\b(xiao|hsiao|hiu|sin.ji|tian.tian|mei.jia)\b/i.test(name))return'f';
@@ -781,6 +780,12 @@ const TTS={
   },
   _voiceNeural(name){return/online|neural|natural|wavenet/i.test(name)},
   build(){this.segs=[];Reader.paras.forEach((p,i)=>{const parts=p.match(/[^。！？…]+[。！？…]*/g)||[p];if(parts.length<=1){this.segs.push({text:p,pi:i});return}parts.forEach(s=>{if(s.trim())this.segs.push({text:s,pi:i})})})},
+  /* Screen Wake Lock：防止螢幕自動關閉中斷朗讀 */
+  _reqWakeLock(){
+    if(!('wakeLock' in navigator)||this._wl)return;
+    navigator.wakeLock.request('screen').then(wl=>{this._wl=wl;wl.addEventListener('release',()=>{this._wl=null})}).catch(()=>{});
+  },
+  _relWakeLock(){if(this._wl){this._wl.release().catch(()=>{});this._wl=null;}},
   /* 靜音 OscillatorNode 保持音訊工作階段活躍，讓背景播放得以持續 */
   _startSilent(){
     if(this._silentCtx)return;
@@ -814,7 +819,7 @@ const TTS={
   /* iOS Safari 有 15 秒超時 bug，每 10 秒 pause/resume 保持活躍 */
   _startHB(){this._stopHB();this._hb=setInterval(()=>{if(this.on&&!this.paused&&window.speechSynthesis.speaking){window.speechSynthesis.pause();window.speechSynthesis.resume()}},10000)},
   _stopHB(){if(this._hb){clearInterval(this._hb);this._hb=null}},
-  start(from){if(!Reader.paras.length){toast('請先開啟書籍');return}this.build();const pg=Reader.pages[Reader.curPage];const startPi=from!=null?from:(pg?pg.startPara:0);const si=this.segs.findIndex(s=>s.pi>=startPi);this.idx=si>=0?si:0;this.on=true;this.paused=false;window.speechSynthesis.cancel();this._startHB();this._startSilent();this._updMediaSession('playing');setTimeout(()=>this.speak(),80);this.updUI()},
+  start(from){if(!Reader.paras.length){toast('請先開啟書籍');return}this.build();const pg=Reader.pages[Reader.curPage];const startPi=from!=null?from:(pg?pg.startPara:0);const si=this.segs.findIndex(s=>s.pi>=startPi);this.idx=si>=0?si:0;this.on=true;this.paused=false;window.speechSynthesis.cancel();this._startHB();this._startSilent();this._reqWakeLock();this._updMediaSession('playing');setTimeout(()=>this.speak(),80);this.updUI()},
   speak(){
     if(!this.on||this.idx>=this.segs.length){this.stop();return}
     const seg=this.segs[this.idx];
@@ -830,7 +835,7 @@ const TTS={
     window.speechSynthesis.speak(u);
   },
   toggle(){if(!this.on)this.start();else if(this.paused){window.speechSynthesis.resume();this.paused=false;this._startHB();this._updMediaSession('playing');this.updUI()}else{window.speechSynthesis.pause();this._stopHB();this.paused=true;this._updMediaSession('paused');this.updUI()}},
-  stop(){this.on=false;this.paused=false;this._stopHB();this._stopSilent();window.speechSynthesis.cancel();document.querySelectorAll('.tts-hi').forEach(el=>el.classList.remove('tts-hi'));this._updMediaSession('none');this.updUI()},
+  stop(){this.on=false;this.paused=false;this._stopHB();this._stopSilent();this._relWakeLock();window.speechSynthesis.cancel();document.querySelectorAll('.tts-hi').forEach(el=>el.classList.remove('tts-hi'));this._updMediaSession('none');this.updUI()},
   updUI(){const pb=document.getElementById('rfPlay');if(this.on&&!this.paused){pb.textContent='⏸';pb.classList.add('on')}else{pb.textContent='▶';pb.classList.remove('on')}},
   fillVoices(){
     const sel=document.getElementById('voiceSel');
@@ -914,11 +919,14 @@ document.addEventListener('DOMContentLoaded',async()=>{
 
   if('speechSynthesis' in window){speechSynthesis.onvoiceschanged=()=>TTS.fillVoices();TTS.fillVoices()}
 
-  /* 回到前台時若 SpeechSynthesis 被 OS kill，自動重啟當前段落 */
+  /* 回到前台時重新請求 Wake Lock；若 SpeechSynthesis 被 OS kill 則自動重啟 */
   document.addEventListener('visibilitychange',()=>{
-    if(!document.hidden&&TTS.on&&!TTS.paused&&!window.speechSynthesis.speaking){
-      window.speechSynthesis.cancel();
-      setTimeout(()=>TTS.speak(),150);
+    if(!document.hidden&&TTS.on&&!TTS.paused){
+      TTS._reqWakeLock();
+      if(!window.speechSynthesis.speaking){
+        window.speechSynthesis.cancel();
+        setTimeout(()=>{TTS.speak();toast('📖 已繼續朗讀')},150);
+      }
     }
   });
 
