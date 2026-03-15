@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<!-- 書閣 Novel Reader v3.0.0 -->
+<!-- 書閣 Novel Reader v3.0.2 -->
 
 <html lang="zh-TW">
 <head>
@@ -9,7 +9,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>書閣 v3.0.0</title>
+<title>書閣 v3.0.2</title>
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -243,7 +243,7 @@ body.night .toast{background:#c09030;color:#0a0806}
 
 <div id="vLib" class="view">
   <header class="lhd">
-    <div class="lhd-logo">書閣 <small>v3.0.0</small></div>
+    <div class="lhd-logo">書閣 <small>v3.0.2</small></div>
     <button class="ibt" id="btnTheme">🌙</button>
     <button class="ibt" id="btnUp">＋</button>
   </header>
@@ -787,7 +787,7 @@ const Reader={
 
 /* ══ TTS ══ */
 const TTS={
-  idx:0,segs:[],on:false,paused:false,_hb:null,_gFilter:'all',_silentAudio:null,_silentUrl:null,_wl:null,_errCnt:0,_sleepTimer:null,_sleepEnd:0,_sleepTick:null,
+  idx:0,segs:[],on:false,paused:false,_hb:null,_gFilter:'all',_silentAudio:null,_silentUrl:null,_wl:null,_errCnt:0,_sleepTimer:null,_sleepEnd:0,_sleepTick:null,_hbNeeded:false,
   _voiceGender(name){
     if(/\b(yun|wanlung|yunlung)\b/i.test(name)||/yun.jhe/i.test(name))return'm';
     if(/\b(xiao|hsiao|hiu|sin.ji|tian.tian|mei.jia)\b/i.test(name))return'f';
@@ -796,7 +796,7 @@ const TTS={
     return'?';
   },
   _voiceNeural(name){return/online|neural|natural|wavenet/i.test(name)},
-  build(){this.segs=[];Reader.paras.forEach((p,i)=>{p=p.replace(/[""''「」『』【】〔〕]/g,'');const parts=p.match(/[^。！？…，、；]+[。！？…，、；]*/g)||[p];if(parts.length<=1){this.segs.push({text:p,pi:i});return}parts.forEach(s=>{if(s.trim())this.segs.push({text:s,pi:i})})})},
+  build(){this.segs=[];Reader.paras.forEach((p,i)=>{p=p.replace(/[\u201C\u201D\u2018\u2019\u300C\u300D\u300E\u300F\u3010\u3011\u3014\u3015\uFF02\u301D\u301E\u301F]/g,'');const parts=p.match(/[^。！？…，、；]+[。！？…，、；]*/g)||[p];if(parts.length<=1){this.segs.push({text:p,pi:i});return}parts.forEach(s=>{if(s.trim())this.segs.push({text:s,pi:i})})})},
   /* Screen Wake Lock：防止螢幕自動關閉中斷朗讀 */
   _reqWakeLock(){
     if(!('wakeLock' in navigator)||this._wl)return;
@@ -872,14 +872,16 @@ const TTS={
     if(this._sleepEnd>0){const rem=Math.max(0,Math.ceil((this._sleepEnd-Date.now())/60000));el.textContent='⏱ '+rem+'分';el.style.display=''}
     else el.style.display='none';
   },
-  /* iOS Safari 有 15 秒超時 bug，每 13.5 秒 pause/resume 保持活躍（間隔拉長以減少卡頓） */
-  _startHB(){this._stopHB();this._hb=setInterval(()=>{if(this.on&&!this.paused&&window.speechSynthesis.speaking){window.speechSynthesis.pause();window.speechSynthesis.resume()}},13500)},
+  /* iOS Safari 有 15 秒超時 bug，每 13.5 秒設旗標，在句子邊界（非朗讀中）才真正 pause/resume，避免卡頓 */
+  _startHB(){this._stopHB();this._hb=setInterval(()=>{if(this.on&&!this.paused)this._hbNeeded=true},13500)},
   _stopHB(){if(this._hb){clearInterval(this._hb);this._hb=null}},
-  start(from){if(!Reader.paras.length){toast('請先開啟書籍');return}this.build();const pg=Reader.pages[Reader.curPage];const startPi=from!=null?from:(pg?pg.startPara:0);const si=this.segs.findIndex(s=>s.pi>=startPi);this.idx=si>=0?si:0;this.on=true;this.paused=false;window.speechSynthesis.cancel();this._startHB();this._startSilent();this._reqWakeLock();this._updMediaSession('playing');setTimeout(()=>this.speak(),80);this.updUI()},
+  start(from){if(!Reader.paras.length){toast('請先開啟書籍');return}this.build();const pg=Reader.pages[Reader.curPage];const startPi=from!=null?from:(pg?pg.startPara:0);const si=this.segs.findIndex(s=>s.pi>=startPi);this.idx=si>=0?si:0;this.on=true;this.paused=false;window.speechSynthesis.cancel();this._startSilent();this._reqWakeLock();this._updMediaSession('playing');setTimeout(()=>this.speak(),80);this.updUI()},
   speak(){
     if(!this.on||this.idx>=this.segs.length){this.stop();return}
     const seg=this.segs[this.idx];
     if(!seg.text.trim()){this.idx++;setTimeout(()=>this.speak(),10);return}
+    /* 句子邊界心跳：speechSynthesis.speaking=false，pause/resume 完全無聲，iOS 計時器安靜重置 */
+    if(this._hbNeeded){this._hbNeeded=false;window.speechSynthesis.pause();window.speechSynthesis.resume()}
     const u=new SpeechSynthesisUtterance(seg.text);
     const pr=Meta.loadP();u.rate=pr.speed||1;u.lang='zh-TW';
     const vs=window.speechSynthesis.getVoices();
@@ -897,8 +899,8 @@ const TTS={
     };
     window.speechSynthesis.speak(u);
   },
-  toggle(){if(!this.on)this.start();else if(this.paused){window.speechSynthesis.resume();this.paused=false;this._startHB();this._updMediaSession('playing');this.updUI()}else{window.speechSynthesis.pause();this._stopHB();this.paused=true;this._updMediaSession('paused');this.updUI()}},
-  stop(){this.on=false;this.paused=false;this._stopHB();this._clearSleep();this._stopSilent();this._relWakeLock();window.speechSynthesis.cancel();document.querySelectorAll('.tts-hi').forEach(el=>el.classList.remove('tts-hi'));this._updMediaSession('none');this.updUI()},
+  toggle(){if(!this.on)this.start();else if(this.paused){window.speechSynthesis.resume();this.paused=false;this._updMediaSession('playing');this.updUI()}else{window.speechSynthesis.pause();this._stopHB();this.paused=true;this._updMediaSession('paused');this.updUI()}},
+  stop(){this.on=false;this.paused=false;this._hbNeeded=false;this._stopHB();this._clearSleep();this._stopSilent();this._relWakeLock();window.speechSynthesis.cancel();document.querySelectorAll('.tts-hi').forEach(el=>el.classList.remove('tts-hi'));this._updMediaSession('none');this.updUI()},
   updUI(){const pb=document.getElementById('rfPlay');if(this.on&&!this.paused){pb.textContent='⏸';pb.classList.add('on')}else{pb.textContent='▶';pb.classList.remove('on')}},
   fillVoices(){
     const sel=document.getElementById('voiceSel');
@@ -995,13 +997,18 @@ document.addEventListener('DOMContentLoaded',async()=>{
 
   if('speechSynthesis' in window){speechSynthesis.onvoiceschanged=()=>TTS.fillVoices();TTS.fillVoices()}
 
-  /* 回到前台時重新請求 Wake Lock；若 SpeechSynthesis 被 OS kill 則自動重啟 */
+  /* 背景偵測：進入背景才啟動心跳（防 iOS 15s 超時），回前台立即停止（消除卡頓） */
   document.addEventListener('visibilitychange',()=>{
-    if(!document.hidden&&TTS.on&&!TTS.paused){
-      TTS._reqWakeLock();
-      if(!window.speechSynthesis.speaking){
-        window.speechSynthesis.cancel();
-        setTimeout(()=>{TTS.speak();toast('📖 已繼續朗讀')},150);
+    if(document.hidden){
+      if(TTS.on&&!TTS.paused)TTS._startHB();
+    }else{
+      TTS._stopHB();
+      if(TTS.on&&!TTS.paused){
+        TTS._reqWakeLock();
+        if(!window.speechSynthesis.speaking){
+          window.speechSynthesis.cancel();
+          setTimeout(()=>{TTS.speak();toast('📖 已繼續朗讀')},150);
+        }
       }
     }
   });
