@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<!-- 書閣 Novel Reader v2.9.0 -->
+<!-- 書閣 Novel Reader v3.0.0 -->
 
 <html lang="zh-TW">
 <head>
@@ -9,7 +9,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>書閣 v2.9.0</title>
+<title>書閣 v3.0.0</title>
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -191,6 +191,10 @@ body.night .rfconv.cn{color:#6e6248;border-color:rgba(192,144,48,.35)}
 .v-gbt{flex:1;height:32px;border-radius:8px;border:1.5px solid var(--bd2);background:var(--panelbg2);color:var(--tx2);font-size:12px;font-weight:600;font-family:var(--serif);transition:all .15s}
 .v-gbt.on{background:var(--ac);color:#fff;border-color:var(--ac)}
 .v-gbt:active{opacity:.75}
+.slp-wrap{display:flex;gap:5px;flex-wrap:wrap}
+.slp-bt{flex:1;min-width:44px;height:32px;border-radius:8px;border:1.5px solid var(--bd2);background:var(--panelbg2);color:var(--tx2);font-size:12px;font-weight:600;font-family:var(--serif);transition:all .15s}
+.slp-bt.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+.slp-bt:active{opacity:.75}
 .sg-hint{font-size:11px;color:var(--tx3);margin-top:8px;line-height:1.5}
 .v-guide-btn{background:none;border:none;color:var(--ac);font-size:11px;font-family:var(--serif);padding:0;margin-top:4px;text-decoration:underline;cursor:pointer}
 .v-guide{display:none;margin-top:10px;border-radius:10px;border:1.5px solid var(--bd2);overflow:hidden}
@@ -239,7 +243,7 @@ body.night .toast{background:#c09030;color:#0a0806}
 
 <div id="vLib" class="view">
   <header class="lhd">
-    <div class="lhd-logo">書閣 <small>v2.9.0</small></div>
+    <div class="lhd-logo">書閣 <small>v3.0.0</small></div>
     <button class="ibt" id="btnTheme">🌙</button>
     <button class="ibt" id="btnUp">＋</button>
   </header>
@@ -283,6 +287,7 @@ body.night .toast{background:#c09030;color:#0a0806}
       <button class="rfconv tw" id="rfConv">繁 ✓</button>
       <div class="rf-div"></div>
       <button class="rftog" id="rfNight">🌙</button>
+      <span id="rfSleep" style="display:none;font-size:11px;color:var(--ac);font-weight:700;flex-shrink:0;white-space:nowrap;margin-right:2px"></span>
       <div class="rf-prog-wrap">
         <div class="rf-prog" id="rfProg"><div class="rf-prog-f" id="rfProgF" style="width:0%"></div></div>
         <span class="rf-pct" id="rfPct">…</span>
@@ -344,6 +349,18 @@ body.night .toast{background:#c09030;color:#0a0806}
           <div class="v-guide-row"><strong>🍎 iPhone / iPad</strong><br>設定 › 輔助使用 › 口語內容 › 語音 › 中文 › 下載更多語音<br>⚠️ iOS 系統限制：切換到其他 App 後聽書會中斷（Apple 尚未解決此問題）<br>建議：聽書時保持書閣在前台，不要切換其他 App</div>
           <div class="v-guide-row"><strong>🚗 開車聽書建議</strong><br>Android：可與導航 App 同時使用（Chrome 電池設為「不受限制」）<br>iPhone：建議連接 CarPlay，或保持手機螢幕在書閣不切換其他 App</div>
         </div>
+      </div>
+      <div class="sg">
+        <div class="sg-lbl">定時關閉</div>
+        <div class="slp-wrap">
+          <button class="slp-bt on" data-m="0">關閉</button>
+          <button class="slp-bt" data-m="5">5分</button>
+          <button class="slp-bt" data-m="10">10分</button>
+          <button class="slp-bt" data-m="15">15分</button>
+          <button class="slp-bt" data-m="20">20分</button>
+          <button class="slp-bt" data-m="30">30分</button>
+        </div>
+        <div class="sg-hint" id="sleepHint" style="display:none"></div>
       </div>
     </div>
   </div>
@@ -770,7 +787,7 @@ const Reader={
 
 /* ══ TTS ══ */
 const TTS={
-  idx:0,segs:[],on:false,paused:false,_hb:null,_gFilter:'all',_silentAudio:null,_silentUrl:null,_wl:null,_errCnt:0,
+  idx:0,segs:[],on:false,paused:false,_hb:null,_gFilter:'all',_silentAudio:null,_silentUrl:null,_wl:null,_errCnt:0,_sleepTimer:null,_sleepEnd:0,_sleepTick:null,
   _voiceGender(name){
     if(/\b(yun|wanlung|yunlung)\b/i.test(name)||/yun.jhe/i.test(name))return'm';
     if(/\b(xiao|hsiao|hiu|sin.ji|tian.tian|mei.jia)\b/i.test(name))return'f';
@@ -779,7 +796,7 @@ const TTS={
     return'?';
   },
   _voiceNeural(name){return/online|neural|natural|wavenet/i.test(name)},
-  build(){this.segs=[];Reader.paras.forEach((p,i)=>{const parts=p.match(/[^。！？…]+[。！？…]*/g)||[p];if(parts.length<=1){this.segs.push({text:p,pi:i});return}parts.forEach(s=>{if(s.trim())this.segs.push({text:s,pi:i})})})},
+  build(){this.segs=[];Reader.paras.forEach((p,i)=>{p=p.replace(/[""''「」『』【】〔〕]/g,'');const parts=p.match(/[^。！？…，、；]+[。！？…，、；]*/g)||[p];if(parts.length<=1){this.segs.push({text:p,pi:i});return}parts.forEach(s=>{if(s.trim())this.segs.push({text:s,pi:i})})})},
   /* Screen Wake Lock：防止螢幕自動關閉中斷朗讀 */
   _reqWakeLock(){
     if(!('wakeLock' in navigator)||this._wl)return;
@@ -827,8 +844,36 @@ const TTS={
     navigator.mediaSession.setActionHandler('pause',()=>{if(TTS.on&&!TTS.paused)TTS.toggle()});
     navigator.mediaSession.setActionHandler('stop',()=>TTS.stop());
   },
-  /* iOS Safari 有 15 秒超時 bug，每 10 秒 pause/resume 保持活躍 */
-  _startHB(){this._stopHB();this._hb=setInterval(()=>{if(this.on&&!this.paused&&window.speechSynthesis.speaking){window.speechSynthesis.pause();window.speechSynthesis.resume()}},10000)},
+  /* 定時關閉（睡眠計時器） */
+  _setSleep(mins){
+    if(this._sleepTimer){clearTimeout(this._sleepTimer);this._sleepTimer=null}
+    if(this._sleepTick){clearInterval(this._sleepTick);this._sleepTick=null}
+    this._sleepEnd=0;this._updSleepUI();
+    const p=Meta.loadP();p.sleepMins=mins||0;Meta.saveP(p);
+    if(!mins||mins<=0)return;
+    this._sleepEnd=Date.now()+mins*60000;
+    this._sleepTimer=setTimeout(()=>{
+      this.stop();toast('⏰ 定時關閉，晚安');
+      this._sleepEnd=0;this._sleepTimer=null;
+      if(this._sleepTick){clearInterval(this._sleepTick);this._sleepTick=null}
+      this._updSleepUI();
+      document.querySelectorAll('.slp-bt').forEach(b=>b.classList.toggle('on',b.dataset.m==='0'));
+      const hint=document.getElementById('sleepHint');if(hint)hint.style.display='none';
+    },mins*60000);
+    this._sleepTick=setInterval(()=>this._updSleepUI(),60000);
+  },
+  _clearSleep(){
+    if(this._sleepTimer){clearTimeout(this._sleepTimer);this._sleepTimer=null}
+    if(this._sleepTick){clearInterval(this._sleepTick);this._sleepTick=null}
+    this._sleepEnd=0;this._updSleepUI();
+  },
+  _updSleepUI(){
+    const el=document.getElementById('rfSleep');if(!el)return;
+    if(this._sleepEnd>0){const rem=Math.max(0,Math.ceil((this._sleepEnd-Date.now())/60000));el.textContent='⏱ '+rem+'分';el.style.display=''}
+    else el.style.display='none';
+  },
+  /* iOS Safari 有 15 秒超時 bug，每 13.5 秒 pause/resume 保持活躍（間隔拉長以減少卡頓） */
+  _startHB(){this._stopHB();this._hb=setInterval(()=>{if(this.on&&!this.paused&&window.speechSynthesis.speaking){window.speechSynthesis.pause();window.speechSynthesis.resume()}},13500)},
   _stopHB(){if(this._hb){clearInterval(this._hb);this._hb=null}},
   start(from){if(!Reader.paras.length){toast('請先開啟書籍');return}this.build();const pg=Reader.pages[Reader.curPage];const startPi=from!=null?from:(pg?pg.startPara:0);const si=this.segs.findIndex(s=>s.pi>=startPi);this.idx=si>=0?si:0;this.on=true;this.paused=false;window.speechSynthesis.cancel();this._startHB();this._startSilent();this._reqWakeLock();this._updMediaSession('playing');setTimeout(()=>this.speak(),80);this.updUI()},
   speak(){
@@ -853,7 +898,7 @@ const TTS={
     window.speechSynthesis.speak(u);
   },
   toggle(){if(!this.on)this.start();else if(this.paused){window.speechSynthesis.resume();this.paused=false;this._startHB();this._updMediaSession('playing');this.updUI()}else{window.speechSynthesis.pause();this._stopHB();this.paused=true;this._updMediaSession('paused');this.updUI()}},
-  stop(){this.on=false;this.paused=false;this._stopHB();this._stopSilent();this._relWakeLock();window.speechSynthesis.cancel();document.querySelectorAll('.tts-hi').forEach(el=>el.classList.remove('tts-hi'));this._updMediaSession('none');this.updUI()},
+  stop(){this.on=false;this.paused=false;this._stopHB();this._clearSleep();this._stopSilent();this._relWakeLock();window.speechSynthesis.cancel();document.querySelectorAll('.tts-hi').forEach(el=>el.classList.remove('tts-hi'));this._updMediaSession('none');this.updUI()},
   updUI(){const pb=document.getElementById('rfPlay');if(this.on&&!this.paused){pb.textContent='⏸';pb.classList.add('on')}else{pb.textContent='▶';pb.classList.remove('on')}},
   fillVoices(){
     const sel=document.getElementById('voiceSel');
@@ -927,6 +972,19 @@ document.addEventListener('DOMContentLoaded',async()=>{
     const open=g.classList.toggle('on');
     document.getElementById('voiceGuideBtn').textContent=open?'如何取得更多高品質語音 ▾':'如何取得更多高品質語音 ▸';
   };
+  document.querySelectorAll('.slp-bt').forEach(btn=>{
+    btn.onclick=()=>{
+      const mins=parseInt(btn.dataset.m)||0;
+      document.querySelectorAll('.slp-bt').forEach(b=>b.classList.remove('on'));
+      btn.classList.add('on');
+      const hint=document.getElementById('sleepHint');
+      TTS._setSleep(mins);
+      if(mins>0){if(hint){hint.textContent='⏰ 將在 '+mins+' 分鐘後停止朗讀';hint.style.display=''}}
+      else{if(hint)hint.style.display='none'}
+    };
+  });
+  // 恢復上次儲存的定時設定（只還原按鈕狀態，不自動啟動計時）
+  (()=>{const sm=Meta.loadP().sleepMins;if(sm){document.querySelectorAll('.slp-bt').forEach(b=>{b.classList.toggle('on',parseInt(b.dataset.m)===sm)})}})();
 
   document.addEventListener('keydown',e=>{
     if(!document.getElementById('vRdr').classList.contains('active'))return;
