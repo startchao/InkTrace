@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<!-- 書閣 Novel Reader v2.8.0 -->
+<!-- 書閣 Novel Reader v2.9.0 -->
 
 <html lang="zh-TW">
 <head>
@@ -9,7 +9,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>書閣 v2.8.0</title>
+<title>書閣 v2.9.0</title>
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -239,7 +239,7 @@ body.night .toast{background:#c09030;color:#0a0806}
 
 <div id="vLib" class="view">
   <header class="lhd">
-    <div class="lhd-logo">書閣 <small>v2.8.0</small></div>
+    <div class="lhd-logo">書閣 <small>v2.9.0</small></div>
     <button class="ibt" id="btnTheme">🌙</button>
     <button class="ibt" id="btnUp">＋</button>
   </header>
@@ -770,7 +770,7 @@ const Reader={
 
 /* ══ TTS ══ */
 const TTS={
-  idx:0,segs:[],on:false,paused:false,_hb:null,_gFilter:'all',_silentCtx:null,_wl:null,_errCnt:0,
+  idx:0,segs:[],on:false,paused:false,_hb:null,_gFilter:'all',_silentAudio:null,_silentUrl:null,_wl:null,_errCnt:0,
   _voiceGender(name){
     if(/\b(yun|wanlung|yunlung)\b/i.test(name)||/yun.jhe/i.test(name))return'm';
     if(/\b(xiao|hsiao|hiu|sin.ji|tian.tian|mei.jia)\b/i.test(name))return'f';
@@ -786,20 +786,30 @@ const TTS={
     navigator.wakeLock.request('screen').then(wl=>{this._wl=wl;wl.addEventListener('release',()=>{this._wl=null})}).catch(()=>{});
   },
   _relWakeLock(){if(this._wl){this._wl.release().catch(()=>{});this._wl=null;}},
-  /* 靜音 OscillatorNode 保持音訊工作階段活躍，讓背景播放得以持續 */
+  /* 靜音 <audio> 保活：讓 iOS 視此頁為「媒體播放器」，享有背景執行優先權
+     使用 <audio> 而非 AudioContext：iOS 對 <audio> 的背景保護優於 OscillatorNode */
   _startSilent(){
-    if(this._silentCtx)return;
+    if(this._silentAudio)return;
     try{
-      const ctx=new(window.AudioContext||window.webkitAudioContext)();
-      const osc=ctx.createOscillator();
-      const gain=ctx.createGain();
-      gain.gain.value=0.001;
-      osc.connect(gain);gain.connect(ctx.destination);osc.start();
-      ctx.onstatechange=()=>{if(ctx.state==='suspended')ctx.resume().catch(()=>{})};
-      this._silentCtx=ctx;
+      // 動態產生 1 秒靜音 WAV（8kHz 8-bit mono）
+      const sr=8000,n=sr,buf=new ArrayBuffer(44+n),v=new DataView(buf);
+      const w=(o,s)=>[...s].forEach((c,i)=>v.setUint8(o+i,c.charCodeAt(0)));
+      w(0,'RIFF');v.setUint32(4,36+n,true);w(8,'WAVE');
+      w(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);
+      v.setUint32(24,sr,true);v.setUint32(28,sr,true);v.setUint16(32,1,true);v.setUint16(34,8,true);
+      w(36,'data');v.setUint32(40,n,true);
+      for(let i=0;i<n;i++)v.setUint8(44+i,128); // 128 = 8-bit PCM 靜音值
+      const url=URL.createObjectURL(new Blob([buf],{type:'audio/wav'}));
+      const a=new Audio(url);
+      a.loop=true;a.volume=0.01;
+      a.play().catch(()=>{});
+      this._silentAudio=a;this._silentUrl=url;
     }catch(e){}
   },
-  _stopSilent(){if(this._silentCtx){this._silentCtx.close();this._silentCtx=null;}},
+  _stopSilent(){
+    if(this._silentAudio){this._silentAudio.pause();this._silentAudio.src='';this._silentAudio=null;}
+    if(this._silentUrl){URL.revokeObjectURL(this._silentUrl);this._silentUrl=null;}
+  },
   /* Media Session API：在鎖定畫面 / 通知中心顯示播放控制 */
   _updMediaSession(state){
     if(!('mediaSession' in navigator))return;
