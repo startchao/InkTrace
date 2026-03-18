@@ -2,7 +2,7 @@
 
 <!--
   ╔══════════════════════════════════════════════════════════════════════╗
-  ║  書閣 Novel Reader  v3.0.3                                          ║
+  ║  書閣 Novel Reader  v3.0.4                                          ║
   ║  一款專為中文小說設計的離線 PWA 閱讀器                              ║
   ║                                                                      ║
   ║  功能特色                                                            ║
@@ -19,7 +19,8 @@
   ║  · IndexedDB（書籍儲存）、localStorage（設定與進度）                ║
   ║                                                                      ║
   ║  Changelog                                                           ║
-  ║  v3.0.3  版面返回修復（debounce resize + visibilitychange 重繪）    ║
+  ║  v3.0.4  修復 SW 導航攔截，飛航模式正式可用                         ║
+  ║  v3.0.4  版面返回修復（debounce resize + visibilitychange 重繪）    ║
   ║           SW 預快取 OpenCC & Google Fonts，支援完整離線模式          ║
   ║  v3.0.2  句子邊界心跳：iOS 背景保活不再產生可聽見的卡頓             ║
   ║  v3.0.1  引號過濾改用 Unicode escape，補充更多引號字元變體          ║
@@ -44,7 +45,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>書閣 v3.0.3</title>
+<title>書閣 v3.0.4</title>
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -278,7 +279,7 @@ body.night .toast{background:#c09030;color:#0a0806}
 
 <div id="vLib" class="view">
   <header class="lhd">
-    <div class="lhd-logo">書閣 <small>v3.0.3</small></div>
+    <div class="lhd-logo">書閣 <small>v3.0.4</small></div>
     <button class="ibt" id="btnTheme">🌙</button>
     <button class="ibt" id="btnUp">＋</button>
   </header>
