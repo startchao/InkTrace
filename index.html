@@ -1,6 +1,42 @@
 <!DOCTYPE html>
 
-<!-- 書閣 Novel Reader v3.0.3 -->
+<!--
+  ╔══════════════════════════════════════════════════════════════════════╗
+  ║  書閣 Novel Reader  v3.0.4                                          ║
+  ║  一款專為中文小說設計的離線 PWA 閱讀器                              ║
+  ║                                                                      ║
+  ║  功能特色                                                            ║
+  ║  · 本機 TXT 書籍載入（IndexedDB 持久化），無需伺服器                ║
+  ║  · overflow 精準分頁引擎，支援多種字體與字級                        ║
+  ║  · TTS 朗讀：語音選擇、語速調整、定時關閉、背景持續播放            ║
+  ║  · 繁簡自動轉換（OpenCC）、章節目錄、閱讀進度記憶                  ║
+  ║  · 離線可用（Service Worker 預快取所有依賴）                        ║
+  ║                                                                      ║
+  ║  技術架構                                                            ║
+  ║  · 純原生 HTML / CSS / JavaScript，零框架依賴                       ║
+  ║  · Web Speech API（TTS）、Wake Lock API、Visual Viewport API        ║
+  ║  · Service Worker（Cache-first shell + 預快取 CDN 資源）            ║
+  ║  · IndexedDB（書籍儲存）、localStorage（設定與進度）                ║
+  ║                                                                      ║
+  ║  Changelog                                                           ║
+  ║  v3.0.4  修復 SW 導航攔截，飛航模式正式可用                         ║
+  ║  v3.0.4  版面返回修復（debounce resize + visibilitychange 重繪）    ║
+  ║           SW 預快取 OpenCC & Google Fonts，支援完整離線模式          ║
+  ║  v3.0.2  句子邊界心跳：iOS 背景保活不再產生可聽見的卡頓             ║
+  ║  v3.0.1  引號過濾改用 Unicode escape，補充更多引號字元變體          ║
+  ║  v3.0.0  新增定時關閉（睡眠計時器）；逗號斷句縮短每段長度          ║
+  ║           修復心跳卡頓；修復引號被 TTS 朗讀為名稱的問題            ║
+  ║  v2.9.0  改用 <audio> 元素保活，提升 iOS 背景播放存活率             ║
+  ║  v2.8.0  修復藍牙連接中斷後 TTS 停止的問題（retry 機制）           ║
+  ║  v2.7.0  Screen Wake Lock 防止螢幕自動關閉；背景播放說明更新        ║
+  ║  v2.6.0  visibilitychange 心跳，切換 App 後 TTS 持續播放            ║
+  ║  v2.5.0  語音性別篩選、AI 神經語音標示、取得語音操作指南            ║
+  ║  v2.4.0  修復字體切換；改善語音選單；程式碼重構優化                 ║
+  ║  v2.3.0  分頁引擎改用 overflow 偵測；新增楷體 / 仿宋字體選項        ║
+  ║  v2.2.0  版面大改版：章節標題、縮小留白、修正文字遮蓋               ║
+  ║  v2.1.0  PWA 支援（manifest + Service Worker）；字體選擇            ║
+  ╚══════════════════════════════════════════════════════════════════════╝
+-->
 
 <html lang="zh-TW">
 <head>
@@ -9,7 +45,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>書閣 v3.0.3</title>
+<title>書閣 v3.0.4</title>
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -243,7 +279,7 @@ body.night .toast{background:#c09030;color:#0a0806}
 
 <div id="vLib" class="view">
   <header class="lhd">
-    <div class="lhd-logo">書閣 <small>v3.0.3</small></div>
+    <div class="lhd-logo">書閣 <small>v3.0.4</small></div>
     <button class="ibt" id="btnTheme">🌙</button>
     <button class="ibt" id="btnUp">＋</button>
   </header>
