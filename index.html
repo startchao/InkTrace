@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<!-- 書閣 Novel Reader v3.0.2 -->
+<!-- 書閣 Novel Reader v3.0.3 -->
 
 <html lang="zh-TW">
 <head>
@@ -9,7 +9,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>書閣 v3.0.2</title>
+<title>書閣 v3.0.3</title>
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -243,7 +243,7 @@ body.night .toast{background:#c09030;color:#0a0806}
 
 <div id="vLib" class="view">
   <header class="lhd">
-    <div class="lhd-logo">書閣 <small>v3.0.2</small></div>
+    <div class="lhd-logo">書閣 <small>v3.0.3</small></div>
     <button class="ibt" id="btnTheme">🌙</button>
     <button class="ibt" id="btnUp">＋</button>
   </header>
@@ -514,7 +514,7 @@ const Reader={
   id:null,rawParas:[],paras:[],chapters:[],
   pages:[],curPage:0,totalPages:0,
   fontSize:18,lineHeight:2,fontFamily:'"Noto Serif TC","Georgia",serif',toolbarOn:false,_paging:false,
-  STEPS:[15,18,21,26],_probe:null,_lastHl:null,
+  STEPS:[15,18,21,26],_probe:null,_lastHl:null,_lastAvailW:0,_lastAvailH:0,
 
   _ensureProbe(){
     if(this._probe)return;
@@ -556,6 +556,7 @@ const Reader={
   _paginate(goToParaIdx){
     this._ensureProbe();
     const{w,h}=this._getAvail();
+    this._lastAvailW=w;this._lastAvailH=h;
     const probe=this._probe;
     probe.style.width=w+'px';
     probe.style.height=h+'px';
@@ -1003,6 +1004,9 @@ document.addEventListener('DOMContentLoaded',async()=>{
       if(TTS.on&&!TTS.paused)TTS._startHB();
     }else{
       TTS._stopHB();
+      /* 返回前台：檢查版面尺寸是否在背景期間改變（iOS URL bar / status bar 變動），
+         尺寸不同 → 重新分頁；尺寸相同 → 至少重繪，修復 iOS 偶發的 DOM 失效 */
+      if(Reader.id){requestAnimationFrame(()=>{const{w,h}=Reader._getAvail();if(w!==Reader._lastAvailW||h!==Reader._lastAvailH){const old=Reader.pages[Reader.curPage]?.startPara||0;Reader._paging=false;Reader._paginate(old)}else{Reader._render(Reader.curPage)}})}
       if(TTS.on&&!TTS.paused){
         TTS._reqWakeLock();
         if(!window.speechSynthesis.speaking){
@@ -1014,8 +1018,10 @@ document.addEventListener('DOMContentLoaded',async()=>{
   });
 
   const onResize=()=>{if(Reader.id){const old=Reader.pages[Reader.curPage]?.startPara||0;Reader._paging=false;requestAnimationFrame(()=>Reader._paginate(old))}};
-  if(window.visualViewport)window.visualViewport.addEventListener('resize',onResize);
-  else{let rt;window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(onResize,350)})}
+  /* 統一 350ms debounce：避免 iOS URL bar 動畫觸發多次中間尺寸的重新分頁 */
+  let _rt;const _debR=()=>{clearTimeout(_rt);_rt=setTimeout(onResize,350)};
+  if(window.visualViewport)window.visualViewport.addEventListener('resize',_debR);
+  else window.addEventListener('resize',_debR);
 });
 </script>
 
