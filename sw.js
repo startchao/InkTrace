@@ -1,6 +1,11 @@
-/* 書閣 Service Worker v3.0.2 */
-const CACHE = 'shuge-v3.0.2';
-const SHELL = ['./index.html', './manifest.json', './icon.svg'];
+/* 書閣 Service Worker v3.0.3 */
+const CACHE = 'shuge-v3.0.3';
+const SHELL = [
+  './index.html','./manifest.json','./icon.svg',
+  /* 預快取外部依賴，確保離線（飛航模式）可用 */
+  'https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js',
+  'https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700&family=LXGW+WenKai+TC&family=Chiron+Sung+HK&display=swap'
+];
 
 self.addEventListener('install', e => {
   e.waitUntil(
