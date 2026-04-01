@@ -2,7 +2,7 @@
 
 <!--
   ╔══════════════════════════════════════════════════════════════════════╗
-  ║  書閣 Novel Reader  v3.0.4                                          ║
+  ║  書閣 Novel Reader  v3.0.5                                          ║
   ║  一款專為中文小說設計的離線 PWA 閱讀器                              ║
   ║                                                                      ║
   ║  功能特色                                                            ║
@@ -19,8 +19,9 @@
   ║  · IndexedDB（書籍儲存）、localStorage（設定與進度）                ║
   ║                                                                      ║
   ║  Changelog                                                           ║
-  ║  v3.0.4  修復 SW 導航攔截，飛航模式正式可用                         ║
-  ║  v3.0.4  版面返回修復（debounce resize + visibilitychange 重繪）    ║
+  ║  v3.0.5  修復 TTS 快速跳段（iOS silent utterance bug）              ║
+  ║  v3.0.5  修復 SW 導航攔截，飛航模式正式可用                         ║
+  ║  v3.0.5  版面返回修復（debounce resize + visibilitychange 重繪）    ║
   ║           SW 預快取 OpenCC & Google Fonts，支援完整離線模式          ║
   ║  v3.0.2  句子邊界心跳：iOS 背景保活不再產生可聽見的卡頓             ║
   ║  v3.0.1  引號過濾改用 Unicode escape，補充更多引號字元變體          ║
@@ -45,7 +46,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>書閣 v3.0.4</title>
+<title>書閣 v3.0.5</title>
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -279,7 +280,7 @@ body.night .toast{background:#c09030;color:#0a0806}
 
 <div id="vLib" class="view">
   <header class="lhd">
-    <div class="lhd-logo">書閣 <small>v3.0.4</small></div>
+    <div class="lhd-logo">書閣 <small>v3.0.5</small></div>
     <button class="ibt" id="btnTheme">🌙</button>
     <button class="ibt" id="btnUp">＋</button>
   </header>
@@ -912,7 +913,7 @@ const TTS={
   /* iOS Safari 有 15 秒超時 bug，每 13.5 秒設旗標，在句子邊界（非朗讀中）才真正 pause/resume，避免卡頓 */
   _startHB(){this._stopHB();this._hb=setInterval(()=>{if(this.on&&!this.paused)this._hbNeeded=true},13500)},
   _stopHB(){if(this._hb){clearInterval(this._hb);this._hb=null}},
-  start(from){if(!Reader.paras.length){toast('請先開啟書籍');return}this.build();const pg=Reader.pages[Reader.curPage];const startPi=from!=null?from:(pg?pg.startPara:0);const si=this.segs.findIndex(s=>s.pi>=startPi);this.idx=si>=0?si:0;this.on=true;this.paused=false;window.speechSynthesis.cancel();this._startSilent();this._reqWakeLock();this._updMediaSession('playing');setTimeout(()=>this.speak(),80);this.updUI()},
+  start(from){if(!Reader.paras.length){toast('請先開啟書籍');return}this.build();const pg=Reader.pages[Reader.curPage];const startPi=from!=null?from:(pg?pg.startPara:0);const si=this.segs.findIndex(s=>s.pi>=startPi);this.idx=si>=0?si:0;this.on=true;this.paused=false;window.speechSynthesis.cancel();this._startSilent();this._reqWakeLock();this._updMediaSession('playing');setTimeout(()=>this.speak(),200);this.updUI()},
   speak(){
     if(!this.on||this.idx>=this.segs.length){this.stop();return}
     const seg=this.segs[this.idx];
@@ -924,11 +925,22 @@ const TTS={
     const vs=window.speechSynthesis.getVoices();
     if(pr.voiceIdx!=null&&vs[pr.voiceIdx])u.voice=vs[pr.voiceIdx];
     else u.voice=vs.find(v=>/zh.*(TW|HK)/i.test(v.lang))||vs.find(v=>/zh/i.test(v.lang))||null;
-    u.onstart=()=>{this._errCnt=0;Reader.hlPara(seg.pi)};
-    u.onend=()=>{if(this.on){this._errCnt=0;this.idx++;setTimeout(()=>this.speak(),50)}};
+    let _started=false;const _t0=Date.now();
+    u.onstart=()=>{_started=true;this._errCnt=0;Reader.hlPara(seg.pi)};
+    u.onend=()=>{
+      if(!this.on)return;
+      /* iOS silent utterance bug：onstart 未觸發，或整段在 200ms 內結束
+         → iOS 沒有實際發音，重試當前段落（不推進 idx） */
+      if(!_started||Date.now()-_t0<200){
+        this._errCnt++;
+        if(this._errCnt<4){window.speechSynthesis.cancel();return setTimeout(()=>this.speak(),300)}
+        this._errCnt=0;this.idx++;return setTimeout(()=>this.speak(),50);
+      }
+      this._errCnt=0;this.idx++;setTimeout(()=>this.speak(),50);
+    };
     u.onerror=e=>{
-      if(e.error==='interrupted'&&this.on){
-        // 藍牙連接 / 音訊路由切換造成中斷，等待後重試當前段落
+      if((e.error==='interrupted'||e.error==='canceled')&&this.on){
+        // 藍牙連接 / 音訊路由切換 / 取消造成中斷，等待後重試當前段落
         this._errCnt++;
         if(this._errCnt<6)setTimeout(()=>this.speak(),600);
         else{this._errCnt=0;this.idx++;setTimeout(()=>this.speak(),120)}
