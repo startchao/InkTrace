@@ -2,7 +2,7 @@
 
 <!--
   ╔══════════════════════════════════════════════════════════════════════╗
-  ║  書閣 Novel Reader  v3.0.4                                          ║
+  ║  書閣 Novel Reader  v3.0.5                                          ║
   ║  一款專為中文小說設計的離線 PWA 閱讀器                              ║
   ║                                                                      ║
   ║  功能特色                                                            ║
@@ -19,6 +19,7 @@
   ║  · IndexedDB（書籍儲存）、localStorage（設定與進度）                ║
   ║                                                                      ║
   ║  Changelog                                                           ║
+  ║  v3.0.5  分隔符（===、---等）不再被 TTS 朗讀；補充無障礙標籤       ║
   ║  v3.0.4  修復 SW 導航攔截，飛航模式正式可用                         ║
   ║  v3.0.4  版面返回修復（debounce resize + visibilitychange 重繪）    ║
   ║           SW 預快取 OpenCC & Google Fonts，支援完整離線模式          ║
@@ -45,7 +46,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>書閣 v3.0.4</title>
+<title>書閣 v3.0.5</title>
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -158,6 +159,7 @@ input,select{font-family:inherit}
 .rp-body{flex:1;overflow:hidden}
 .para{margin-bottom:.75em;line-height:2;text-align:justify;text-indent:2em;word-break:break-all}
 .para.tts-hi{background:rgba(160,112,24,.14);border-left:2px solid var(--ac);padding-left:8px;text-indent:0}
+.para.para-sep{text-indent:0;font-size:0;height:1px;background:linear-gradient(90deg,transparent,var(--bd2),transparent);margin:.9em 20px;opacity:.7}
 .rp-foot{flex-shrink:0;padding-top:4px;margin-top:2px;display:flex;align-items:center;justify-content:center;border-top:1px solid var(--bd);opacity:.38}
 .rp-num{font-size:10px;color:var(--tx3)}
 
@@ -279,9 +281,9 @@ body.night .toast{background:#c09030;color:#0a0806}
 
 <div id="vLib" class="view">
   <header class="lhd">
-    <div class="lhd-logo">書閣 <small>v3.0.4</small></div>
-    <button class="ibt" id="btnTheme">🌙</button>
-    <button class="ibt" id="btnUp">＋</button>
+    <div class="lhd-logo">書閣 <small>v3.0.5</small></div>
+    <button class="ibt" id="btnTheme" aria-label="切換夜間模式">🌙</button>
+    <button class="ibt" id="btnUp" aria-label="上傳書籍">＋</button>
   </header>
   <div class="lbody">
     <div class="lbar">
@@ -291,7 +293,7 @@ body.night .toast{background:#c09030;color:#0a0806}
     </div>
     <div class="blist" id="blist"></div>
   </div>
-  <button class="fab" id="fab">＋</button>
+  <button class="fab" id="fab" aria-label="上傳書籍">＋</button>
   <input type="file" id="fi" accept=".txt">
 </div>
 
@@ -303,8 +305,8 @@ body.night .toast{background:#c09030;color:#0a0806}
       <button class="rbk" id="btnBack">◀ 書庫</button>
       <div class="rtitle" id="rdTitle">—</div>
       <div class="rtool">
-        <button class="ribt" id="btnToc">☰</button>
-        <button class="ribt" id="btnSet">⚙</button>
+        <button class="ribt" id="btnToc" aria-label="章節目錄">☰</button>
+        <button class="ribt" id="btnSet" aria-label="閱讀設定">⚙</button>
       </div>
     </header>
     <div class="rbook" id="rbook">
@@ -314,15 +316,15 @@ body.night .toast{background:#c09030;color:#0a0806}
       <div class="rpwrap" id="rpwrap"></div>
     </div>
     <div class="rfoot" id="rfoot">
-      <button class="rfbt" id="rfPlay">▶</button>
-      <button class="rfbt" id="rfStop">⏹</button>
+      <button class="rfbt" id="rfPlay" aria-label="播放／暫停朗讀">▶</button>
+      <button class="rfbt" id="rfStop" aria-label="停止朗讀">⏹</button>
       <div class="rf-div"></div>
-      <button class="rffont" id="rfFontM">A−</button>
-      <button class="rffont" id="rfFontP">A+</button>
+      <button class="rffont" id="rfFontM" aria-label="縮小字體">A−</button>
+      <button class="rffont" id="rfFontP" aria-label="放大字體">A+</button>
       <div class="rf-div"></div>
       <button class="rfconv tw" id="rfConv">繁 ✓</button>
       <div class="rf-div"></div>
-      <button class="rftog" id="rfNight">🌙</button>
+      <button class="rftog" id="rfNight" aria-label="切換夜間模式">🌙</button>
       <span id="rfSleep" style="display:none;font-size:11px;color:var(--ac);font-weight:700;flex-shrink:0;white-space:nowrap;margin-right:2px"></span>
       <div class="rf-prog-wrap">
         <div class="rf-prog" id="rfProg"><div class="rf-prog-f" id="rfProgF" style="width:0%"></div></div>
@@ -336,8 +338,8 @@ body.night .toast{background:#c09030;color:#0a0806}
 
 <div class="pback" id="tocBack">
   <div class="pov" id="tocOv"></div>
-  <div class="pbox">
-    <div class="phd"><span class="phd-t">📖 章節目錄</span><button class="pcls" id="tocCls">✕</button></div>
+  <div class="pbox" role="dialog" aria-label="章節目錄" aria-modal="true">
+    <div class="phd"><span class="phd-t">📖 章節目錄</span><button class="pcls" id="tocCls" aria-label="關閉目錄">✕</button></div>
     <div class="pbody" id="tocBody"></div>
   </div>
 </div>
@@ -346,8 +348,8 @@ body.night .toast{background:#c09030;color:#0a0806}
 
 <div class="pback" id="setBack">
   <div class="pov" id="setOv"></div>
-  <div class="pbox">
-    <div class="phd"><span class="phd-t">⚙ 閱讀設定</span><button class="pcls" id="setCls">✕</button></div>
+  <div class="pbox" role="dialog" aria-label="閱讀設定" aria-modal="true">
+    <div class="phd"><span class="phd-t">⚙ 閱讀設定</span><button class="pcls" id="setCls" aria-label="關閉設定">✕</button></div>
     <div class="pbody">
       <div class="sg">
         <div class="sg-lbl">字體</div>
@@ -403,7 +405,7 @@ body.night .toast{background:#c09030;color:#0a0806}
 </div>
 
 <div class="dlg-back" id="dlgBack">
-  <div class="dlg-box">
+  <div class="dlg-box" role="dialog" aria-modal="true" aria-labelledby="dlgT">
     <div class="dlg-t" id="dlgT">確認刪除</div>
     <div class="dlg-m" id="dlgM"></div>
     <div class="dlg-bts">
@@ -413,7 +415,7 @@ body.night .toast{background:#c09030;color:#0a0806}
   </div>
 </div>
 <div class="lmask" id="lmask"><div class="lspin"></div><div class="ltxt" id="ltxt">處理中…</div></div>
-<div id="toasts"></div>
+<div id="toasts" aria-live="polite" aria-atomic="true"></div>
 <div id="errbox"></div>
 
 <script>
@@ -471,6 +473,8 @@ const readFile=file=>{
 const PALS=[['#243356','#141d36'],['#322256','#1c1236'],['#224438','#11291f'],['#4e3416','#2c1c08'],['#163356','#091d36'],['#3e1424','#22090f'],['#143e32','#09271e'],['#321244','#1c0826'],['#163844','#091f2a'],['#3e3214','#222008'],['#243e4e','#122430'],['#3c1a1a','#220a0a']];
 const cvColor=t=>{let h=0;for(let i=0;i<t.length;i++)h=(h*31+t.charCodeAt(i))|0;const[a,b]=PALS[Math.abs(h)%PALS.length];return`linear-gradient(150deg,${a},${b})`};
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const SEP_RE=/^[\s=\-~*＝━─═—＊·•○●◇◆▪■□\u2500-\u257F]{3,}$/;
+const isSep=p=>SEP_RE.test(p)&&p.trim().length>0;
 
 function toast(msg,dur=2200){const c=document.getElementById('toasts');const el=Object.assign(document.createElement('div'),{className:'toast',textContent:msg});c.appendChild(el);setTimeout(()=>{el.classList.add('out');setTimeout(()=>el.remove(),220)},dur)}
 function showLoad(t){document.getElementById('ltxt').textContent=t||'處理中…';document.getElementById('lmask').classList.add('on')}
@@ -634,7 +638,7 @@ const Reader={
       while(endPara<this.paras.length){
         if(endPara>startPara&&chMap.has(endPara))break;
         const p_=document.createElement('p');
-        p_.className='para';p_.textContent=this.paras[endPara];
+        p_.className='para'+(isSep(this.paras[endPara])?' para-sep':'');p_.textContent=this.paras[endPara];
         probe.appendChild(p_);
         if(probe.scrollHeight>probe.clientHeight){
           probe.removeChild(p_);
@@ -721,7 +725,7 @@ const Reader={
 
     const body=document.createElement('div');body.className='rp-body';body.style.fontSize=fs+'px';body.style.lineHeight=this.lineHeight.toString();
     for(let i=startPara;i<=endPara&&i<this.paras.length;i++){
-      const p_=document.createElement('p');p_.className='para';p_.dataset.paraIdx=i;p_.textContent=this.paras[i];body.appendChild(p_);
+      const p_=document.createElement('p');const sep=isSep(this.paras[i]);p_.className='para'+(sep?' para-sep':'');p_.dataset.paraIdx=i;p_.textContent=this.paras[i];if(sep)p_.setAttribute('aria-hidden','true');body.appendChild(p_);
     }
     div.appendChild(body);
 
@@ -833,7 +837,7 @@ const TTS={
     return'?';
   },
   _voiceNeural(name){return/online|neural|natural|wavenet/i.test(name)},
-  build(){this.segs=[];Reader.paras.forEach((p,i)=>{p=p.replace(/[\u201C\u201D\u2018\u2019\u300C\u300D\u300E\u300F\u3010\u3011\u3014\u3015\uFF02\u301D\u301E\u301F]/g,'');const parts=p.match(/[^。！？…，、；]+[。！？…，、；]*/g)||[p];if(parts.length<=1){this.segs.push({text:p,pi:i});return}parts.forEach(s=>{if(s.trim())this.segs.push({text:s,pi:i})})})},
+  build(){this.segs=[];Reader.paras.forEach((p,i)=>{if(isSep(p))return;p=p.replace(/[\u201C\u201D\u2018\u2019\u300C\u300D\u300E\u300F\u3010\u3011\u3014\u3015\uFF02\u301D\u301E\u301F]/g,'');const parts=p.match(/[^。！？…，、；]+[。！？…，、；]*/g)||[p];if(parts.length<=1){this.segs.push({text:p,pi:i});return}parts.forEach(s=>{if(s.trim())this.segs.push({text:s,pi:i})})})},
   /* Screen Wake Lock：防止螢幕自動關閉中斷朗讀 */
   _reqWakeLock(){
     if(!('wakeLock' in navigator)||this._wl)return;
