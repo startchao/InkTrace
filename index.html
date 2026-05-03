@@ -2,7 +2,7 @@
 
 <!--
   ╔══════════════════════════════════════════════════════════════════════╗
-  ║  書閣 Novel Reader  v3.0.5                                          ║
+  ║  書閣 Novel Reader  v3.1.0                                          ║
   ║  一款專為中文小說設計的離線 PWA 閱讀器                              ║
   ║                                                                      ║
   ║  功能特色                                                            ║
@@ -19,6 +19,7 @@
   ║  · IndexedDB（書籍儲存）、localStorage（設定與進度）                ║
   ║                                                                      ║
   ║  Changelog                                                           ║
+  ║  v3.1.0  新增 EPUB 格式支援（EPUB2/3 自動解析）                     ║
   ║  v3.0.5  分隔符（===、---等）不再被 TTS 朗讀；補充無障礙標籤       ║
   ║  v3.0.4  修復 SW 導航攔截，飛航模式正式可用                         ║
   ║  v3.0.4  版面返回修復（debounce resize + visibilitychange 重繪）    ║
@@ -46,7 +47,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>書閣 v3.0.5</title>
+<title>書閣 v3.1.0</title>
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -55,6 +56,7 @@
 <meta name="theme-color" content="#a07018">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700&family=LXGW+WenKai+TC&family=Chiron+Sung+HK&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <style>
 :root{
   --bg:#f5f0e8;--bg2:#fffcf5;--bg3:#fff8ee;
@@ -281,7 +283,7 @@ body.night .toast{background:#c09030;color:#0a0806}
 
 <div id="vLib" class="view">
   <header class="lhd">
-    <div class="lhd-logo">書閣 <small>v3.0.5</small></div>
+    <div class="lhd-logo">書閣 <small>v3.1.0</small></div>
     <button class="ibt" id="btnTheme" aria-label="切換夜間模式">🌙</button>
     <button class="ibt" id="btnUp" aria-label="上傳書籍">＋</button>
   </header>
@@ -294,7 +296,7 @@ body.night .toast{background:#c09030;color:#0a0806}
     <div class="blist" id="blist"></div>
   </div>
   <button class="fab" id="fab" aria-label="上傳書籍">＋</button>
-  <input type="file" id="fi" accept=".txt">
+  <input type="file" id="fi" accept=".txt,.epub">
 </div>
 
 <!-- 閱讀器 -->
@@ -476,6 +478,83 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 const SEP_RE=/^[\s=\-~*＝━─═—＊·•○●◇◆▪■□\u2500-\u257F]{3,}$/;
 const isSep=p=>SEP_RE.test(p)&&p.trim().length>0;
 
+/* ══ EPUB ══ */
+const resolvePath=(base,href)=>{
+  if(!href)return'';if(href.startsWith('/'))return href.slice(1);
+  const parts=(base+href).split('/'),r=[];
+  for(const p of parts){if(p==='..')r.pop();else if(p!=='.')r.push(p)}
+  return r.join('/');
+};
+const XHTML_BLOCK=new Set(['p','h1','h2','h3','h4','h5','h6','li','blockquote','pre','td','th']);
+const extractParasFromXhtml=xhtmlStr=>{
+  let doc;
+  try{doc=new DOMParser().parseFromString(xhtmlStr,'application/xhtml+xml')}catch(e){}
+  if(!doc||doc.querySelector('parsererror'))
+    doc=new DOMParser().parseFromString(xhtmlStr,'text/html');
+  const ps=[];
+  (function walk(n){
+    if(n.nodeType!==1)return;
+    const tag=n.localName?.toLowerCase();
+    if(tag==='script'||tag==='style'||tag==='head')return;
+    if(XHTML_BLOCK.has(tag)){const t=(n.textContent||'').replace(/\s+/g,' ').trim();if(t)ps.push(t);return}
+    for(const c of n.childNodes)walk(c);
+  })(doc.body||doc.documentElement);
+  return ps;
+};
+const readEpub=async file=>{
+  if(typeof JSZip==='undefined')throw new Error('EPUB 解析器未載入，請先連線載入一次');
+  const zip=await JSZip.loadAsync(await file.arrayBuffer());
+  // 1. container.xml → OPF 路徑
+  const contXml=await zip.file('META-INF/container.xml')?.async('text');
+  if(!contXml)throw new Error('無效的 EPUB（缺少 container.xml）');
+  const contDoc=new DOMParser().parseFromString(contXml,'application/xml');
+  const opfPath=contDoc.querySelector('rootfile')?.getAttribute('full-path');
+  if(!opfPath)throw new Error('無效的 EPUB（缺少 OPF）');
+  const opfBase=opfPath.includes('/')?opfPath.slice(0,opfPath.lastIndexOf('/')+1):'';
+  // 2. 解析 OPF
+  const opfXml=await zip.file(opfPath)?.async('text');
+  if(!opfXml)throw new Error('無法讀取 OPF');
+  const opfDoc=new DOMParser().parseFromString(opfXml,'application/xml');
+  const epubMeta=opfDoc.querySelector('metadata');
+  const title=[...(epubMeta?.children||[])].find(el=>el.localName==='title')?.textContent?.trim()||file.name.replace(/\.epub$/i,'');
+  // 3. manifest
+  const mf={};
+  opfDoc.querySelectorAll('manifest item').forEach(it=>{
+    mf[it.getAttribute('id')]={href:resolvePath(opfBase,it.getAttribute('href')||''),props:it.getAttribute('properties')||''};
+  });
+  // 4. spine
+  const spine=[...opfDoc.querySelectorAll('spine itemref')].map(ir=>ir.getAttribute('idref')).filter(id=>mf[id]);
+  // 5. 目錄（EPUB3 nav 優先，退回 EPUB2 NCX）
+  const navItem=Object.values(mf).find(m=>m.props.includes('nav'));
+  const ncxId=opfDoc.querySelector('spine')?.getAttribute('toc');
+  const tocItem=navItem||(ncxId?mf[ncxId]:null);
+  let tocEntries=[];
+  if(tocItem){
+    const tocBase=tocItem.href.replace(/[^/]+$/,'');
+    const tocTxt=await zip.file(tocItem.href)?.async('text')||'';
+    if(navItem){
+      const nd=new DOMParser().parseFromString(tocTxt,'application/xhtml+xml');
+      nd.querySelectorAll('nav a').forEach(a=>{const h=a.getAttribute('href');const t=a.textContent.trim();if(h&&t)tocEntries.push({title:t,href:resolvePath(tocBase,h.split('#')[0])})});
+    }else{
+      const nd=new DOMParser().parseFromString(tocTxt,'application/xml');
+      nd.querySelectorAll('navPoint').forEach(np=>{const t=np.querySelector('navLabel text')?.textContent?.trim()||'';const s=np.querySelector('content')?.getAttribute('src')||'';if(t&&s)tocEntries.push({title:t,href:resolvePath(tocBase,s.split('#')[0])})});
+    }
+    tocEntries=tocEntries.filter((e,i,a)=>i===0||e.href!==a[i-1].href);
+  }
+  // 6. 解析各 spine XHTML，建立 paras[]
+  const paras=[];const fileIdx={};
+  for(const idref of spine){
+    const item=mf[idref];
+    if(!item||item.props.includes('nav'))continue;
+    fileIdx[item.href]=paras.length;
+    const xtxt=await zip.file(item.href)?.async('text')||'';
+    paras.push(...extractParasFromXhtml(xtxt));
+  }
+  // 7. 建立 chapters[]
+  const chapters=tocEntries.map(e=>({title:e.title,idx:fileIdx[e.href]??0})).filter((c,i,a)=>i===0||c.idx!==a[i-1].idx);
+  return{title,paras,chapters};
+};
+
 function toast(msg,dur=2200){const c=document.getElementById('toasts');const el=Object.assign(document.createElement('div'),{className:'toast',textContent:msg});c.appendChild(el);setTimeout(()=>{el.classList.add('out');setTimeout(()=>el.remove(),220)},dur)}
 function showLoad(t){document.getElementById('ltxt').textContent=t||'處理中…';document.getElementById('lmask').classList.add('on')}
 function hideLoad(){document.getElementById('lmask').classList.remove('on')}
@@ -529,13 +608,21 @@ const Lib={
   async del(id,title){if(!await confirm_('刪除書籍',`確定要移除《${title}》嗎？`))return;showLoad('刪除中…');await Store.del(id);Meta.delBook(id);hideLoad();this.render();toast(`已刪除《${title}》`)},
   async addFile(file){
     if(!file)return;
-    if(!file.name.toLowerCase().endsWith('.txt')){toast('請選擇 .txt 格式');return}
-    if(file.size>30*1024*1024){toast('文件過大（上限 30MB）');return}
+    const nm=file.name.toLowerCase();
+    if(!nm.endsWith('.txt')&&!nm.endsWith('.epub')){toast('請選擇 .txt 或 .epub 格式');return}
+    if(file.size>50*1024*1024){toast('文件過大（上限 50MB）');return}
     showLoad('正在讀取文件…');
     try{
-      const raw=await readFile(file);
-      const paras=raw.split(/\r?\n/).map(l=>l.trim()).filter(l=>l.length>0);
-      const chapters=parseChs(paras);const id='b'+Date.now();const title=file.name.replace(/\.txt$/i,'');
+      let paras,chapters,title;
+      if(nm.endsWith('.epub')){
+        document.getElementById('ltxt').textContent='正在解析 EPUB…';
+        ({paras,chapters,title}=await readEpub(file));
+      }else{
+        const raw=await readFile(file);
+        paras=raw.split(/\r?\n/).map(l=>l.trim()).filter(l=>l.length>0);
+        chapters=parseChs(paras);title=file.name.replace(/\.txt$/i,'');
+      }
+      const id='b'+Date.now();
       document.getElementById('ltxt').textContent='正在儲存，請稍候…';
       await Store.put(id,paras);Meta.saveBook({id,title,chapters,total:paras.length,pos:0,addedAt:Date.now()});
       hideLoad();this.render();toast(`✓ 已加入《${title}》（${paras.length} 段 · ${chapters.length} 章）`);
