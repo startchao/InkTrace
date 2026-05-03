@@ -1,5 +1,5 @@
-/* 書閣 Service Worker v3.0.4 */
-const CACHE = 'shuge-v3.0.4';
+/* 書閣 Service Worker v3.1.0 */
+const CACHE = 'shuge-v3.1.0';
 
 self.addEventListener('install', e => {
   e.waitUntil(
@@ -9,6 +9,7 @@ self.addEventListener('install', e => {
       // CDN 資源：最佳努力，失敗不中斷安裝
       await Promise.allSettled([
         'https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js',
+        'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js',
         'https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700&family=LXGW+WenKai+TC&family=Chiron+Sung+HK&display=swap'
       ].map(url => fetch(url).then(r => r.ok ? c.put(url, r) : null).catch(() => null)));
       self.skipWaiting();
