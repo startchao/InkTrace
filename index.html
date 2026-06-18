@@ -1154,25 +1154,27 @@ document.addEventListener('DOMContentLoaded',async()=>{
   if('speechSynthesis' in window){speechSynthesis.onvoiceschanged=()=>TTS.fillVoices();TTS.fillVoices()}
 
   /* 背景偵測：進入背景才啟動心跳（防 iOS 15s 超時），回前台立即停止（消除卡頓） */
-  document.addEventListener('visibilitychange',()=>{
-    if(document.hidden){
-      if(TTS.on&&!TTS.paused)TTS._startHB();
-    }else{
-      TTS._stopHB();
-      /* 返回前台：檢查版面尺寸是否在背景期間改變（iOS URL bar / status bar 變動），
-         尺寸不同 → 重新分頁；尺寸相同 → 至少重繪，修復 iOS 偶發的 DOM 失效 */
-      if(Reader.id){requestAnimationFrame(()=>{const{w,h}=Reader._getAvail();if(w!==Reader._lastAvailW||h!==Reader._lastAvailH){const old=Reader.pages[Reader.curPage]?.startPara||0;Reader._paging=false;Reader._paginate(old)}else{Reader._render(Reader.curPage)}})}
-      if(TTS.on&&!TTS.paused){
-        TTS._reqWakeLock();
-        /* 靜音保活可能因地圖導航中斷而暫停，回前台時嘗試重啟 */
-        if(TTS._silentAudio&&TTS._silentAudio.paused)TTS._silentAudio.play().catch(()=>{});
-        if(!window.speechSynthesis.speaking){
-          window.speechSynthesis.cancel();
-          setTimeout(()=>{TTS.speak();toast('📖 已繼續朗讀')},150);
-        }
+  const handleBgRisk=()=>{if(TTS.on&&!TTS.paused)TTS._startHB()};
+  const handleFgResume=()=>{
+    TTS._stopHB();
+    /* 返回前台：檢查版面尺寸是否在背景期間改變（iOS URL bar / status bar 變動），
+       尺寸不同 → 重新分頁；尺寸相同 → 至少重繪，修復 iOS 偶發的 DOM 失效 */
+    if(Reader.id){requestAnimationFrame(()=>{const{w,h}=Reader._getAvail();if(w!==Reader._lastAvailW||h!==Reader._lastAvailH){const old=Reader.pages[Reader.curPage]?.startPara||0;Reader._paging=false;Reader._paginate(old)}else{Reader._render(Reader.curPage)}})}
+    if(TTS.on&&!TTS.paused){
+      TTS._reqWakeLock();
+      /* 靜音保活可能因地圖導航中斷而暫停，回前台時嘗試重啟 */
+      if(TTS._silentAudio&&TTS._silentAudio.paused)TTS._silentAudio.play().catch(()=>{});
+      if(!window.speechSynthesis.speaking){
+        window.speechSynthesis.cancel();
+        setTimeout(()=>{TTS.speak();toast('📖 已繼續朗讀')},150);
       }
     }
-  });
+  };
+  document.addEventListener('visibilitychange',()=>document.hidden?handleBgRisk():handleFgResume());
+  window.addEventListener('pagehide',handleBgRisk);
+  window.addEventListener('blur',handleBgRisk);
+  window.addEventListener('pageshow',handleFgResume);
+  window.addEventListener('focus',handleFgResume);
 
   const onResize=()=>{if(Reader.id){const old=Reader.pages[Reader.curPage]?.startPara||0;Reader._paging=false;requestAnimationFrame(()=>Reader._paginate(old))}};
   /* 統一 350ms debounce：避免 iOS URL bar 動畫觸發多次中間尺寸的重新分頁 */
