@@ -2,7 +2,7 @@
 
 <!--
   ╔══════════════════════════════════════════════════════════════════════╗
-  ║  書閣 Novel Reader  v3.1.1                                          ║
+  ║  書閣 Novel Reader  v3.1.2                                          ║
   ║  一款專為中文小說設計的離線 PWA 閱讀器                              ║
   ║                                                                      ║
   ║  功能特色                                                            ║
@@ -19,6 +19,7 @@
   ║  · IndexedDB（書籍儲存）、localStorage（設定與進度）                ║
   ║                                                                      ║
   ║  Changelog                                                           ║
+  ║  v3.1.2  穩定聽書：保守恢復邏輯、語音固定、降低切句碎片化
   ║  v3.1.1  改善 iOS 背景播放：地圖導航中斷後自動恢復；CarPlay 控制鍵  ║
   ║  v3.1.0  新增 EPUB 格式支援（EPUB2/3 自動解析）                     ║
   ║  v3.0.5  分隔符（===、---等）不再被 TTS 朗讀；補充無障礙標籤       ║
@@ -48,7 +49,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>書閣 v3.1.1</title>
+<title>書閣 v3.1.2</title>
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -284,7 +285,7 @@ body.night .toast{background:#c09030;color:#0a0806}
 
 <div id="vLib" class="view">
   <header class="lhd">
-    <div class="lhd-logo">書閣 <small>v3.1.1</small></div>
+    <div class="lhd-logo">書閣 <small>v3.1.2</small></div>
     <button class="ibt" id="btnTheme" aria-label="切換夜間模式">🌙</button>
     <button class="ibt" id="btnUp" aria-label="上傳書籍">＋</button>
   </header>
@@ -916,7 +917,7 @@ const Reader={
 
 /* ══ TTS ══ */
 const TTS={
-  idx:0,segs:[],on:false,paused:false,_hb:null,_gFilter:'all',_silentAudio:null,_silentUrl:null,_wl:null,_errCnt:0,_sleepTimer:null,_sleepEnd:0,_sleepTick:null,_hbNeeded:false,_resumeSilentT:null,
+  idx:0,segs:[],on:false,paused:false,_hb:null,_gFilter:'all',_silentAudio:null,_silentUrl:null,_wl:null,_errCnt:0,_sleepTimer:null,_sleepEnd:0,_sleepTick:null,_hbNeeded:false,_resumeSilentT:null,_resumeT:null,_lastProgressAt:0,
   _voiceGender(name){
     if(/\b(yun|wanlung|yunlung)\b/i.test(name)||/yun.jhe/i.test(name))return'm';
     if(/\b(xiao|hsiao|hiu|sin.ji|tian.tian|mei.jia)\b/i.test(name))return'f';
@@ -925,7 +926,27 @@ const TTS={
     return'?';
   },
   _voiceNeural(name){return/online|neural|natural|wavenet/i.test(name)},
-  build(){this.segs=[];Reader.paras.forEach((p,i)=>{if(isSep(p))return;p=p.replace(/[\u201C\u201D\u2018\u2019\u300C\u300D\u300E\u300F\u3010\u3011\u3014\u3015\uFF02\u301D\u301E\u301F]/g,'');const parts=p.match(/[^。！？…，、；]+[。！？…，、；]*/g)||[p];if(parts.length<=1){this.segs.push({text:p,pi:i});return}parts.forEach(s=>{if(s.trim())this.segs.push({text:s,pi:i})})})},
+  _splitText(t){
+    const out=[];let buf='';
+    const flush=()=>{const v=buf.trim();if(v)out.push(v);buf=''};
+    for(const ch of t){
+      buf+=ch;
+      if(/[。！？…]/.test(ch)&&buf.length>=80)flush();
+      else if(buf.length>=220)flush();
+    }
+    flush();
+    return out;
+  },
+  _pickVoice(pr){
+    const vs=window.speechSynthesis.getVoices();
+    return vs.find(v=>pr.voiceURI&&v.voiceURI===pr.voiceURI)
+      ||vs.find(v=>pr.voiceName&&v.name===pr.voiceName&&v.lang===pr.voiceLang)
+      ||(pr.voiceIdx!=null&&vs[pr.voiceIdx])
+      ||vs.find(v=>/zh.*(TW|HK)/i.test(v.lang))
+      ||vs.find(v=>/^zh/i.test(v.lang))
+      ||null;
+  },
+  build(){this.segs=[];Reader.paras.forEach((p,i)=>{if(isSep(p))return;p=p.replace(/[“”‘’「」『』【】〔〕＂〝〞〟]/g,'');this._splitText(p).forEach(s=>this.segs.push({text:s,pi:i}))})},
   /* Screen Wake Lock：防止螢幕自動關閉中斷朗讀 */
   _reqWakeLock(){
     if(!('wakeLock' in navigator)||this._wl)return;
@@ -1016,16 +1037,9 @@ const TTS={
     if(this._sleepEnd>0){const rem=Math.max(0,Math.ceil((this._sleepEnd-Date.now())/60000));el.textContent='⏱ '+rem+'分';el.style.display=''}
     else el.style.display='none';
   },
-  /* iOS Safari 有 15 秒超時 bug，每 13.5 秒設旗標，在句子邊界（非朗讀中）才真正 pause/resume，避免卡頓
-     同時偵測 TTS 是否在背景中斷後未自行恢復（如地圖導航結束後），若停滯則主動重啟 */
-  _startHB(){this._stopHB();this._hb=setInterval(()=>{
-    if(!this.on||this.paused)return;
-    this._hbNeeded=true;
-    // TTS 停滯偵測：若既不在說話也沒有待播佇列，主動重啟
-    if(!window.speechSynthesis.speaking&&!window.speechSynthesis.pending){
-      window.speechSynthesis.cancel();setTimeout(()=>this.speak(),300);
-    }
-  },13500)},
+  /* iOS Safari 可能有背景計時限制。心跳只在下一個句子邊界重置 speechSynthesis，
+     不在背景計時器內 cancel/restart，避免正常句間空檔被誤判造成斷音或重播。 */
+  _startHB(){this._stopHB();this._hb=setInterval(()=>{if(this.on&&!this.paused)this._hbNeeded=true},13500)},
   _stopHB(){if(this._hb){clearInterval(this._hb);this._hb=null}},
   start(from){if(!Reader.paras.length){toast('請先開啟書籍');return}this.build();const pg=Reader.pages[Reader.curPage];const startPi=from!=null?from:(pg?pg.startPara:0);const si=this.segs.findIndex(s=>s.pi>=startPi);this.idx=si>=0?si:0;this.on=true;this.paused=false;window.speechSynthesis.cancel();this._startSilent();this._reqWakeLock();this._updMediaSession('playing');setTimeout(()=>this.speak(),80);this.updUI()},
   speak(){
@@ -1036,11 +1050,9 @@ const TTS={
     if(this._hbNeeded){this._hbNeeded=false;window.speechSynthesis.pause();window.speechSynthesis.resume()}
     const u=new SpeechSynthesisUtterance(seg.text);
     const pr=Meta.loadP();u.rate=pr.speed||1;u.lang='zh-TW';
-    const vs=window.speechSynthesis.getVoices();
-    if(pr.voiceIdx!=null&&vs[pr.voiceIdx])u.voice=vs[pr.voiceIdx];
-    else u.voice=vs.find(v=>/zh.*(TW|HK)/i.test(v.lang))||vs.find(v=>/zh/i.test(v.lang))||null;
-    u.onstart=()=>{this._errCnt=0;Reader.hlPara(seg.pi)};
-    u.onend=()=>{if(this.on){this._errCnt=0;this.idx++;setTimeout(()=>this.speak(),50)}};
+    u.voice=this._pickVoice(pr);
+    u.onstart=()=>{this._errCnt=0;this._lastProgressAt=Date.now();Reader.hlPara(seg.pi)};
+    u.onend=()=>{this._lastProgressAt=Date.now();if(this.on){this._errCnt=0;this.idx++;setTimeout(()=>this.speak(),50)}};
     u.onerror=e=>{
       if(e.error==='interrupted'&&this.on){
         /* 音訊中斷（地圖導航 / 藍牙切換）→ 漸進式等待重試
@@ -1056,7 +1068,7 @@ const TTS={
     window.speechSynthesis.speak(u);
   },
   toggle(){if(!this.on)this.start();else if(this.paused){window.speechSynthesis.resume();this.paused=false;this._updMediaSession('playing');this.updUI()}else{window.speechSynthesis.pause();this._stopHB();this.paused=true;this._updMediaSession('paused');this.updUI()}},
-  stop(){this.on=false;this.paused=false;this._hbNeeded=false;this._stopHB();this._clearSleep();this._stopSilent();this._relWakeLock();window.speechSynthesis.cancel();document.querySelectorAll('.tts-hi').forEach(el=>el.classList.remove('tts-hi'));this._updMediaSession('none');this.updUI()},
+  stop(){this.on=false;this.paused=false;this._hbNeeded=false;clearTimeout(this._resumeT);this._resumeT=null;this._stopHB();this._clearSleep();this._stopSilent();this._relWakeLock();window.speechSynthesis.cancel();document.querySelectorAll('.tts-hi').forEach(el=>el.classList.remove('tts-hi'));this._updMediaSession('none');this.updUI()},
   updUI(){const pb=document.getElementById('rfPlay');if(this.on&&!this.paused){pb.textContent='⏸';pb.classList.add('on')}else{pb.textContent='▶';pb.classList.remove('on')}},
   fillVoices(){
     const sel=document.getElementById('voiceSel');
@@ -1070,7 +1082,9 @@ const TTS={
     sel.innerHTML='<option value="">自動選擇</option>'
       +(zh.length?'<optgroup label="─ 中文語音 ─">'+zh.map(toOpt).join('')+'</optgroup>':'')
       +(other.length?'<optgroup label="─ 其他語音 ─">'+other.map(toOpt).join('')+'</optgroup>':'');
-    const pr=Meta.loadP();if(pr.voiceIdx!=null)sel.value=pr.voiceIdx;
+    const pr=Meta.loadP();
+    if(pr.voiceURI){const m=all.find(x=>x.v.voiceURI===pr.voiceURI);if(m)sel.value=m.i}
+    else if(pr.voiceIdx!=null)sel.value=pr.voiceIdx;
   }
 };
 
@@ -1111,12 +1125,11 @@ document.addEventListener('DOMContentLoaded',async()=>{
 
   document.querySelectorAll('.font-opt').forEach(btn=>btn.onclick=()=>Reader.setFont(btn.dataset.font));
   document.getElementById('spdSlider').oninput=e=>{const v=parseFloat(e.target.value);document.getElementById('spdVal').textContent=v.toFixed(1)+'×';const p=Meta.loadP();p.speed=v;Meta.saveP(p)};
-  document.getElementById('voiceSel').onchange=e=>{const p=Meta.loadP();p.voiceIdx=e.target.value?parseInt(e.target.value):null;Meta.saveP(p)};
+  document.getElementById('voiceSel').onchange=e=>{const p=Meta.loadP();const vs=window.speechSynthesis.getVoices();const v=e.target.value?vs[parseInt(e.target.value)]:null;p.voiceIdx=e.target.value?parseInt(e.target.value):null;p.voiceURI=v?v.voiceURI:null;p.voiceName=v?v.name:null;p.voiceLang=v?v.lang:null;Meta.saveP(p)};
   document.getElementById('voiceTest').onclick=()=>{
     const u=new SpeechSynthesisUtterance('春眠不覺曉，處處聞啼鳥。');
     const pr=Meta.loadP();u.rate=pr.speed||1;u.lang='zh-TW';
-    const vs=window.speechSynthesis.getVoices();
-    if(pr.voiceIdx!=null&&vs[pr.voiceIdx])u.voice=vs[pr.voiceIdx];
+    u.voice=TTS._pickVoice(pr);
     window.speechSynthesis.cancel();window.speechSynthesis.speak(u);
   };
   document.querySelectorAll('.v-gbt').forEach(btn=>btn.onclick=()=>{
@@ -1164,17 +1177,19 @@ document.addEventListener('DOMContentLoaded',async()=>{
       TTS._reqWakeLock();
       /* 靜音保活可能因地圖導航中斷而暫停，回前台時嘗試重啟 */
       if(TTS._silentAudio&&TTS._silentAudio.paused)TTS._silentAudio.play().catch(()=>{});
-      if(!window.speechSynthesis.speaking){
-        window.speechSynthesis.cancel();
-        setTimeout(()=>{TTS.speak();toast('📖 已繼續朗讀')},150);
-      }
+      clearTimeout(TTS._resumeT);
+      TTS._resumeT=setTimeout(()=>{
+        const stale=Date.now()-(TTS._lastProgressAt||0)>3000;
+        if(TTS.on&&!TTS.paused&&stale&&!window.speechSynthesis.speaking&&!window.speechSynthesis.pending){
+          window.speechSynthesis.cancel();
+          setTimeout(()=>{if(TTS.on&&!TTS.paused)TTS.speak()},150);
+        }
+      },350);
     }
   };
   document.addEventListener('visibilitychange',()=>document.hidden?handleBgRisk():handleFgResume());
   window.addEventListener('pagehide',handleBgRisk);
-  window.addEventListener('blur',handleBgRisk);
   window.addEventListener('pageshow',handleFgResume);
-  window.addEventListener('focus',handleFgResume);
 
   const onResize=()=>{if(Reader.id){const old=Reader.pages[Reader.curPage]?.startPara||0;Reader._paging=false;requestAnimationFrame(()=>Reader._paginate(old))}};
   /* 統一 350ms debounce：避免 iOS URL bar 動畫觸發多次中間尺寸的重新分頁 */
