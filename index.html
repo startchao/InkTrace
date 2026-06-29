@@ -2,7 +2,7 @@
 
 <!--
   ╔══════════════════════════════════════════════════════════════════════╗
-  ║  書閣 Novel Reader  v3.1.3                                          ║
+  ║  書閣 Novel Reader  v3.1.4                                          ║
   ║  一款專為中文小說設計的離線 PWA 閱讀器                              ║
   ║                                                                      ║
   ║  功能特色                                                            ║
@@ -19,6 +19,7 @@
   ║  · IndexedDB（書籍儲存）、localStorage（設定與進度）                ║
   ║                                                                      ║
   ║  Changelog                                                           ║
+  ║  v3.1.4  修復 TTS 啟動路徑：播放需在使用者手勢內立即送出，並加入啟動看門狗
   ║  v3.1.3  修復 iOS Safari 泛用 Script error 顯示與 CDN CORS
   ║  v3.1.2  穩定聽書：保守恢復邏輯、語音固定、降低切句碎片化
   ║  v3.1.1  改善 iOS 背景播放：地圖導航中斷後自動恢復；CarPlay 控制鍵  ║
@@ -50,7 +51,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>書閣 v3.1.3</title>
+<title>書閣 v3.1.4</title>
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -287,7 +288,7 @@ body.night .toast{background:#c09030;color:#0a0806}
 
 <div id="vLib" class="view">
   <header class="lhd">
-    <div class="lhd-logo">書閣 <small>v3.1.3</small></div>
+    <div class="lhd-logo">書閣 <small>v3.1.4</small></div>
     <button class="ibt" id="btnTheme" aria-label="切換夜間模式">🌙</button>
     <button class="ibt" id="btnUp" aria-label="上傳書籍">＋</button>
   </header>
@@ -924,7 +925,7 @@ const Reader={
 
 /* ══ TTS ══ */
 const TTS={
-  idx:0,segs:[],on:false,paused:false,_hb:null,_gFilter:'all',_silentAudio:null,_silentUrl:null,_wl:null,_errCnt:0,_sleepTimer:null,_sleepEnd:0,_sleepTick:null,_hbNeeded:false,_resumeSilentT:null,_resumeT:null,_lastProgressAt:0,
+  idx:0,segs:[],on:false,paused:false,_hb:null,_gFilter:'all',_silentAudio:null,_silentUrl:null,_wl:null,_errCnt:0,_sleepTimer:null,_sleepEnd:0,_sleepTick:null,_hbNeeded:false,_resumeSilentT:null,_resumeT:null,_startGuardT:null,_startRetry:0,_lastProgressAt:0,
   _voiceGender(name){
     if(/\b(yun|wanlung|yunlung)\b/i.test(name)||/yun.jhe/i.test(name))return'm';
     if(/\b(xiao|hsiao|hiu|sin.ji|tian.tian|mei.jia)\b/i.test(name))return'f';
@@ -1048,7 +1049,24 @@ const TTS={
      不在背景計時器內 cancel/restart，避免正常句間空檔被誤判造成斷音或重播。 */
   _startHB(){this._stopHB();this._hb=setInterval(()=>{if(this.on&&!this.paused)this._hbNeeded=true},13500)},
   _stopHB(){if(this._hb){clearInterval(this._hb);this._hb=null}},
-  start(from){if(!Reader.paras.length){toast('請先開啟書籍');return}this.build();const pg=Reader.pages[Reader.curPage];const startPi=from!=null?from:(pg?pg.startPara:0);const si=this.segs.findIndex(s=>s.pi>=startPi);this.idx=si>=0?si:0;this.on=true;this.paused=false;window.speechSynthesis.cancel();this._startSilent();this._reqWakeLock();this._updMediaSession('playing');setTimeout(()=>this.speak(),80);this.updUI()},
+  _clearStartGuard(){if(this._startGuardT){clearTimeout(this._startGuardT);this._startGuardT=null}},
+  start(from){
+    if(!('speechSynthesis' in window)){toast('此瀏覽器不支援系統朗讀');return}
+    if(!Reader.paras.length){toast('請先開啟書籍');return}
+    this.build();
+    if(!this.segs.length){toast('沒有可朗讀內容');return}
+    const pg=Reader.pages[Reader.curPage];
+    const startPi=from!=null?from:(pg?pg.startPara:0);
+    const si=this.segs.findIndex(s=>s.pi>=startPi);
+    this.idx=si>=0?si:0;this.on=true;this.paused=false;this._errCnt=0;this._startRetry=0;this._hbNeeded=false;
+    this._lastProgressAt=Date.now();
+    this._clearStartGuard();clearTimeout(this._resumeT);this._resumeT=null;
+    window.speechSynthesis.cancel();
+    this._startSilent();this._reqWakeLock();this._updMediaSession('playing');
+    /* iOS Safari/PWA 對語音與媒體啟動較嚴格；第一句必須在點擊事件堆疊內立即送出，避免 setTimeout 失去使用者手勢。 */
+    this.speak();
+    this.updUI();
+  },
   speak(){
     if(!this.on||this.idx>=this.segs.length){this.stop();return}
     const seg=this.segs[this.idx];
@@ -1058,9 +1076,14 @@ const TTS={
     const u=new SpeechSynthesisUtterance(seg.text);
     const pr=Meta.loadP();u.rate=pr.speed||1;u.lang='zh-TW';
     u.voice=this._pickVoice(pr);
-    u.onstart=()=>{this._errCnt=0;this._lastProgressAt=Date.now();Reader.hlPara(seg.pi)};
-    u.onend=()=>{this._lastProgressAt=Date.now();if(this.on){this._errCnt=0;this.idx++;setTimeout(()=>this.speak(),50)}};
+    const startIdx=this.idx;
+    this._lastProgressAt=Date.now();
+    this._clearStartGuard();
+    u.onstart=()=>{this._clearStartGuard();this._startRetry=0;this._errCnt=0;this._lastProgressAt=Date.now();Reader.hlPara(seg.pi)};
+    u.onend=()=>{this._clearStartGuard();this._lastProgressAt=Date.now();if(this.on){this._startRetry=0;this._errCnt=0;this.idx++;setTimeout(()=>this.speak(),50)}};
     u.onerror=e=>{
+      this._clearStartGuard();
+      if((e.error==='not-allowed'||e.error==='service-not-allowed')&&this.on){toast('朗讀被瀏覽器阻擋，請再按一次播放');this.stop();return}
       if(e.error==='interrupted'&&this.on){
         /* 音訊中斷（地圖導航 / 藍牙切換）→ 漸進式等待重試
            前 3 次：600ms（短暫藍牙切換），之後逐漸拉長至 5s
@@ -1072,10 +1095,18 @@ const TTS={
         else{this._errCnt=0;this.idx++;setTimeout(()=>this.speak(),120)}
       }else if(this.on){this._errCnt=0;this.idx++;setTimeout(()=>this.speak(),120)}
     };
+    try{window.speechSynthesis.resume()}catch(e){}
     window.speechSynthesis.speak(u);
+    this._startGuardT=setTimeout(()=>{
+      if(!this.on||this.paused||this.idx!==startIdx)return;
+      if(!window.speechSynthesis.speaking&&!window.speechSynthesis.pending){
+        if(this._startRetry<1){this._startRetry++;window.speechSynthesis.cancel();setTimeout(()=>{if(this.on&&!this.paused&&this.idx===startIdx)this.speak()},120)}
+        else toast('朗讀尚未啟動，請再按一次播放');
+      }
+    },1400);
   },
-  toggle(){if(!this.on)this.start();else if(this.paused){window.speechSynthesis.resume();this.paused=false;this._updMediaSession('playing');this.updUI()}else{window.speechSynthesis.pause();this._stopHB();this.paused=true;this._updMediaSession('paused');this.updUI()}},
-  stop(){this.on=false;this.paused=false;this._hbNeeded=false;clearTimeout(this._resumeT);this._resumeT=null;this._stopHB();this._clearSleep();this._stopSilent();this._relWakeLock();window.speechSynthesis.cancel();document.querySelectorAll('.tts-hi').forEach(el=>el.classList.remove('tts-hi'));this._updMediaSession('none');this.updUI()},
+  toggle(){if(!this.on)this.start();else if(this.paused){this._startSilent();this._reqWakeLock();window.speechSynthesis.resume();this.paused=false;this._updMediaSession('playing');this.updUI()}else{window.speechSynthesis.pause();this._stopHB();this.paused=true;this._updMediaSession('paused');this.updUI()}},
+  stop(){this.on=false;this.paused=false;this._hbNeeded=false;this._startRetry=0;this._clearStartGuard();clearTimeout(this._resumeT);this._resumeT=null;this._stopHB();this._clearSleep();this._stopSilent();this._relWakeLock();if('speechSynthesis' in window)window.speechSynthesis.cancel();document.querySelectorAll('.tts-hi').forEach(el=>el.classList.remove('tts-hi'));this._updMediaSession('none');this.updUI()},
   updUI(){const pb=document.getElementById('rfPlay');if(this.on&&!this.paused){pb.textContent='⏸';pb.classList.add('on')}else{pb.textContent='▶';pb.classList.remove('on')}},
   fillVoices(){
     const sel=document.getElementById('voiceSel');
