@@ -1,5 +1,5 @@
-/* 書閣 Service Worker v3.1.7 */
-const CACHE = 'shuge-v3.1.7';
+/* 書閣 Service Worker v3.1.8 */
+const CACHE = 'shuge-v3.1.8';
 
 self.addEventListener('install', e => {
   e.waitUntil(

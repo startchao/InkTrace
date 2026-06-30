@@ -2,7 +2,7 @@
 
 <!--
   ╔══════════════════════════════════════════════════════════════════════╗
-  ║  書閣 Novel Reader  v3.1.7                                          ║
+  ║  書閣 Novel Reader  v3.1.8                                          ║
   ║  一款專為中文小說設計的離線 PWA 閱讀器                              ║
   ║                                                                      ║
   ║  功能特色                                                            ║
@@ -19,6 +19,7 @@
   ║  · IndexedDB（書籍儲存）、localStorage（設定與進度）                ║
   ║                                                                      ║
   ║  Changelog                                                           ║
+  ║  v3.1.8  新增 Long Chunk 聽書模式，測試 v2.9 風格長句背景續播
   ║  v3.1.7  修正聽書模式按鈕誤觸字體切換造成 family.split 錯誤
   ║  v3.1.6  新增 Classic 聽書模式，預設回到 v3.1.0 純粹 TTS 架構
   ║  v3.1.5  新增強制更新按鈕；Service Worker 改為 network-first 避免 Safari 卡舊版
@@ -54,7 +55,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>書閣 v3.1.7</title>
+<title>書閣 v3.1.8</title>
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -291,7 +292,7 @@ body.night .toast{background:#c09030;color:#0a0806}
 
 <div id="vLib" class="view">
   <header class="lhd">
-    <div class="lhd-logo">書閣 <small>v3.1.7</small></div>
+    <div class="lhd-logo">書閣 <small>v3.1.8</small></div>
     <button class="ibt" id="btnRefresh" aria-label="強制更新最新版" title="強制更新最新版">↻</button>
     <button class="ibt" id="btnTheme" aria-label="切換夜間模式">🌙</button>
     <button class="ibt" id="btnUp" aria-label="上傳書籍">＋</button>
@@ -380,11 +381,12 @@ body.night .toast{background:#c09030;color:#0a0806}
       </div>
       <div class="sg">
         <div class="sg-lbl">聽書模式</div>
-        <div class="font-opts">
+        <div class="font-opts" style="grid-template-columns:1fr 1fr 1fr">
           <button class="font-opt tts-mode on" id="ttsModeClassic" data-mode="classic">Classic</button>
+          <button class="font-opt tts-mode" id="ttsModeLong" data-mode="long">Long Chunk</button>
           <button class="font-opt tts-mode" id="ttsModeRecover" data-mode="recover">Auto Recover</button>
         </div>
-        <div class="sg-hint">Classic：回到 v3.1.0 較純粹的背景播放策略。Auto Recover：保留導航/CarPlay 中斷後恢復補丁。</div>
+        <div class="sg-hint">Classic：v3.1.0 純粹策略。Long Chunk：接近 v2.9，只用句號/問號/驚嘆號切段，測試背景能否多撐一段。Auto Recover：保留導航/CarPlay 中斷後恢復補丁。</div>
       </div>
       <div class="sg">
         <div class="sg-lbl">朗讀語音</div>
@@ -962,7 +964,7 @@ const Reader={
 const TTS={
   idx:0,segs:[],on:false,paused:false,_hb:null,_gFilter:'all',_silentAudio:null,_silentUrl:null,_wl:null,_errCnt:0,_sleepTimer:null,_sleepEnd:0,_sleepTick:null,_hbNeeded:false,_resumeSilentT:null,_resumeT:null,_startGuardT:null,_startRetry:0,_lastProgressAt:0,_mode:'classic',
   mode(){return Meta.loadP().ttsMode||'classic'},
-  setMode(m){const p=Meta.loadP();p.ttsMode=m;Meta.saveP(p);this._mode=m;this.refreshModeUI();toast(m==='classic'?'Classic 聽書模式':'Auto Recover 聽書模式')},
+  setMode(m){const p=Meta.loadP();p.ttsMode=m;Meta.saveP(p);this._mode=m;this.refreshModeUI();toast(m==='classic'?'Classic 聽書模式':m==='long'?'Long Chunk 聽書模式':'Auto Recover 聽書模式')},
   refreshModeUI(){const m=this.mode();document.querySelectorAll('.tts-mode').forEach(b=>b.classList.toggle('on',b.dataset.mode===m))},
   _voiceGender(name){
     if(/\b(yun|wanlung|yunlung)\b/i.test(name)||/yun.jhe/i.test(name))return'm';
@@ -992,7 +994,7 @@ const TTS={
       ||vs.find(v=>/^zh/i.test(v.lang))
       ||null;
   },
-  build(){this.segs=[];Reader.paras.forEach((p,i)=>{if(isSep(p))return;p=p.replace(/[“”‘’「」『』【】〔〕＂〝〞〟]/g,'');if(this.mode()==='classic'){const parts=p.match(/[^。！？…，、；]+[。！？…，、；]*/g)||[p];if(parts.length<=1){this.segs.push({text:p,pi:i});return}parts.forEach(s=>{if(s.trim())this.segs.push({text:s,pi:i})})}else{this._splitText(p).forEach(s=>this.segs.push({text:s,pi:i}))}})},
+  build(){this.segs=[];Reader.paras.forEach((p,i)=>{if(isSep(p))return;p=p.replace(/[“”‘’「」『』【】〔〕＂〝〞〟]/g,'');if(this.mode()==='classic'||this.mode()==='long'){const re=this.mode()==='long'?/[^。！？…]+[。！？…]*/g:/[^。！？…，、；]+[。！？…，、；]*/g;const parts=p.match(re)||[p];if(parts.length<=1){this.segs.push({text:p,pi:i});return}parts.forEach(s=>{if(s.trim())this.segs.push({text:s,pi:i})})}else{this._splitText(p).forEach(s=>this.segs.push({text:s,pi:i}))}})},
   /* Screen Wake Lock：防止螢幕自動關閉中斷朗讀 */
   _reqWakeLock(){
     if(!('wakeLock' in navigator)||this._wl)return;
