@@ -1,5 +1,5 @@
-/* 書閣 Service Worker v3.1.4 */
-const CACHE = 'shuge-v3.1.4';
+/* 書閣 Service Worker v3.1.5 */
+const CACHE = 'shuge-v3.1.5';
 
 self.addEventListener('install', e => {
   e.waitUntil(
@@ -27,20 +27,26 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
-  // 導航請求 → 從快取提供 index.html（飛航模式離線啟動的關鍵）
+  // 導航請求 → network-first，避免 Safari / PWA 長期卡在舊版；離線時才回退快取
   if (e.request.mode === 'navigate') {
-    e.respondWith(caches.match('./index.html').then(r => r || fetch(e.request)));
+    e.respondWith(
+      fetch(e.request, { cache: 'reload' }).then(res => {
+        const clone = res.clone();
+        caches.open(CACHE).then(c => c.put('./index.html', clone)).catch(() => null);
+        return res;
+      }).catch(() => caches.match('./index.html'))
+    );
     return;
   }
   const url = new URL(e.request.url);
-  // 本機 app shell：cache-first
+  // 本機 app shell：network-first，確保新版 HTML / manifest / icon 能被抓到
   if (url.origin === location.origin) {
     e.respondWith(
-      caches.match(e.request).then(r => r || fetch(e.request).then(res => {
+      fetch(e.request, { cache: 'reload' }).then(res => {
         const clone = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, clone));
+        caches.open(CACHE).then(c => c.put(e.request, clone)).catch(() => null);
         return res;
-      }))
+      }).catch(() => caches.match(e.request))
     );
     return;
   }
