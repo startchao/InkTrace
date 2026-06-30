@@ -2,7 +2,7 @@
 
 <!--
   ╔══════════════════════════════════════════════════════════════════════╗
-  ║  書閣 Novel Reader  v3.1.6                                          ║
+  ║  書閣 Novel Reader  v3.1.7                                          ║
   ║  一款專為中文小說設計的離線 PWA 閱讀器                              ║
   ║                                                                      ║
   ║  功能特色                                                            ║
@@ -19,6 +19,7 @@
   ║  · IndexedDB（書籍儲存）、localStorage（設定與進度）                ║
   ║                                                                      ║
   ║  Changelog                                                           ║
+  ║  v3.1.7  修正聽書模式按鈕誤觸字體切換造成 family.split 錯誤
   ║  v3.1.6  新增 Classic 聽書模式，預設回到 v3.1.0 純粹 TTS 架構
   ║  v3.1.5  新增強制更新按鈕；Service Worker 改為 network-first 避免 Safari 卡舊版
   ║  v3.1.4  修復 TTS 啟動路徑：播放需在使用者手勢內立即送出，並加入啟動看門狗
@@ -53,7 +54,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>書閣 v3.1.6</title>
+<title>書閣 v3.1.7</title>
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -290,7 +291,7 @@ body.night .toast{background:#c09030;color:#0a0806}
 
 <div id="vLib" class="view">
   <header class="lhd">
-    <div class="lhd-logo">書閣 <small>v3.1.6</small></div>
+    <div class="lhd-logo">書閣 <small>v3.1.7</small></div>
     <button class="ibt" id="btnRefresh" aria-label="強制更新最新版" title="強制更新最新版">↻</button>
     <button class="ibt" id="btnTheme" aria-label="切換夜間模式">🌙</button>
     <button class="ibt" id="btnUp" aria-label="上傳書籍">＋</button>
@@ -713,7 +714,7 @@ const Reader={
   },
 
   _updFontOpts(){
-    document.querySelectorAll('.font-opt').forEach(btn=>btn.classList.toggle('on',btn.dataset.font===this.fontFamily));
+    document.querySelectorAll('.font-opt[data-font]').forEach(btn=>btn.classList.toggle('on',btn.dataset.font===this.fontFamily));
   },
 
   _getAvail(){
@@ -1204,7 +1205,7 @@ document.addEventListener('DOMContentLoaded',async()=>{
   document.getElementById('rfNight').onclick=()=>{const p=Meta.loadP();p.night=!p.night;Meta.saveP(p);applyTheme(p.night);toast(p.night?'🌙 夜間模式':'☀ 日間模式')};
   document.getElementById('rfProg').onclick=e=>Reader.onProgClick(e);
 
-  document.querySelectorAll('.font-opt').forEach(btn=>btn.onclick=()=>Reader.setFont(btn.dataset.font));
+  document.querySelectorAll('.font-opt[data-font]').forEach(btn=>btn.onclick=()=>Reader.setFont(btn.dataset.font));
   document.getElementById('spdSlider').oninput=e=>{const v=parseFloat(e.target.value);document.getElementById('spdVal').textContent=v.toFixed(1)+'×';const p=Meta.loadP();p.speed=v;Meta.saveP(p)};
   document.getElementById('voiceSel').onchange=e=>{const p=Meta.loadP();const vs=window.speechSynthesis.getVoices();const v=e.target.value?vs[parseInt(e.target.value)]:null;p.voiceIdx=e.target.value?parseInt(e.target.value):null;p.voiceURI=v?v.voiceURI:null;p.voiceName=v?v.name:null;p.voiceLang=v?v.lang:null;Meta.saveP(p)};
   document.getElementById('voiceTest').onclick=()=>{
